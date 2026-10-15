@@ -69,7 +69,7 @@ describe('AppShell navigation', () => {
     expect(within(nav).getByRole('link', { name: 'Overview' })).not.toHaveAttribute('aria-current');
   });
 
-  it('has a skip link, landmarks and a logout action', () => {
+  it('has a skip link, landmarks and an account menu', () => {
     loginAs('buyer');
     renderShell('/buyer');
     expect(screen.getByRole('link', { name: 'Skip to content' })).toHaveAttribute(
@@ -78,7 +78,7 @@ describe('AppShell navigation', () => {
     );
     expect(screen.getByRole('banner')).toBeInTheDocument();
     expect(screen.getByRole('main')).toHaveAttribute('id', 'main-content');
-    expect(screen.getByRole('button', { name: /log out/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /account menu/i })).toBeInTheDocument();
   });
 });
 

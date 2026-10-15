@@ -50,11 +50,25 @@ describe('source checks', () => {
     expect(offenders(/dangerouslySetInnerHTML/)).toEqual([]);
   });
 
-  it('never uses localStorage for session data', () => {
-    expect(offenders(/localStorage/, inAuthOrApi)).toEqual([]);
-    expect(
-      offenders(/localStorage.*(token|session|auth)|(token|session|auth).*localStorage/i),
-    ).toEqual([]);
+  it('never uses localStorage anywhere', () => {
+    expect(offenders(/localStorage/)).toEqual([]);
+  });
+
+  it('never sends a role in a registration request', () => {
+    // The register body is built from named fields only (src/api/endpoints/auth.js).
+    const isAuthEndpoints = (path) => path === 'src/api/endpoints/auth.js';
+    expect(offenders(/\brole\s*:|\['role'\]|\["role"\]|\.role\s*=/, isAuthEndpoints)).toEqual([]);
+    const text = sources.find(({ path }) => path === 'src/api/endpoints/auth.js')?.text ?? '';
+    expect(text).toMatch(/export function buildRegisterBody/);
+    // The register endpoints receive only what buildRegisterBody returns.
+    for (const route of ['register/farmer', 'register/buyer']) {
+      expect(text).toContain(`'/api/v1/auth/${route}', { body: buildRegisterBody(fields) }`);
+    }
+  });
+
+  it('keeps credentials out of TanStack mutations and query keys in the auth screens', () => {
+    const authScreens = (path) => path.startsWith('src/screens/auth/');
+    expect(offenders(/useMutation|useQuery|queryKey/, authScreens)).toEqual([]);
   });
 
   it('never uses eval or new Function', () => {

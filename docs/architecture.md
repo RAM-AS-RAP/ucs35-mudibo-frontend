@@ -31,7 +31,7 @@ localhost and 127.0.0.1. On failure `src/main.jsx` renders a full page configura
 Order of `onRequest`: error handling, timeout, authorization (responses and errors run in reverse).
 
 1. **Authorization:** adds `Authorization: Bearer <token>` when the session has a real token.
-   Anonymous calls and development fake sessions send no header.
+   Anonymous calls, development fake sessions and the public auth routes (`PUBLIC_AUTH_PATHS`) send no header.
 2. **Timeout:** an `AbortController` per request, 20 s by default, 60 s for multipart uploads, or a per
    call `timeoutMs` (`api.POST(path, { body, timeoutMs: 60_000 })`). A caller's own abort is respected.
 3. **Errors:** every non 2xx response throws an `ApiError` (`status`, `code`, `message`, `reason`,
@@ -57,13 +57,23 @@ POST /auth/login -> session.setFromLogin(tokenResponse) -> sessionStorage["agris
   It persists in `sessionStorage` (this tab only), never `localStorage`, a URL, a log line or a query key.
   An expired stored session is discarded on load. `clear()` also clears the TanStack Query cache.
 - `GET /auth/me` (`UserOut`) does **not** return `is_super_admin`. `setProfile()` reads it only if the
-  backend adds it. Until then F1 calls `GET /admin/users?role=admin&q=<own email>` after an admin logs in
-  and passes the row's `is_super_admin` to `setSuperAdmin()` (see `docs/backend/frontend_contract.md`).
+  backend adds it, so it stays false today (listed as a backend gap in the README). `setProfile()` also
+  refreshes the name, the role and `mustChangePassword`.
+- **Flash messages:** `clear(reason)` leaves a one time, in memory message for the login screen
+  (`expired`, `password_changed`, `unauthorized`; a sign out leaves a silent one); `setFlash()` sets one
+  without a session. The login screen consumes it.
+- **Startup revalidation** (`src/auth/revalidate.js`): a session restored from `sessionStorage` is checked
+  once with `GET /auth/me` before `RequireAuth` renders anything protected (loading state, at most 8
+  seconds). A 401 clears it with `expired`; a network failure keeps it and the offline banner says the API
+  could not be reached (`src/lib/connectivity.js`).
+- Sign in and the post login redirect: see [auth.md](auth.md).
 - Guards (`src/auth/guards.jsx`):
   - `RequireAuth`: anonymous users go to `/login` with the intended path in router state (never in the URL).
     A session with `mustChangePassword` can only reach `/change-password` (which offers logout).
   - `RequireRole`: the wrong role sees the `Forbidden` screen in place, so there is no redirect loop.
-  - `PublicOnly`: a signed in user visiting `/login` and the other public pages goes to their role home.
+  - `PublicOnly` (`/login`, `/register`, `/forgot-password`): a signed in user goes to their role home,
+    except while a screen is signing someone in (`useSignInHold`). `/reset-password` and `/accept-invite`
+    open with or without a session and show `SignedInNotice` when signed in.
   - Guards only shape the UI. The server checks the role on every request.
 - Role areas (`/farmer/*`, `/buyer/*`, `/admin/*`) are lazily loaded with `React.lazy` and `Suspense`
   so one role never downloads another role's screens.

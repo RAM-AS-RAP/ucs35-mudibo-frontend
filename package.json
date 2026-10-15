@@ -22,6 +22,7 @@
     "e2e": "node -e \"console.log('End to end tests (Playwright) arrive in module F5.')\""
   },
   "dependencies": {
+    "@hookform/resolvers": "^5.9.1",
     "@tanstack/react-query": "^5.104.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -30,10 +31,12 @@
     "radix-ui": "^1.8.1",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
+    "react-hook-form": "^7.90.0",
     "react-router": "^8.4.0",
     "sonner": "^2.0.8",
     "tailwind-merge": "^3.7.0",
-    "workbox-window": "^7.4.1"
+    "workbox-window": "^7.4.1",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",

@@ -3,7 +3,7 @@ import { createMemoryRouter, RouterProvider } from 'react-router';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from '@/lib/queryClient';
 import { routes } from '@/routes';
-import { clear, setFromLogin } from '@/auth/session';
+import { clear, consumeFlash, restore, setFromLogin } from '@/auth/session';
 
 /**
  * Render the real route table at a path.
@@ -52,6 +52,33 @@ export function loginAs(
   });
 }
 
+/** End the session between tests, without leaving the sign out's silent flash behind. */
 export function logout() {
   clear('logout');
+  consumeFlash();
+}
+
+/**
+ * Put a session in sessionStorage and load it as the app does at startup, so the next
+ * protected route revalidates it with GET /auth/me.
+ * @param {{ role?: string, mustChangePassword?: boolean, isSuperAdmin?: boolean, name?: string | null }} [options]
+ */
+export function restoreStoredSession({
+  role = 'farmer',
+  mustChangePassword = false,
+  isSuperAdmin = false,
+  name = 'Stored Name',
+} = {}) {
+  window.sessionStorage.setItem(
+    'agrisence.session',
+    JSON.stringify({
+      accessToken: 'stored-token-not-a-secret',
+      role,
+      mustChangePassword,
+      isSuperAdmin,
+      expiresAt: Date.now() + 30 * 60 * 1000,
+      name,
+    }),
+  );
+  restore();
 }

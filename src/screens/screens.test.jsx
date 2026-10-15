@@ -13,38 +13,7 @@ afterEach(() => {
   queryClient.clear();
 });
 
-const PUBLIC_SCREENS = [
-  ['/login', 'Log in'],
-  ['/register', 'Create an account'],
-  ['/forgot-password', 'Forgot your password?'],
-  ['/reset-password', 'Reset your password'],
-  ['/accept-invite', 'Accept your invitation'],
-];
-
-describe('placeholder screens', () => {
-  it.each(PUBLIC_SCREENS)(
-    '%s says which module builds it and has no axe violations',
-    async (path, heading) => {
-      const { container } = renderApp(path);
-      expect(await screen.findByRole('heading', { name: heading, level: 1 })).toBeInTheDocument();
-      expect(
-        screen.getByText('This screen is built in module F1 (authentication).'),
-      ).toBeInTheDocument();
-      expect(container.querySelector('form')).toBeNull();
-      await expectNoAxeViolations(container, { page: true });
-    },
-  );
-
-  it('/change-password is accessible and offers logout', async () => {
-    loginAs('farmer', { mustChangePassword: true });
-    const { container } = renderApp('/change-password');
-    expect(
-      await screen.findByRole('heading', { name: 'Change your password' }),
-    ).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /log out/i })).toBeInTheDocument();
-    await expectNoAxeViolations(container, { page: true });
-  });
-
+describe('role home placeholders and shared screens', () => {
   it.each([
     ['farmer', 'F2 (farmer)'],
     ['buyer', 'F3 (buyer)'],
@@ -55,6 +24,8 @@ describe('placeholder screens', () => {
     expect(
       await screen.findByText(`This screen is built in module ${module}.`),
     ).toBeInTheDocument();
+    // No profile loaded: a generic greeting.
+    expect(screen.getByText('Welcome')).toBeInTheDocument();
     await expectNoAxeViolations(container, { page: true });
   });
 

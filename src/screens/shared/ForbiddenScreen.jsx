@@ -1,14 +1,13 @@
-import { Link, useNavigate } from 'react-router';
+import { Link } from 'react-router';
 import { ShieldAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PublicLayout } from '@/components/layout/PublicLayout';
-import { clear, useSession } from '@/auth/session';
+import { useAuth } from '@/auth/useAuth';
 import { homeForRole, PUBLIC_HOME } from '@/auth/roles';
 
 /** Shown in place of a page the current role may not open (the server enforces this too). */
 export default function ForbiddenScreen() {
-  const session = useSession();
-  const navigate = useNavigate();
+  const { session, logout } = useAuth();
   const home = (session && homeForRole(session.role)) ?? PUBLIC_HOME;
   return (
     <PublicLayout>
@@ -21,15 +20,8 @@ export default function ForbiddenScreen() {
             <Link to={home}>Go to my home page</Link>
           </Button>
           {session && (
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                clear('logout');
-                navigate('/login', { replace: true });
-              }}
-            >
-              Log out
+            <Button type="button" variant="outline" onClick={logout}>
+              Sign out
             </Button>
           )}
         </div>

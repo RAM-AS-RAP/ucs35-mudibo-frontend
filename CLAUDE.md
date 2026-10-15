@@ -13,7 +13,7 @@ Roles: `farmer` (prices, forecasts, listings, orders on their listings), `buyer`
 | Module | Scope                                                                                                    | Status      |
 | ------ | -------------------------------------------------------------------------------------------------------- | ----------- |
 | F0     | Foundation: scaffold, tooling, API layer, session, guards, shells, design system, PWA shell, tests, docs | Done        |
-| F1     | Authentication: login, register, password change and reset, accept invite, super admin lookup            | Not started |
+| F1     | Authentication: login, register, password change and reset, accept invite, session handling              | Done        |
 | F2     | Farmer: prices, forecast with SHAP bars, listings, orders on my listings                                 | Not started |
 | F3     | Buyer: browse, listing detail, checkout, M-Pesa payment polling, my orders                               | Not started |
 | F4     | Admin: dashboard, users, invites, moderation, orders, payments, reconciliation, accuracy                 | Not started |
@@ -42,7 +42,8 @@ Node 24 LTS (`.nvmrc`), npm. JavaScript only (`.js`, `.jsx`), no TypeScript sour
 | eslint-plugin-react       | 7.37.5  | axe-core                                          | 4.14.0                        |
 | eslint-plugin-react-hooks | 7.1.1   | ajv                                               | 8.20.0                        |
 | eslint-plugin-jsx-a11y    | 6.10.2  | prettier                                          | 3.9.10                        |
-| globals                   | 17.13.0 |                                                   |                               |
+| globals                   | 17.13.0 | react-hook-form                                   | 7.90.0                        |
+| zod                       | 4.6.7   | @hookform/resolvers                               | 5.9.1                         |
 
 Version and dependency decisions:
 
@@ -57,6 +58,10 @@ Version and dependency decisions:
   from ui.shadcn.com, which F0's network rules did not allow, so the components were written by hand from
   the shadcn sources. `components.json` is set up for JavaScript if you want to use the CLI later.
 - **workbox-window**: needed by `virtual:pwa-register/react`.
+- **react-hook-form, zod, @hookform/resolvers** (F1): form state, schema validation and the bridge
+  between them for the auth forms (named in the F1 task). Together with the auth screens and the
+  dropdown menu they raised the initial JavaScript from 149.9 kB to 212.6 kB gzip (budget 250 kB).
+- **Dropdown menu** (F1, account menu): `src/components/ui/dropdown-menu.jsx`, from `radix-ui` (no new package).
 
 ```bash
 npm ci                    # install exactly from package-lock.json
@@ -79,14 +84,18 @@ src/
   screens/      auth/, farmer/, buyer/, admin/, shared/   one screen per file, default export, *Screen.jsx
   components/   ui/ (shadcn), layout/, feedback/, display/   named exports
   api/          client.js, errors.js, endpoints/<area>.js, schema.d.ts (generated, do not edit)
-  auth/         session.js, guards.jsx, roles.js
-  lib/          env.js, format.js, queryClient.js, utils.js
+  auth/         session.js, guards.jsx, roles.js, paths.js, auth.js (signIn, signOut, sign in hold),
+                useAuth.js, redirects.js, revalidate.js
+  components/auth/  AuthLayout, FormField, PasswordField, CodeInput, FormErrorSummary, CountdownButton,
+                PasswordRequirements, SignedInNotice, ResendCode, FormNotices, useServerProblem
+  lib/          env.js, format.js, queryClient.js, utils.js, validation.js, messages.js, formErrors.js,
+                connectivity.js, useCountdown.js, usePageTitle.js
   styles/       tokens.css (all colours), index.css
   dev/          DevRoleSwitcher.jsx (development only)
   test/         setup.js, msw/, fixtures/, helpers (render, axe, openapi, contrast)
   App.jsx, main.jsx, routes.jsx (the single route table)
 scripts/        check-contract.mjs, check-build.mjs, tokens.mjs
-docs/           backend/, architecture.md, design-system.md, security-headers.md
+docs/           backend/, architecture.md, auth.md, design-system.md, security-headers.md
 ```
 
 - Import with the `@/` alias (`@/api/endpoints`). Tests sit next to the code as `*.test.js(x)`.
@@ -107,7 +116,10 @@ docs/           backend/, architecture.md, design-system.md, security-headers.md
   New backend codes go into `ERROR_MESSAGES` in `src/api/errors.js`.
 - Contract workflow: copy `openapi.json` and `frontend_contract.md` into `docs/backend/` (see
   `docs/backend/README.md`), run `npm run gen:types`, then `npm run check:contract` and `npm test`.
-- `/auth/me` returns no `is_super_admin`; use the admin users lookup from the contract and `setSuperAdmin()`.
+- **isSuperAdmin is not available from the backend:** `/auth/me` (`UserOut`) returns no `is_super_admin`.
+  F1 keeps `isSuperAdmin` false (it is read from the profile only if the backend adds the field) and lists
+  the gap in the README. Do not guess it. The contract's workaround (`GET /admin/users?role=admin&q=<email>`,
+  then `setSuperAdmin()`) is the option for F4 if the backend is not changed.
 - The backend is the single authority for roles, prices, totals, stock and order state. Show `can_pay` /
   `can_cancel` and server totals as returned; never recompute them.
 
@@ -120,12 +132,33 @@ docs/           backend/, architecture.md, design-system.md, security-headers.md
 - Any 401 outside the public auth routes logs out (handled in the client middleware).
 - The dev role switcher's fake session never carries a token and never ships in production.
 
+## 5a. Authentication conventions (F1, details in `docs/auth.md`)
+
+- Sign in through `signIn()` / `useAuth().login` (`src/auth/auth.js`): login, `setFromLogin`, then `getMe`
+  and `setProfile`. Sign out through `useAuth().logout` or `signOut()`; there is no logout endpoint.
+- **Credentials never go through TanStack Query.** Auth forms call the endpoint functions from their submit
+  handlers; `useMutation` would keep the password in the mutation cache. A source check enforces this for
+  `src/screens/auth/`. Never auto fill a password: `PasswordField` takes no `value` or `defaultValue`.
+- **Flash messages:** `clear(reason)` and `setFlash()` leave one in memory message for the login screen,
+  which consumes it. Add new texts to `src/lib/messages.js`.
+- **Redirects:** after sign in always go through `getPostLoginPath()` (`src/auth/redirects.js`); never
+  navigate to a path taken from router state or the URL without it. Wrap a sign in with `useSignInHold()`
+  so `PublicOnly` does not redirect before the screen does.
+- **Resend cooldown:** every "send a new code" control waits 60 seconds after a send (`ResendCode`), and
+  every 429 disables the action for `Retry-After` seconds (60 without the header).
+- Forms: Zod schema in `src/lib/validation.js`, server errors through `useServerProblem` (focus to the
+  summary, 422 fields mapped with `src/lib/formErrors.js`), `SubmitButton` for pending and countdown.
+- A session restored from `sessionStorage` is revalidated with `GET /auth/me` before protected routes
+  render (`src/auth/revalidate.js`); a fresh login is not.
+- Public auth routes (`PUBLIC_AUTH_PATHS` in `src/api/client.js`) never send `Authorization`.
+
 ## 6. UI rules
 
 - Colours only through tokens (`src/styles/tokens.css`); no hex colours elsewhere in `src/`.
 - Never colour alone: pair it with an icon or sign and a word (`DeltaTag`, `StatusBadge`).
 - Touch targets at least 44 by 44 px; phone first, no horizontal scroll at 360 px; inputs at 16 px or more.
-- English only. Keep user facing strings in the component or `src/api/errors.js` so they are easy to find.
+- English only. Keep user facing strings in `src/lib/messages.js` (auth screens), the component, or
+  `src/api/errors.js` (backend codes) so they are easy to find.
 - Money and dates only through `src/lib/format.js` (KES, Africa/Nairobi time).
 
 ## 7. PWA rules

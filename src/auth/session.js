@@ -8,6 +8,8 @@
  */
 import { useSyncExternalStore } from 'react';
 import { queryClient } from '@/lib/queryClient';
+import { MESSAGES } from '@/lib/messages';
+import { isKnownRole } from './roles';
 
 const STORAGE_KEY = 'agrisence.session';
 
@@ -22,12 +24,34 @@ const STORAGE_KEY = 'agrisence.session';
  * @property {boolean} [isDevFake]  development only role preview; never persisted, never sent
  */
 
-/** @typedef {'logout' | 'expired' | 'password_changed' | 'dev'} ClearReason */
+/** @typedef {'logout' | 'expired' | 'password_changed' | 'unauthorized' | 'dev'} ClearReason */
+
+/**
+ * The one time message each clear reason leaves for the login screen. A sign out leaves an
+ * empty, silent message: nothing is shown, and the login screen also skips its
+ * "Please sign in to continue." hint.
+ */
+const FLASH_BY_REASON = Object.freeze({
+  logout: '',
+  dev: null,
+  expired: MESSAGES.flash.expired,
+  password_changed: MESSAGES.flash.passwordChanged,
+  unauthorized: MESSAGES.flash.unauthorized,
+});
 
 /** @type {Session | null} */
 let state = null;
 /** @type {ClearReason | null} */
 let lastClearReason = null;
+/** One time message for the login screen. In memory only, never persisted. */
+/** @type {string | null} */
+let flash = null;
+/**
+ * Non zero while the current session was restored from sessionStorage (not created by a login
+ * in this page load); increases on every restore so startup revalidation runs once per restore.
+ */
+let restoreId = 0;
+let restoreCounter = 0;
 /** @type {ReturnType<typeof setTimeout> | null} */
 let expiryTimer = null;
 /** @type {Set<() => void>} */
@@ -109,6 +133,8 @@ function setState(next) {
  */
 export function setFromLogin(tokenResponse) {
   lastClearReason = null;
+  flash = null;
+  restoreId = 0;
   setState({
     accessToken: tokenResponse.access_token,
     role: tokenResponse.role,
@@ -120,16 +146,17 @@ export function setFromLogin(tokenResponse) {
 }
 
 /**
- * Merge the profile from GET /auth/me. That response (UserOut) has no is_super_admin
- * field today; the flag is read only if the backend adds it. Until then, use setSuperAdmin()
- * after the admin users lookup described in docs/backend/frontend_contract.md.
+ * Merge the profile from GET /auth/me: name, role and must_change_password. That response
+ * (UserOut) has no is_super_admin field today; the flag is read only if the backend adds it,
+ * and is otherwise left as it is (false after a login). It is never guessed from anything else.
  * @param {import('@/api/schema').components['schemas']['UserOut'] & { is_super_admin?: boolean }} me
  */
 export function setProfile(me) {
   if (!state) return;
   setState({
     ...state,
-    name: me.name ?? state.name,
+    name: typeof me.name === 'string' && me.name.trim() ? me.name.trim() : state.name,
+    role: isKnownRole(me.role) ? me.role : state.role,
     mustChangePassword: Boolean(me.must_change_password),
     isSuperAdmin: typeof me.is_super_admin === 'boolean' ? me.is_super_admin : state.isSuperAdmin,
   });
@@ -148,18 +175,60 @@ export function markPasswordChangeRequired() {
 }
 
 /**
- * End the session, remove it from storage and clear every cached query.
+ * End the session, remove it from storage and clear every cached query. The reason leaves a
+ * one time flash message for the login screen (`expired`, `password_changed`, `unauthorized`).
  * @param {ClearReason} [reason]
  */
 export function clear(reason = 'logout') {
   lastClearReason = reason;
+  flash = FLASH_BY_REASON[reason] ?? null;
+  restoreId = 0;
   queryClient.clear();
   setState(null);
 }
 
-/** The reason of the last clear (for example to show "Your session expired" on the login screen). */
+/** The reason of the last clear. */
 export function getLastClearReason() {
   return lastClearReason;
+}
+
+/**
+ * Leave a one time message for the login screen without a session (for example
+ * "Account created. Please sign in.").
+ * @param {string | null} message
+ */
+export function setFlash(message) {
+  flash = message;
+}
+
+/** Read the flash message without consuming it ('' after a sign out, null when there is none). */
+export function peekFlash() {
+  return flash;
+}
+
+/** Read and remove the flash message (it is shown once). */
+export function consumeFlash() {
+  const message = flash;
+  flash = null;
+  return message;
+}
+
+/** Non zero while the current session came from sessionStorage at startup (see restore()). */
+export function getRestoreId() {
+  return restoreId;
+}
+
+/**
+ * Load the session of this tab from sessionStorage. Runs once when the module loads; a
+ * restored session is revalidated with GET /auth/me before protected routes render.
+ */
+export function restore() {
+  const loaded = load();
+  restoreCounter += 1;
+  restoreId = loaded ? restoreCounter : 0;
+  state = loaded;
+  scheduleExpiry();
+  emit();
 }
 
 /** @returns {Session | null} */
@@ -187,6 +256,8 @@ export function startDevFakeSession({ role, isSuperAdmin = false, mustChangePass
   if (!import.meta.env.DEV) return;
   queryClient.clear();
   lastClearReason = null;
+  flash = null;
+  restoreId = 0;
   setState({
     accessToken: null,
     role,
@@ -220,13 +291,15 @@ export const session = Object.freeze({
   getSession,
   isAuthenticated,
   getLastClearReason,
+  setFlash,
+  peekFlash,
+  consumeFlash,
   subscribe,
 });
 
 // Restore the session for this tab, and log out when it expires while the tab was hidden
 // (timers can be paused in background tabs).
-state = load();
-scheduleExpiry();
+restore();
 if (typeof document !== 'undefined') {
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible' && state && state.expiresAt <= Date.now()) {
