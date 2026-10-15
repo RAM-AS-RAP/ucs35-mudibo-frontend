@@ -135,4 +135,57 @@ describe('session store', () => {
     expect(listener).toHaveBeenCalledTimes(2);
     unsubscribe();
   });
+
+  it.each([
+    ['expired', 'Your session expired. Please sign in again.'],
+    ['password_changed', 'Password changed. Please sign in again.'],
+    ['unauthorized', 'Please sign in to continue.'],
+  ])('clear(%s) leaves a one time flash message', (reason, message) => {
+    session.setFromLogin(fixtures.tokenResponse);
+    session.clear(/** @type {any} */ (reason));
+    expect(session.peekFlash()).toBe(message);
+    expect(session.consumeFlash()).toBe(message);
+    expect(session.consumeFlash()).toBeNull();
+  });
+
+  it('a sign out leaves a silent flash, and the flash is never persisted', () => {
+    session.setFromLogin(fixtures.tokenResponse);
+    session.clear('logout');
+    expect(session.peekFlash()).toBe('');
+    session.setFlash('Account created. Please sign in.');
+    expect(window.sessionStorage.length).toBe(0);
+    expect(session.consumeFlash()).toBe('Account created. Please sign in.');
+    expect(session.consumeFlash()).toBeNull();
+  });
+
+  it('a new login drops any pending flash', () => {
+    session.clear('expired');
+    session.setFromLogin(fixtures.tokenResponse);
+    expect(session.peekFlash()).toBeNull();
+  });
+
+  it('setProfile updates role, name and must_change_password but ignores an unknown role', () => {
+    session.setFromLogin(fixtures.tokenResponse);
+    session.setProfile({ ...fixtures.userMe, role: 'buyer', must_change_password: true });
+    expect(session.getSession()).toMatchObject({
+      role: 'buyer',
+      name: 'Wanjiku Kamau',
+      mustChangePassword: true,
+    });
+    session.setProfile({ ...fixtures.userMe, role: 'owner' });
+    expect(session.getSession()?.role).toBe('buyer');
+  });
+
+  it('marks a session restored from storage, but not one from a login', () => {
+    session.setFromLogin(fixtures.tokenResponse);
+    expect(session.getRestoreId()).toBe(0);
+    window.sessionStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ accessToken: 't', role: 'farmer', expiresAt: Date.now() + 60_000 }),
+    );
+    session.restore();
+    expect(session.getRestoreId()).toBeGreaterThan(0);
+    session.clear('logout');
+    expect(session.getRestoreId()).toBe(0);
+  });
 });
