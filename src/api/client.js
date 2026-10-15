@@ -14,7 +14,11 @@ import { ApiError, apiErrorFromResponse } from './errors';
 export const DEFAULT_TIMEOUT_MS = 20_000;
 export const UPLOAD_TIMEOUT_MS = 60_000;
 
-/** Routes where a 401 means "wrong credentials or code", not "session ended". */
+/**
+ * Public auth routes. They never carry an Authorization header, and a 401 from them means
+ * "wrong credentials or code", not "session ended", so it never clears the session.
+ * GET /auth/me and POST /auth/change-password are not here: they need the token.
+ */
 export const PUBLIC_AUTH_PATHS = Object.freeze([
   '/api/v1/auth/login',
   '/api/v1/auth/register/farmer',
@@ -53,7 +57,8 @@ function isMultipart(request) {
 
 /** @type {import('openapi-fetch').Middleware} */
 const authMiddleware = {
-  onRequest({ request }) {
+  onRequest({ request, schemaPath }) {
+    if (PUBLIC_AUTH_PATHS.includes(schemaPath)) return request;
     // getToken() returns null for anonymous users and for development fake sessions.
     const token = session.getToken();
     if (token) request.headers.set('Authorization', `Bearer ${token}`);
