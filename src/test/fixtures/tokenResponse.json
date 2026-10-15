@@ -1,0 +1,7 @@
+{
+  "access_token": "test-access-token-not-a-secret",
+  "token_type": "bearer",
+  "expires_in": 3600,
+  "role": "farmer",
+  "must_change_password": false
+}

@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="AgriSence placeholder leaf mark">
+  <!-- PLACEHOLDER icon: a simple leaf on the primary green (the primary token). Replace with the final brand mark. -->
+  <rect width="512" height="512" rx="96" fill="#1B5E3B"/>
+  <path d="M376 136c-120 0-232 56-232 184 0 22 4 40 10 56 30-74 92-124 166-150-62 38-110 92-136 168 16 6 34 10 54 10 120 0 172-112 172-232 0-12-1-24-4-36h-30z" fill="#FFFFFF"/>
+</svg>

@@ -1,0 +1,69 @@
+/*
+ * AgriSence design tokens: the single source of every colour in the app.
+ *
+ * Edit values here only. Hex colours are not allowed anywhere else in src/
+ * (a source check test enforces this). The contrast test, vite.config.js
+ * (theme-color and the PWA manifest) and scripts/check-build.mjs read this file.
+ * See docs/design-system.md for usage rules and measured contrast ratios.
+ */
+:root {
+  color-scheme: light;
+
+  /* Brand */
+  --primary: #1b5e3b;
+  --primary-hover: #14482d;
+  --on-primary: #ffffff;
+
+  /* Surfaces */
+  --canvas: #eaf5ec;
+  --sidebar: #eaf5ec;
+  --card: #ffffff;
+
+  /* Text */
+  --text: #111827;
+  --text-secondary: #4b5563;
+
+  /* Lines */
+  --border: #d1d5db;
+
+  /* Neutral tags */
+  --neutral-bg: #f3f4f6;
+  --neutral-text: #374151;
+
+  /* Positive: adjusted from #16A34A and #15803D to pass contrast on the mint canvas */
+  --positive: #16a149;
+  --positive-soft: #86efac;
+  --positive-text: #157f3d;
+
+  /* Negative */
+  --negative: #dc2626;
+  --negative-soft: #fca5a5;
+  --negative-text: #b91c1c;
+
+  /* Focus */
+  --focus-ring: #1b5e3b;
+
+  /* Dialog and drawer backdrop */
+  --overlay: rgb(17 24 39 / 0.5);
+
+  /* shadcn/ui semantic variables mapped to the tokens above */
+  --background: var(--canvas);
+  --foreground: var(--text);
+  --card-foreground: var(--text);
+  --popover: var(--card);
+  --popover-foreground: var(--text);
+  --primary-foreground: var(--on-primary);
+  --secondary: var(--neutral-bg);
+  --secondary-foreground: var(--neutral-text);
+  --muted: var(--neutral-bg);
+  --muted-foreground: var(--text-secondary);
+  --accent: var(--canvas);
+  --accent-foreground: var(--text);
+  --destructive: var(--negative-text);
+  --destructive-foreground: var(--on-primary);
+  --input: var(--border);
+  --ring: var(--focus-ring);
+  --sidebar-foreground: var(--text);
+
+  --radius: 0.75rem;
+}

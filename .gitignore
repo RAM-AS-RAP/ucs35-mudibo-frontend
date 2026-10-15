@@ -427,3 +427,14 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+# --- AgriSence frontend (Vite, Node) ---
+node_modules
+dist
+coverage
+.env
+.env.*.local
+*.local
+playwright-report
+test-results
+.vite

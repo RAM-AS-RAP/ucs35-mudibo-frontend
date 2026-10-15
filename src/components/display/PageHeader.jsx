@@ -1,0 +1,19 @@
+import { cn } from '@/lib/utils';
+
+/**
+ * The page title (the h1 of a screen), an optional description and actions.
+ * @param {{ title: string, description?: string, actions?: import('react').ReactNode, className?: string }} props
+ */
+export function PageHeader({ title, description, actions, className }) {
+  return (
+    <div
+      className={cn('flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between', className)}
+    >
+      <div className="flex flex-col gap-1">
+        <h1 className="text-2xl font-bold text-text">{title}</h1>
+        {description && <p className="text-text-secondary">{description}</p>}
+      </div>
+      {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
+    </div>
+  );
+}
