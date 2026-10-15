@@ -1,7 +1,11 @@
 # ucs35-mudibo-frontend
+
 ## Project Title: SHAP-based explainable decision support system for crop price prediction and farmer-buyer linkage among smallholder farmers in Kenya
+
 ### Name: Sean Mudibo
+
 ### Adm No: 168329
+
 ### Capstone Project (Webmasters Kenya)
 
 - ML repository: https://github.com/RAM-AS-RAP/ucs35-mudibo-ml
@@ -11,8 +15,9 @@ The AgriSence web app: crop price forecasts with SHAP explanations and a farmer 
 for smallholder farmers in Kenya. It is a React single page application, installable as a PWA, that
 talks to the AgriSence backend API (a separate repository). Payments use the M-Pesa sandbox only.
 
-Current state: module F0 (foundation). The account, farmer, buyer and admin screens are placeholders
-that later modules (F1 to F5) replace. See [CLAUDE.md](CLAUDE.md) for the roadmap and status.
+Current state: modules F0 (foundation) and F1 (authentication) are done. The farmer, buyer and admin
+screens are placeholders that later modules (F2 to F5) replace. See [CLAUDE.md](CLAUDE.md) for the
+roadmap and status.
 
 ## Requirements
 
@@ -30,6 +35,17 @@ npm run dev               # http://localhost:5173
 In development a small "Dev: role preview" control (bottom right) opens the farmer, buyer, admin or
 super admin shell with a fake in memory session, without a backend login. It never sends a token and
 is not included in production builds.
+
+## Authentication
+
+Farmers and buyers create their own accounts (`/register`, an explicit farmer or buyer choice) and sign
+in with a phone number or email (`/login`). Administrators join through an emailed invitation code
+(`/accept-invite`). People with an email address can reset a forgotten password with an emailed code
+(`/forgot-password`, then `/reset-password`). A required password change (`/change-password`) blocks every
+other screen until it is done; a voluntary one is in the account menu. Any password change signs the user
+out, because the backend revokes older tokens. Sessions last 60 minutes, live only in this tab's
+`sessionStorage`, and are checked with `GET /auth/me` when the app reopens. Details, error messages and
+redirect rules: [docs/auth.md](docs/auth.md).
 
 ## Scripts
 
@@ -94,6 +110,7 @@ from the server; offline, the app only shows a message that a connection is need
 
 - [CLAUDE.md](CLAUDE.md): conventions, rules and module status (also for AI assistants)
 - [docs/architecture.md](docs/architecture.md): data flow, session and guards, errors, PWA caching
+- [docs/auth.md](docs/auth.md): authentication flows, messages, redirect rules and limitations
 - [docs/design-system.md](docs/design-system.md): tokens, usage rules, contrast ratios
 - [docs/security-headers.md](docs/security-headers.md): headers for the later deployment
 - [docs/backend/](docs/backend/): the backend contract and how to refresh it
@@ -103,7 +120,13 @@ from the server; offline, the app only shows a message that a connection is need
 - `docs/backend/SOURCE.md`: fill in the backend commit hash and export date of the copied contract.
 - `public/favicon.svg` and the generated icons are a placeholder mark; replace with the final logo and run `npm run gen:icons`.
 - Ask the backend team to add the frontend's development (`http://localhost:5173`) and production origins to `CORS_ORIGINS`.
-- `/auth/me` does not return `is_super_admin`; F1 implements the admin users lookup described in the contract.
+
+## Known backend gaps
+
+- backend: expose `is_super_admin` in the user object. `GET /auth/me` (`UserOut`) does not return it, so
+  F1 keeps `isSuperAdmin` false and the super admin's "Invites" item stays hidden. The contract's
+  workaround (`GET /admin/users?role=admin&q=<own email>`) was not built in F1; decide in F4 whether to
+  use it if the backend is not changed.
 
 ## Troubleshooting
 

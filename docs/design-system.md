@@ -91,9 +91,14 @@ From `src/styles/tokens.test.js`, which reads `tokens.css` (print with
 ## Components
 
 - `components/ui/`: shadcn/ui (button, input, label, card, badge, skeleton, alert, dialog, tabs, select,
-  table, sonner toaster, separator, sheet). Written by hand in JavaScript from the shadcn "new-york" sources,
+  table, sonner toaster, separator, sheet, dropdown menu). Written by hand in JavaScript from the shadcn "new-york" sources,
   re-pointed at the tokens; `components.json` is configured for JavaScript (`tsx: false`).
-- `components/layout/`: `AppShell`, `navConfig`, `PublicLayout`, `AuthPlaceholder`, `RoleSection`.
+- `components/layout/`: `AppShell`, `AccountMenu`, `navConfig`, `PublicLayout`, `RoleSection`.
+- `components/auth/` (F1): `AuthLayout` (mint canvas, white card, wordmark, prototype note), `FormField`,
+  `PasswordField` (show or hide toggle with `aria-pressed`), `CodeInput`, `FormErrorSummary`
+  (`role="alert"`, links to fields), `CountdownButton` and `SubmitButton`, `PasswordRequirements`
+  (icon plus "Done" or "Not yet"), `SignedInNotice`, `ResendCode`, `OfflineFormNotice`, `SuccessMessage`
+  (icon plus a word, `positive-text`), `InfoMessage`. Field errors use `negative-text` with an icon.
 - `components/feedback/`: `ErrorBoundary`, `ErrorState`, `EmptyState`, `LoadingState`, `OfflineBanner`,
   `ApiStatus`, `PwaUpdatePrompt`.
 - `components/display/`: `PageHeader`, `StatCard`, `DeltaTag`, `StatusBadge`, `Money`, `ComingSoon`.
