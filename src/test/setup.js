@@ -2,6 +2,7 @@ import '@testing-library/jest-dom/vitest';
 import { afterAll, afterEach, beforeAll } from 'vitest';
 import { cleanup } from '@testing-library/react';
 import { server } from './msw/server';
+import { markReachable } from '@/lib/connectivity';
 
 // jsdom gaps used by Radix UI and layout code.
 if (!window.matchMedia) {
@@ -30,5 +31,6 @@ afterEach(() => {
   cleanup();
   server.resetHandlers();
   window.sessionStorage.clear();
+  markReachable();
 });
 afterAll(() => server.close());
