@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Link, NavLink, useNavigate } from 'react-router';
-import { LogOut, Menu, Sprout } from 'lucide-react';
+import { Link, NavLink } from 'react-router';
+import { Menu, Sprout } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Sheet,
@@ -10,12 +10,11 @@ import {
   SheetTitle,
   SheetTrigger,
 } from '@/components/ui/sheet';
-import { clear, useSession } from '@/auth/session';
+import { useSession } from '@/auth/session';
 import { ROLE_HOME } from '@/auth/roles';
 import { cn } from '@/lib/utils';
+import { AccountMenu } from './AccountMenu';
 import { BOTTOM_NAV_ROLES, getNavItems } from './navConfig';
-
-const ROLE_LABEL = { farmer: 'Farmer', buyer: 'Buyer', admin: 'Administrator' };
 const BOTTOM_COLS = {
   1: 'grid-cols-1',
   2: 'grid-cols-2',
@@ -83,13 +82,12 @@ function BottomNav({ items }) {
 }
 
 /**
- * The signed in layout: skip link, top bar (name and logout), sidebar on large screens,
+ * The signed in layout: skip link, top bar (account menu), sidebar on large screens,
  * bottom bar on small screens for farmer and buyer, and a drawer on small screens for admin.
  * @param {{ children?: import('react').ReactNode }} props
  */
 export function AppShell({ children }) {
   const session = useSession();
-  const navigate = useNavigate();
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   if (!session) return null;
@@ -97,14 +95,6 @@ export function AppShell({ children }) {
   const items = getNavItems(role, { isSuperAdmin: session.isSuperAdmin });
   const hasBottomNav = BOTTOM_NAV_ROLES.has(role);
   const home = ROLE_HOME[/** @type {keyof typeof ROLE_HOME} */ (role)] ?? '/';
-  const displayName =
-    session.name ??
-    `${ROLE_LABEL[/** @type {keyof typeof ROLE_LABEL} */ (role)] ?? 'User'} account`;
-
-  function logout() {
-    clear('logout');
-    navigate('/login', { replace: true });
-  }
 
   return (
     <div className="min-h-dvh bg-canvas">
@@ -147,16 +137,7 @@ export function AppShell({ children }) {
           <span>AgriSence</span>
         </Link>
         <div className="ml-auto flex min-w-0 items-center gap-2">
-          <span
-            className="max-w-[9rem] truncate text-sm text-text-secondary sm:max-w-xs"
-            title={displayName}
-          >
-            {displayName}
-          </span>
-          <Button type="button" variant="outline" onClick={logout}>
-            <LogOut aria-hidden="true" />
-            <span className="sr-only sm:not-sr-only">Log out</span>
-          </Button>
+          <AccountMenu />
         </div>
       </header>
 

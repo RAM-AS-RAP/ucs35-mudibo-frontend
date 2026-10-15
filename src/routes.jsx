@@ -81,10 +81,11 @@ export const routes = [
           { path: '/login', element: <LoginScreen /> },
           { path: '/register', element: <RegisterScreen /> },
           { path: '/forgot-password', element: <ForgotPasswordScreen /> },
-          { path: '/reset-password', element: <ResetPasswordScreen /> },
-          { path: '/accept-invite', element: <AcceptInviteScreen /> },
         ],
       },
+      // Reachable with or without a session: they show SignedInNotice when signed in.
+      { path: '/reset-password', element: <ResetPasswordScreen /> },
+      { path: '/accept-invite', element: <AcceptInviteScreen /> },
       {
         path: '/change-password',
         element: (
