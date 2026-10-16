@@ -150,7 +150,7 @@ describe('ResetPasswordScreen', () => {
     await fillReset(user);
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent('That code is incorrect or has expired.');
-    expect(alert).toHaveFocus();
+    await waitFor(() => expect(alert).toHaveFocus());
 
     await user.click(within(alert).getByRole('button', { name: 'Send me a new code' }));
     expect(

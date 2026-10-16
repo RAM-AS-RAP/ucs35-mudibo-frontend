@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import { ApiError, getUserMessage } from '@/api/errors';
 import { serverFieldErrors } from '@/lib/formErrors';
 import { MESSAGES } from '@/lib/messages';
@@ -29,7 +29,9 @@ export function useServerProblem({ setError, fieldMap = {}, passwordField, idPre
   const countdown = useCountdown();
   const startCountdown = countdown.start;
 
-  useEffect(() => {
+  // A layout effect: focus moves right after the summary is committed, before paint, and does
+  // not wait for the scheduler (which fake timers can hold back in tests).
+  useLayoutEffect(() => {
     if (problem) summaryRef.current?.focus();
   }, [problem]);
 
