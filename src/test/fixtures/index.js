@@ -8,6 +8,15 @@ import adminMe from './adminMe.json';
 import registeredUser from './registeredUser.json';
 import passwordChanged from './passwordChanged.json';
 import codeRequested from './codeRequested.json';
+import markets from './markets.json';
+import currentPricesMaize from './currentPricesMaize.json';
+import currentPricesBeans from './currentPricesBeans.json';
+import trendNairobiMaize from './trendNairobiMaize.json';
+import trendKisumuMaize from './trendKisumuMaize.json';
+import trendNairobiBeans from './trendNairobiBeans.json';
+import trendKisumuBeans from './trendKisumuBeans.json';
+import forecastOneMonth from './forecastOneMonth.json';
+import forecastTwoMonth from './forecastTwoMonth.json';
 
 export const fixtures = {
   health,
@@ -18,6 +27,15 @@ export const fixtures = {
   registeredUser,
   passwordChanged,
   codeRequested,
+  markets,
+  currentPricesMaize,
+  currentPricesBeans,
+  trendNairobiMaize,
+  trendKisumuMaize,
+  trendNairobiBeans,
+  trendKisumuBeans,
+  forecastOneMonth,
+  forecastTwoMonth,
 };
 
 /** Fixture name to the OpenAPI response it must match. */
@@ -30,4 +48,15 @@ export const FIXTURE_CONTRACT = {
   registeredUser: { path: '/api/v1/auth/register/farmer', method: 'post', status: '201' },
   passwordChanged: { path: '/api/v1/auth/change-password', method: 'post', status: '200' },
   codeRequested: { path: '/api/v1/auth/password-reset/request', method: 'post', status: '202' },
+  markets: { path: '/api/v1/markets', method: 'get', status: '200' },
+  currentPricesMaize: { path: '/api/v1/prices/current', method: 'get', status: '200' },
+  currentPricesBeans: { path: '/api/v1/prices/current', method: 'get', status: '200' },
+  trendNairobiMaize: { path: '/api/v1/prices/trends', method: 'get', status: '200' },
+  trendKisumuMaize: { path: '/api/v1/prices/trends', method: 'get', status: '200' },
+  trendNairobiBeans: { path: '/api/v1/prices/trends', method: 'get', status: '200' },
+  trendKisumuBeans: { path: '/api/v1/prices/trends', method: 'get', status: '200' },
+  // The 200 schema of GET /forecasts is empty in openapi.json; shap_values is validated by the
+  // Zod schema in src/lib/shapSchema.js (src/lib/shapSchema.test.js).
+  forecastOneMonth: { path: '/api/v1/forecasts', method: 'get', status: '200' },
+  forecastTwoMonth: { path: '/api/v1/forecasts', method: 'get', status: '200' },
 };

@@ -3,6 +3,10 @@ import { afterAll, afterEach, beforeAll } from 'vitest';
 import { cleanup } from '@testing-library/react';
 import { server } from './msw/server';
 import { markReachable } from '@/lib/connectivity';
+import { RETRY_POLICY } from '@/api/queries/policy';
+
+// Keep the number of retries (tested in src/api/queries) but not the real back off delay.
+RETRY_POLICY.baseDelayMs = 1;
 
 // jsdom gaps used by Radix UI and layout code.
 if (!window.matchMedia) {

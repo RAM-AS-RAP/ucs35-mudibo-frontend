@@ -47,7 +47,95 @@ export function tokenFor({ role = 'farmer', mustChangePassword = false, token } 
   };
 }
 
+/** Markets with price data in the fixtures. Others answer 404 market_not_available. */
+const TRENDS = {
+  'Nairobi:maize': fixtures.trendNairobiMaize,
+  'Kisumu:maize': fixtures.trendKisumuMaize,
+  'Nairobi:beans': fixtures.trendNairobiBeans,
+  'Kisumu:beans': fixtures.trendKisumuBeans,
+};
+
+/** @param {string} iso */
+const monthNumber = (iso) => {
+  const [y, m] = iso.split('-').map(Number);
+  return y * 12 + m - 1;
+};
+
+/**
+ * The trend of a market and crop limited to the last `months` calendar months, as the backend
+ * returns it (missing months stay absent).
+ * @param {{ market: string, crop: string, months?: number }} params
+ */
+export function trendFor({ market, crop, months = 24 }) {
+  const full = TRENDS[/** @type {keyof typeof TRENDS} */ (`${market}:${crop}`)];
+  if (!full) return null;
+  const last = monthNumber(full.last_month);
+  const points = full.points.filter((p) => monthNumber(p.month) > last - months);
+  return {
+    ...full,
+    points,
+    first_month: points[0]?.month ?? null,
+    last_month: points[points.length - 1]?.month ?? null,
+    count: points.length,
+  };
+}
+
+/**
+ * The fixture forecast for a horizon, relabelled for another market or crop.
+ * @param {{ market?: string, crop?: string, horizon?: string }} [params]
+ */
+export function forecastFor({ market = 'Nairobi', crop = 'maize', horizon = 'one_month' } = {}) {
+  const base = horizon === 'two_month' ? fixtures.forecastTwoMonth : fixtures.forecastOneMonth;
+  return { ...structuredClone(base), market, crop };
+}
+
+/** @param {'no_forecast' | 'stale'} reason */
+export function forecastUnavailableResponse(reason) {
+  return errorResponse(404, 'forecast_unavailable', {
+    message: 'Forecast not available.',
+    extra: { reason },
+  });
+}
+
+export const marketNotAvailableResponse = () =>
+  errorResponse(404, 'market_not_available', { message: 'No price data for this market.' });
+
+const KNOWN_MARKETS = new Set(fixtures.markets.map((m) => m.name));
+
+export const priceHandlers = [
+  http.get(apiUrl('/api/v1/markets'), () => HttpResponse.json(fixtures.markets)),
+  http.get(apiUrl('/api/v1/prices/current'), ({ request }) => {
+    const crop = new URL(request.url).searchParams.get('crop');
+    if (crop === 'maize') return HttpResponse.json(fixtures.currentPricesMaize);
+    if (crop === 'beans') return HttpResponse.json(fixtures.currentPricesBeans);
+    return validationErrorResponse([{ field: 'crop', message: 'Invalid crop' }]);
+  }),
+  http.get(apiUrl('/api/v1/prices/trends'), ({ request }) => {
+    const query = new URL(request.url).searchParams;
+    const months = Number(query.get('months') ?? 24);
+    const trend = trendFor({
+      market: query.get('market') ?? '',
+      crop: query.get('crop') ?? '',
+      months,
+    });
+    return trend ? HttpResponse.json(trend) : marketNotAvailableResponse();
+  }),
+  http.get(apiUrl('/api/v1/forecasts'), ({ request }) => {
+    const query = new URL(request.url).searchParams;
+    const market = query.get('market') ?? '';
+    if (!KNOWN_MARKETS.has(market)) return marketNotAvailableResponse();
+    return HttpResponse.json(
+      forecastFor({
+        market,
+        crop: query.get('crop') ?? 'maize',
+        horizon: query.get('horizon') ?? 'one_month',
+      }),
+    );
+  }),
+];
+
 export const handlers = [
+  ...priceHandlers,
   http.get(apiUrl('/api/v1/health'), () => HttpResponse.json(fixtures.health)),
   http.get(apiUrl('/api/v1/health/db'), () => HttpResponse.json(fixtures.dbHealth)),
 

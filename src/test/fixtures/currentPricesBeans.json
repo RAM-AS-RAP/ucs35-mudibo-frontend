@@ -1,0 +1,27 @@
+{
+  "items": [
+    {
+      "market": "Nairobi",
+      "crop": "beans",
+      "month": "2026-08-01",
+      "avg_price_per_kg": 95.5,
+      "source": "fews_net",
+      "fetched_at": "2026-09-03T06:15:00Z",
+      "previous_month": "2026-07-01",
+      "previous_price": 98.0,
+      "change_pct": -2.55
+    },
+    {
+      "market": "Kisumu",
+      "crop": "beans",
+      "month": "2026-08-01",
+      "avg_price_per_kg": 101.2,
+      "source": "fews_net",
+      "fetched_at": "2026-09-03T06:15:00Z",
+      "previous_month": "2026-07-01",
+      "previous_price": 101.0,
+      "change_pct": 0.2
+    }
+  ],
+  "as_of_note": "Prices are monthly averages from FEWS NET. Latest month: August 2026."
+}
