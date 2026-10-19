@@ -89,6 +89,66 @@ describe('source checks', () => {
     expect(offenders(/console\.(log|info|debug|warn|error|table|dir)\b/, inAuthOrApi)).toEqual([]);
   });
 
+  it('has no rgb(), hsl() or oklch() colours outside the style sheets', () => {
+    const colourFn = /\b(rgba?|hsla?|oklch|oklab)\(/;
+    expect(offenders(colourFn, (path) => !path.endsWith('.css'))).toEqual([]);
+  });
+
+  it('draws chart series only with the chart tokens, through CSS variables', () => {
+    const canvas = sources.find(({ path }) => path.endsWith('display/TrendChartCanvas.jsx'));
+    expect(canvas?.text).toBeDefined();
+    for (const token of ['--chart-1', '--chart-2', '--chart-3', '--chart-4']) {
+      expect(canvas?.text).toContain(`var(${token})`);
+    }
+    const tokensCss = readFileSync('src/styles/tokens.css', 'utf8');
+    for (const token of ['--chart-1', '--chart-2', '--chart-3', '--chart-4']) {
+      expect(tokensCss).toMatch(new RegExp(`${token}:\\s*#[0-9a-f]{6};`, 'i'));
+    }
+  });
+
+  it('imports Recharts only in the chart canvas, which is loaded lazily', () => {
+    const isCanvas = (path) => path.endsWith('display/TrendChartCanvas.jsx');
+    expect(offenders(/from ['"]recharts['"]/, (path) => !isCanvas(path))).toEqual([]);
+    // Never a static import of the canvas: only import('./TrendChartCanvas').
+    expect(offenders(/^\s*import .*TrendChartCanvas/)).toEqual([]);
+    const chart = sources.find(({ path }) => path.endsWith('display/TrendChart.jsx'));
+    expect(chart?.text).toMatch(/lazy\(\(\) => import\('\.\/TrendChartCanvas'\)\)/);
+  });
+
+  describe('farmer price, trend and forecast files show no absolute dates', () => {
+    const relativeOnly = (path) =>
+      path.startsWith('src/screens/farmer/') ||
+      path.startsWith('src/components/display/') ||
+      ['src/lib/forecast.js', 'src/lib/relativeTime.js', 'src/lib/trends.js'].includes(path);
+
+    it('covers the expected files', () => {
+      for (const path of [
+        'src/screens/farmer/ForecastScreen.jsx',
+        'src/screens/farmer/PricesScreen.jsx',
+        'src/screens/farmer/DashboardScreen.jsx',
+        'src/components/display/PriceCard.jsx',
+        'src/lib/relativeTime.js',
+        'src/lib/forecast.js',
+      ]) {
+        expect(files).toContain(path);
+      }
+    });
+
+    it.each([
+      ['formatMonth or formatDateTime', /\bformat(Month|DateTime)\b/],
+      ['new Date(', /new Date\(/],
+      ['toLocaleDateString', /toLocaleDateString/],
+      ['toLocaleString', /toLocaleString/],
+      ['Intl.DateTimeFormat', /Intl\.DateTimeFormat/],
+      [
+        'month names',
+        /['"`](Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec|January|February|March|April|June|July|August|September|October|November|December)['"`]/,
+      ],
+    ])('never uses %s', (_name, pattern) => {
+      expect(offenders(pattern, relativeOnly)).toEqual([]);
+    });
+  });
+
   it('index.html loads no third party scripts, fonts or stylesheets', () => {
     const html = readFileSync('index.html', 'utf8');
     expect(html).not.toMatch(/<(script|link)[^>]+(src|href)="(https?:)?\/\//);
