@@ -96,7 +96,7 @@ describe('startup revalidation', () => {
     );
     setFromLogin(fixtures.tokenResponse);
     renderApp('/farmer');
-    expect(await screen.findByRole('heading', { name: 'Overview', level: 1 })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Dashboard', level: 1 })).toBeInTheDocument();
     expect(calls).toBe(0);
   });
 });
@@ -106,7 +106,7 @@ describe('expiry and logout', () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     setFromLogin({ ...fixtures.tokenResponse, expires_in: 5 });
     const { router } = renderApp('/farmer');
-    await screen.findByRole('heading', { name: 'Overview', level: 1 });
+    await screen.findByRole('heading', { name: 'Dashboard', level: 1 });
     await act(() => vi.advanceTimersByTimeAsync(5_000));
     await waitFor(() => expect(router.state.location.pathname).toBe('/login'));
     expect(

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import { http } from 'msw';
 import { server } from '@/test/msw/server';
 import { apiUrl, errorResponse } from '@/test/msw/handlers';
@@ -87,7 +87,9 @@ describe('guards and routes', () => {
     expect(
       await screen.findByRole('heading', { name: 'My listings', level: 1 }),
     ).toBeInTheDocument();
-    expect(screen.getByText('This screen is built in module F2 (farmer).')).toBeInTheDocument();
+    expect(
+      screen.getByText('This screen is built in module F2b (farmer listings).'),
+    ).toBeInTheDocument();
   });
 
   it('shows NotFound for an unknown route', async () => {
@@ -102,10 +104,51 @@ describe('guards and routes', () => {
     expect(screen.getByRole('button', { name: /account menu/i })).toBeInTheDocument();
   });
 
+  it.each(['/farmer', '/farmer/prices', '/farmer/forecast'])(
+    'a buyer cannot open %s (Forbidden, no price request)',
+    async (path) => {
+      loginAs('buyer');
+      const seen = [];
+      server.events.on('request:start', ({ request }) => seen.push(request.url));
+      renderApp(path);
+      expect(await screen.findByRole('heading', { name: 'No access' })).toBeInTheDocument();
+      expect(seen.filter((url) => /prices|markets|forecasts/.test(url))).toEqual([]);
+      server.events.removeAllListeners();
+    },
+  );
+
+  it.each(['/farmer/prices', '/farmer/forecast?market=Nairobi'])(
+    'sends an anonymous visitor of %s to /login',
+    async (path) => {
+      const { router } = renderApp(path);
+      await waitFor(() => expect(router.state.location.pathname).toBe('/login'));
+    },
+  );
+
+  it('names the farmer home "Dashboard" and keeps My listings and Orders as placeholders', async () => {
+    loginAs('farmer');
+    const { router } = renderApp('/farmer');
+    expect(await screen.findByRole('heading', { name: 'Dashboard', level: 1 })).toBeInTheDocument();
+    const nav = screen.getByRole('navigation', { name: 'Main navigation' });
+    expect(within(nav).getByRole('link', { name: 'Dashboard' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    for (const [path, title] of [
+      ['/farmer/listings', 'My listings'],
+      ['/farmer/orders', 'Orders'],
+      ['/farmer/listings/new?crop=maize&market=Nairobi', 'New listing'],
+    ]) {
+      await router.navigate(path);
+      expect(await screen.findByRole('heading', { name: title, level: 1 })).toBeInTheDocument();
+      expect(screen.getByText(/This screen is built in module F2b/)).toBeInTheDocument();
+    }
+  });
+
   it('a 401 from the API logs out and navigates to /login through the router', async () => {
     loginAs('farmer');
     const { router } = renderApp('/farmer');
-    await screen.findByRole('heading', { name: 'Overview', level: 1 });
+    await screen.findByRole('heading', { name: 'Dashboard', level: 1 });
     server.use(
       http.get(apiUrl('/api/v1/auth/me'), () => errorResponse(401, 'invalid_credentials')),
     );

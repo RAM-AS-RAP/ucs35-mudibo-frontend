@@ -18,7 +18,12 @@ import AcceptInviteScreen from '@/screens/auth/AcceptInviteScreen';
 import ChangePasswordScreen from '@/screens/auth/ChangePasswordScreen';
 import NotFoundScreen from '@/screens/shared/NotFoundScreen';
 
+// Farmer screens: each lazily loaded; the trend chart loads Recharts lazily on top of that.
 const FarmerHomeScreen = lazy(() => import('@/screens/farmer/FarmerHomeScreen'));
+const DashboardScreen = lazy(() => import('@/screens/farmer/DashboardScreen'));
+const PricesScreen = lazy(() => import('@/screens/farmer/PricesScreen'));
+const ForecastScreen = lazy(() => import('@/screens/farmer/ForecastScreen'));
+const NewListingScreen = lazy(() => import('@/screens/farmer/NewListingScreen'));
 const BuyerHomeScreen = lazy(() => import('@/screens/buyer/BuyerHomeScreen'));
 const AdminHomeScreen = lazy(() => import('@/screens/admin/AdminHomeScreen'));
 
@@ -97,7 +102,14 @@ export const routes = [
       {
         path: '/farmer',
         element: <RoleLayout role={ROLES.FARMER} />,
-        children: roleChildren(<FarmerHomeScreen />),
+        children: [
+          { index: true, element: <DashboardScreen /> },
+          { path: 'prices', element: <PricesScreen /> },
+          { path: 'forecast', element: <ForecastScreen /> },
+          // F2b replaces these placeholders (listings and orders).
+          { path: 'listings/new', element: <NewListingScreen /> },
+          { path: '*', element: <FarmerHomeScreen /> },
+        ],
       },
       {
         path: '/buyer',
