@@ -44,6 +44,46 @@ export function formatKES(value) {
   return `KES ${amountFormat.format(n)}`;
 }
 
+const wholeFormat = new Intl.NumberFormat(LOCALE, { maximumFractionDigits: 0 });
+
+const unsignedPctFormat = new Intl.NumberFormat(LOCALE, {
+  minimumFractionDigits: 1,
+  maximumFractionDigits: 1,
+});
+
+/**
+ * Format a whole shilling amount without decimals, for example `KES 7,380` (a rounded bag price).
+ * @param {number | string | null | undefined} value
+ */
+export function formatKESWhole(value) {
+  const n = toNumber(value);
+  if (n === null) return PLACEHOLDER;
+  return `KES ${wholeFormat.format(n)}`;
+}
+
+/**
+ * Format a KES amount with an explicit sign before the currency: `+KES 1.42`, `-KES 0.48`,
+ * `KES 0.00`. Used for approximate effects, never for a charged amount.
+ * @param {number | string | null | undefined} value
+ */
+export function formatSignedKES(value) {
+  const n = toNumber(value);
+  if (n === null) return PLACEHOLDER;
+  const text = amountFormat.format(Math.abs(n));
+  if (text === amountFormat.format(0)) return `KES ${text}`;
+  return `${n > 0 ? '+' : '-'}KES ${text}`;
+}
+
+/**
+ * Format a percentage without a sign, for example `6.2%` (inside "rise by about 6.2%").
+ * @param {number | string | null | undefined} value
+ */
+export function formatPctUnsigned(value) {
+  const n = toNumber(value);
+  if (n === null) return PLACEHOLDER;
+  return `${unsignedPctFormat.format(n)}%`;
+}
+
 /**
  * Format a percentage value (4.5 means 4.5%) with an explicit sign: `+4.5%`, `-2.0%`, `0.0%`.
  * @param {number | string | null | undefined} value

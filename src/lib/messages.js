@@ -190,3 +190,103 @@ export const MESSAGES = Object.freeze({
     checkingSession: 'Checking your session…',
   },
 });
+
+/*
+ * Farmer price, trend and forecast screens (F2a). These screens never show a calendar month,
+ * a year, a date or an "updated" time: time is relative to the latest published price.
+ * Wording rules (docs/forecast-display.md): describe how the model reached a forecast, never a
+ * cause of real price movements; "the model expects", never "will"; no guarantees; plain English.
+ */
+
+/** Heading of a price card (one place to change). */
+export const LABEL_LATEST_PRICE = 'Latest price';
+export const FRESHNESS_PRICES = 'Prices are monthly figures from FEWS NET.';
+export const FRESHNESS_FORECAST = 'Forecasts look ahead from the latest published prices.';
+export const AXIS_TITLE = 'Months before the latest price';
+
+/** @type {Readonly<Record<string, string>>} */
+const CROP_LABELS = Object.freeze({ maize: 'Maize', beans: 'Beans' });
+
+/**
+ * "Maize" or "Beans" for a crop value from the API.
+ * @param {string} crop
+ */
+export function cropLabel(crop) {
+  return CROP_LABELS[crop] ?? crop.charAt(0).toUpperCase() + crop.slice(1);
+}
+
+export const PRICE_TEXT = Object.freeze({
+  empty: 'Prices are not available yet. Please check again soon.',
+  emptyTitle: 'No prices yet',
+  noChange: 'No change data',
+  /** @param {string} period  for example "1 month ago" */
+  vs: (period) => `vs ${period}`,
+  perKg: 'per kg',
+  trendTitle: 'Price trend',
+  rangeLegend: 'Time range',
+  marketsLegend: 'Markets',
+  marketsHint: 'At least one market stays selected.',
+  seeNumbers: 'See the numbers',
+  fewPoints: 'There are not enough prices yet to draw a chart. The numbers are in the table.',
+  noPrice: 'No price',
+  periodColumn: 'Period',
+  loadingPrices: 'Loading prices…',
+  loadingTrend: 'Loading the price trend…',
+  loadingChart: 'Loading the chart…',
+  errorTitle: 'Prices could not be loaded',
+  trendErrorTitle: 'The price trend could not be loaded',
+});
+
+export const FORECAST_TEXT = Object.freeze({
+  uncertainty:
+    'Forecasts are estimates and can be wrong. Weather, supply, policy and local conditions can change prices in ways the model cannot see.',
+  explanationUnavailable: 'The explanation for this forecast is not available right now.',
+  forecastUnusable: 'This forecast cannot be shown right now. Please check again soon.',
+  whyTitle: 'Why the model expects this',
+  typicalDescription:
+    'The change the model starts from for this market and crop, before looking at the recent prices.',
+  barsNote:
+    'The bars show how the model reached this forecast. They are approximate shares and do not add up exactly. They do not prove why prices move.',
+  howToRead: 'How to read this',
+  howToReadText: [
+    'The typical change is where the model starts for this market and crop.',
+    'A Boost pushed the model’s forecast up and a Drag pulled it down.',
+    'Longer bars had a bigger effect on the forecast, but the shares are approximate.',
+  ],
+  seeNumbers: 'See the numbers',
+  totalLabel: 'Expected change',
+  /** @param {string} market @param {string} crop */
+  noForecast: (market, crop) =>
+    `A forecast is not available yet for ${market} ${crop}. We forecast only from the latest published prices. Please check again soon.`,
+  /** @param {string} market @param {string} crop */
+  stale: (market, crop) =>
+    `The latest forecast for ${market} ${crop} is out of date because new prices have not been published yet. Please check again soon.`,
+  notAvailableShort: 'Not available yet',
+  planListing: 'Plan a listing',
+  planListingHint: 'You choose the price you ask for.',
+  limitations:
+    'These forecasts use monthly prices published by FEWS NET. A model trained on past prices can be wrong, especially after sudden events.',
+  /** @param {string} amount  "KES 40.00" @param {string} when  "in 1 month" */
+  caption: (amount, when) =>
+    `Expected ${when}, starting from the latest price of ${amount} per kg.`,
+  loading: 'Loading the forecast…',
+  errorTitle: 'The forecast could not be loaded',
+});
+
+/** Plain descriptions of the explanation groups, by the label the ML pipeline sends. */
+const GROUP_DESCRIPTIONS = Object.freeze({
+  'Time of year': 'The pattern the model learned for this point in the year from past prices.',
+  'Recent price momentum': 'How the price moved over the last few months.',
+  'Price compared with its recent average':
+    'Whether the latest price is above or below its average over recent months.',
+});
+
+/**
+ * The description of an explanation group; unknown labels get a general one.
+ * @param {string} label
+ */
+export function groupDescription(label) {
+  return Object.prototype.hasOwnProperty.call(GROUP_DESCRIPTIONS, label)
+    ? GROUP_DESCRIPTIONS[/** @type {keyof typeof GROUP_DESCRIPTIONS} */ (label)]
+    : 'Another pattern the model found in past prices.';
+}
