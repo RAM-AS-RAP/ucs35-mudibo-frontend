@@ -40,6 +40,14 @@
   --negative-soft: #fca5a5;
   --negative-text: #b91c1c;
 
+  /* Chart series (lines). Series also differ by line style and direct end labels, never colour alone.
+     chart-1: primary green, solid. chart-2: amber, dashed. chart-3 and chart-4: reserved for a
+     third and fourth market (dotted, dash dot). Each is at least 3:1 against card. */
+  --chart-1: #1b5e3b;
+  --chart-2: #b45309;
+  --chart-3: #6d28d9;
+  --chart-4: #0e7490;
+
   /* Focus */
   --focus-ring: #1b5e3b;
 
