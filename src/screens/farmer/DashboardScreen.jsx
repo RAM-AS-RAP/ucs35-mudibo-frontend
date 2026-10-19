@@ -5,7 +5,6 @@ import { useSession } from '@/auth/session';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
 import { DeltaTag } from '@/components/display/DeltaTag';
 import { FreshnessNote } from '@/components/display/FreshnessNote';
 import { PageHeader } from '@/components/display/PageHeader';
@@ -99,7 +98,8 @@ function ForecastSnapshotCard({ market, crop }) {
   const name = cropLabel(crop);
   let body;
   if (query.isPending) {
-    body = <Skeleton className="h-16 w-full" />;
+    // A labelled status (not a bare skeleton), so screen readers hear the forecast is loading.
+    body = <LoadingState label={FORECAST_TEXT.loading} rows={1} />;
   } else if (query.isError) {
     body = (
       <ErrorState
