@@ -1,0 +1,309 @@
+{
+  "market": "Kisumu",
+  "crop": "beans",
+  "points": [
+    {
+      "month": "2021-09-01",
+      "avg_price_per_kg": 88.97,
+      "source": "fews_net"
+    },
+    {
+      "month": "2021-10-01",
+      "avg_price_per_kg": 88.73,
+      "source": "fews_net"
+    },
+    {
+      "month": "2021-11-01",
+      "avg_price_per_kg": 90.58,
+      "source": "fews_net"
+    },
+    {
+      "month": "2021-12-01",
+      "avg_price_per_kg": 94.03,
+      "source": "fews_net"
+    },
+    {
+      "month": "2022-01-01",
+      "avg_price_per_kg": 98.3,
+      "source": "fews_net"
+    },
+    {
+      "month": "2022-02-01",
+      "avg_price_per_kg": 102.46,
+      "source": "fews_net"
+    },
+    {
+      "month": "2022-03-01",
+      "avg_price_per_kg": 105.64,
+      "source": "fews_net"
+    },
+    {
+      "month": "2022-04-01",
+      "avg_price_per_kg": 107.15,
+      "source": "fews_net"
+    },
+    {
+      "month": "2022-05-01",
+      "avg_price_per_kg": 106.64,
+      "source": "fews_net"
+    },
+    {
+      "month": "2022-06-01",
+      "avg_price_per_kg": 104.18,
+      "source": "fews_net"
+    },
+    {
+      "month": "2022-07-01",
+      "avg_price_per_kg": 100.21,
+      "source": "fews_net"
+    },
+    {
+      "month": "2022-08-01",
+      "avg_price_per_kg": 95.49,
+      "source": "fews_net"
+    },
+    {
+      "month": "2022-09-01",
+      "avg_price_per_kg": 90.94,
+      "source": "fews_net"
+    },
+    {
+      "month": "2022-10-01",
+      "avg_price_per_kg": 87.5,
+      "source": "fews_net"
+    },
+    {
+      "month": "2022-11-01",
+      "avg_price_per_kg": 85.89,
+      "source": "fews_net"
+    },
+    {
+      "month": "2022-12-01",
+      "avg_price_per_kg": 86.54,
+      "source": "fews_net"
+    },
+    {
+      "month": "2023-01-01",
+      "avg_price_per_kg": 89.45,
+      "source": "fews_net"
+    },
+    {
+      "month": "2023-02-01",
+      "avg_price_per_kg": 94.24,
+      "source": "fews_net"
+    },
+    {
+      "month": "2023-03-01",
+      "avg_price_per_kg": 100.14,
+      "source": "fews_net"
+    },
+    {
+      "month": "2023-04-01",
+      "avg_price_per_kg": 106.21,
+      "source": "fews_net"
+    },
+    {
+      "month": "2023-05-01",
+      "avg_price_per_kg": 111.46,
+      "source": "fews_net"
+    },
+    {
+      "month": "2023-06-01",
+      "avg_price_per_kg": 115.02,
+      "source": "fews_net"
+    },
+    {
+      "month": "2023-07-01",
+      "avg_price_per_kg": 116.35,
+      "source": "fews_net"
+    },
+    {
+      "month": "2023-08-01",
+      "avg_price_per_kg": 115.28,
+      "source": "fews_net"
+    },
+    {
+      "month": "2023-09-01",
+      "avg_price_per_kg": 112.06,
+      "source": "fews_net"
+    },
+    {
+      "month": "2023-10-01",
+      "avg_price_per_kg": 107.33,
+      "source": "fews_net"
+    },
+    {
+      "month": "2023-11-01",
+      "avg_price_per_kg": 101.96,
+      "source": "fews_net"
+    },
+    {
+      "month": "2023-12-01",
+      "avg_price_per_kg": 96.92,
+      "source": "fews_net"
+    },
+    {
+      "month": "2024-01-01",
+      "avg_price_per_kg": 93.1,
+      "source": "fews_net"
+    },
+    {
+      "month": "2024-02-01",
+      "avg_price_per_kg": 91.12,
+      "source": "fews_net"
+    },
+    {
+      "month": "2024-03-01",
+      "avg_price_per_kg": 91.25,
+      "source": "fews_net"
+    },
+    {
+      "month": "2024-04-01",
+      "avg_price_per_kg": 93.34,
+      "source": "fews_net"
+    },
+    {
+      "month": "2024-05-01",
+      "avg_price_per_kg": 96.87,
+      "source": "fews_net"
+    },
+    {
+      "month": "2024-06-01",
+      "avg_price_per_kg": 101.03,
+      "source": "fews_net"
+    },
+    {
+      "month": "2024-07-01",
+      "avg_price_per_kg": 104.91,
+      "source": "fews_net"
+    },
+    {
+      "month": "2024-08-01",
+      "avg_price_per_kg": 107.64,
+      "source": "fews_net"
+    },
+    {
+      "month": "2024-09-01",
+      "avg_price_per_kg": 108.58,
+      "source": "fews_net"
+    },
+    {
+      "month": "2024-10-01",
+      "avg_price_per_kg": 107.44,
+      "source": "fews_net"
+    },
+    {
+      "month": "2024-11-01",
+      "avg_price_per_kg": 104.33,
+      "source": "fews_net"
+    },
+    {
+      "month": "2024-12-01",
+      "avg_price_per_kg": 99.75,
+      "source": "fews_net"
+    },
+    {
+      "month": "2025-01-01",
+      "avg_price_per_kg": 94.51,
+      "source": "fews_net"
+    },
+    {
+      "month": "2025-02-01",
+      "avg_price_per_kg": 89.56,
+      "source": "fews_net"
+    },
+    {
+      "month": "2025-03-01",
+      "avg_price_per_kg": 85.83,
+      "source": "fews_net"
+    },
+    {
+      "month": "2025-04-01",
+      "avg_price_per_kg": 84.06,
+      "source": "fews_net"
+    },
+    {
+      "month": "2025-05-01",
+      "avg_price_per_kg": 84.63,
+      "source": "fews_net"
+    },
+    {
+      "month": "2025-06-01",
+      "avg_price_per_kg": 87.52,
+      "source": "fews_net"
+    },
+    {
+      "month": "2025-07-01",
+      "avg_price_per_kg": 92.32,
+      "source": "fews_net"
+    },
+    {
+      "month": "2025-08-01",
+      "avg_price_per_kg": 98.25,
+      "source": "fews_net"
+    },
+    {
+      "month": "2025-09-01",
+      "avg_price_per_kg": 104.36,
+      "source": "fews_net"
+    },
+    {
+      "month": "2025-10-01",
+      "avg_price_per_kg": 109.64,
+      "source": "fews_net"
+    },
+    {
+      "month": "2025-11-01",
+      "avg_price_per_kg": 113.26,
+      "source": "fews_net"
+    },
+    {
+      "month": "2025-12-01",
+      "avg_price_per_kg": 114.69,
+      "source": "fews_net"
+    },
+    {
+      "month": "2026-01-01",
+      "avg_price_per_kg": 113.79,
+      "source": "fews_net"
+    },
+    {
+      "month": "2026-02-01",
+      "avg_price_per_kg": 110.84,
+      "source": "fews_net"
+    },
+    {
+      "month": "2026-03-01",
+      "avg_price_per_kg": 106.48,
+      "source": "fews_net"
+    },
+    {
+      "month": "2026-04-01",
+      "avg_price_per_kg": 101.6,
+      "source": "fews_net"
+    },
+    {
+      "month": "2026-05-01",
+      "avg_price_per_kg": 97.14,
+      "source": "fews_net"
+    },
+    {
+      "month": "2026-06-01",
+      "avg_price_per_kg": 93.94,
+      "source": "fews_net"
+    },
+    {
+      "month": "2026-07-01",
+      "avg_price_per_kg": 101,
+      "source": "fews_net"
+    },
+    {
+      "month": "2026-08-01",
+      "avg_price_per_kg": 101.2,
+      "source": "fews_net"
+    }
+  ],
+  "first_month": "2021-09-01",
+  "last_month": "2026-08-01",
+  "count": 60
+}

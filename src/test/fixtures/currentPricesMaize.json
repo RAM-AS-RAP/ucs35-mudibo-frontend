@@ -1,0 +1,27 @@
+{
+  "items": [
+    {
+      "market": "Nairobi",
+      "crop": "maize",
+      "month": "2026-08-01",
+      "avg_price_per_kg": 40.0,
+      "source": "fews_net",
+      "fetched_at": "2026-09-03T06:15:00Z",
+      "previous_month": "2026-07-01",
+      "previous_price": 38.28,
+      "change_pct": 4.49
+    },
+    {
+      "market": "Kisumu",
+      "crop": "maize",
+      "month": "2026-07-01",
+      "avg_price_per_kg": 37.5,
+      "source": "fews_net",
+      "fetched_at": "2026-09-03T06:15:00Z",
+      "previous_month": null,
+      "previous_price": null,
+      "change_pct": null
+    }
+  ],
+  "as_of_note": "Prices are monthly averages from FEWS NET. Latest month: August 2026."
+}

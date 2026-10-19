@@ -12,6 +12,8 @@ const PAIRS = [
   ['text', 'canvas', 4.5],
   ['text', 'neutral-bg', 4.5],
   ['text', 'positive-soft', 4.5],
+  // The "fall" recommendation box.
+  ['text', 'negative-soft', 4.5],
   ['text-secondary', 'card', 4.5],
   ['text-secondary', 'canvas', 4.5],
   ['text-secondary', 'neutral-bg', 4.5],
@@ -31,6 +33,11 @@ const PAIRS = [
   ['negative', 'canvas', 3],
   ['focus-ring', 'card', 3],
   ['focus-ring', 'canvas', 3],
+  // Chart lines and their end labels on the white chart card.
+  ['chart-1', 'card', 3],
+  ['chart-2', 'card', 3],
+  ['chart-3', 'card', 3],
+  ['chart-4', 'card', 3],
 ];
 
 describe('design token contrast (WCAG)', () => {
@@ -54,10 +61,16 @@ describe('design token contrast (WCAG)', () => {
       'negative-soft',
       'negative-text',
       'focus-ring',
+      'chart-1',
+      'chart-2',
+      'chart-3',
+      'chart-4',
     ]) {
       expect(tokens[name], name).toMatch(/^#[0-9A-F]{6}$/);
     }
     expect(tokens.sidebar).toBe(tokens.canvas);
+    expect(tokens['chart-1']).toBe('#1B5E3B');
+    expect(tokens['chart-2']).toBe('#B45309');
   });
 
   it('meets the minimum contrast ratios', () => {

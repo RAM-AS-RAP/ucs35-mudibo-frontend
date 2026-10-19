@@ -22,11 +22,11 @@ import {
  * @property {boolean} [superAdminOnly]
  */
 
-/** Placeholder navigation per role. Screens arrive in F2 (farmer), F3 (buyer) and F4 (admin). */
+/** Navigation per role. Farmer listings and orders arrive in F2b, buyer in F3, admin in F4. */
 /** @type {Record<string, NavItem[]>} */
 export const NAV_ITEMS = {
   farmer: [
-    { label: 'Overview', to: '/farmer', icon: LayoutDashboard, end: true },
+    { label: 'Dashboard', to: '/farmer', icon: LayoutDashboard, end: true },
     { label: 'Prices', to: '/farmer/prices', icon: LineChart },
     { label: 'Forecast', to: '/farmer/forecast', icon: TrendingUp },
     { label: 'My listings', to: '/farmer/listings', icon: Package },

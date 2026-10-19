@@ -15,7 +15,6 @@ afterEach(() => {
 
 describe('role home placeholders and shared screens', () => {
   it.each([
-    ['farmer', 'F2 (farmer)'],
     ['buyer', 'F3 (buyer)'],
     ['admin', 'F4 (admin)'],
   ])('%s home renders ComingSoon inside the shell without axe violations', async (role, module) => {
@@ -28,6 +27,16 @@ describe('role home placeholders and shared screens', () => {
     expect(screen.getByText('Welcome')).toBeInTheDocument();
     await expectNoAxeViolations(container, { page: true });
   });
+
+  it.each(['/farmer/listings', '/farmer/orders', '/farmer/listings/new'])(
+    'the farmer placeholder %s renders ComingSoon without axe violations',
+    async (path) => {
+      loginAs('farmer');
+      const { container } = renderApp(path);
+      expect(await screen.findByText(/This screen is built in module F2b/)).toBeInTheDocument();
+      await expectNoAxeViolations(container, { page: true });
+    },
+  );
 
   it('Forbidden and NotFound have no axe violations', async () => {
     loginAs('farmer');

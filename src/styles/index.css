@@ -41,6 +41,11 @@
   --color-negative-soft: var(--negative-soft);
   --color-negative-text: var(--negative-text);
 
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+
   --color-focus-ring: var(--focus-ring);
   --color-ring: var(--ring);
 

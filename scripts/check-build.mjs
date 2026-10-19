@@ -4,7 +4,8 @@
 // - the service worker has no runtime caching route and does not contain the API address;
 // - the development role switcher is not in the build;
 // - no source maps or .env content are emitted;
-// - the initial JavaScript stays within the performance budget.
+// - the initial JavaScript stays within the performance budget;
+// - no lazy chunk is over its own budget, and Recharts is only in a lazy chunk.
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 import { gzipSync } from 'node:zlib';
@@ -14,6 +15,11 @@ import { readTokens } from './tokens.mjs';
 // Performance budget: initial JavaScript (entry plus modulepreloaded chunks), gzipped.
 // Smallholder farmers often use low end phones on slow mobile data; raise this only on purpose.
 const INITIAL_JS_BUDGET_KB = 250;
+// Second budget: no single lazily loaded chunk (a screen, the chart) above this, gzipped.
+const LAZY_CHUNK_BUDGET_KB = 250;
+// A string only Recharts' code contains (its wrapper class name). It must never be in the
+// initial JavaScript: the trend chart loads Recharts lazily.
+const RECHARTS_MARKER = 'recharts-wrapper';
 
 const DIST = 'dist';
 const DEV_SWITCHER_MARKER = 'agrisence-dev-role-switcher';
@@ -133,9 +139,10 @@ for (const envFile of envFiles) {
 const gz = (file) => gzipSync(readFileSync(join(DIST, file))).length;
 const kb = (bytes) => (bytes / 1024).toFixed(1);
 const jsFiles = files.filter((f) => f.startsWith('assets/') && f.endsWith('.js'));
-const largest = jsFiles
+const chunks = jsFiles
   .map((file) => ({ file, raw: statSync(join(DIST, file)).size, gzip: gz(file) }))
-  .sort((a, b) => b.gzip - a.gzip)[0];
+  .sort((a, b) => b.gzip - a.gzip);
+const largest = chunks[0];
 
 const html = read('index.html');
 const initial = new Set();
@@ -144,6 +151,13 @@ for (const m of html.matchAll(/<link[^>]+rel="modulepreload"[^>]+href="\/?([^"]+
   initial.add(m[1]);
 const initialGzip = [...initial].reduce((sum, file) => sum + gz(file), 0);
 
+console.log('  JS chunks (gzip):');
+for (const chunk of chunks) {
+  const kind = initial.has(chunk.file) ? 'initial' : 'lazy';
+  console.log(
+    `    ${kb(chunk.gzip).padStart(7)} kB  ${kind.padEnd(7)}  ${chunk.file} (${kb(chunk.raw)} kB raw)`,
+  );
+}
 if (largest)
   console.log(
     `  largest JS chunk: ${largest.file} ${kb(largest.raw)} kB (${kb(largest.gzip)} kB gzip)`,
@@ -157,6 +171,27 @@ if (initialGzip > INITIAL_JS_BUDGET_KB * 1024) {
     `Initial JavaScript is ${kb(initialGzip)} kB gzip, over the ${INITIAL_JS_BUDGET_KB} kB budget.`,
   );
 }
+
+// 6. Lazy chunks: each within its own budget; Recharts only in a lazy chunk.
+const lazyChunks = chunks.filter((chunk) => !initial.has(chunk.file));
+const largestLazy = lazyChunks[0];
+if (largestLazy)
+  console.log(
+    `  largest lazy chunk: ${largestLazy.file} ${kb(largestLazy.gzip)} kB gzip (budget ${LAZY_CHUNK_BUDGET_KB} kB)`,
+  );
+for (const chunk of lazyChunks) {
+  if (chunk.gzip > LAZY_CHUNK_BUDGET_KB * 1024)
+    fail(
+      `Lazy chunk ${chunk.file} is ${kb(chunk.gzip)} kB gzip, over the ${LAZY_CHUNK_BUDGET_KB} kB budget.`,
+    );
+}
+const rechartsChunks = chunks.filter((chunk) => read(chunk.file).includes(RECHARTS_MARKER));
+for (const chunk of rechartsChunks) {
+  if (initial.has(chunk.file))
+    fail(`Recharts is in the initial JavaScript (${chunk.file}); load it lazily.`);
+}
+if (rechartsChunks.length > 0)
+  console.log(`  Recharts: lazy chunk(s) ${rechartsChunks.map((c) => c.file).join(', ')}`);
 
 if (failures.length) {
   console.error('check:build FAILED');

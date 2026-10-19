@@ -14,7 +14,8 @@ Roles: `farmer` (prices, forecasts, listings, orders on their listings), `buyer`
 | ------ | -------------------------------------------------------------------------------------------------------- | ----------- |
 | F0     | Foundation: scaffold, tooling, API layer, session, guards, shells, design system, PWA shell, tests, docs | Done        |
 | F1     | Authentication: login, register, password change and reset, accept invite, session handling              | Done        |
-| F2     | Farmer: prices, forecast with SHAP bars, listings, orders on my listings                                 | Not started |
+| F2a    | Farmer decision support: dashboard, prices, price trends, forecast with SHAP bars (relative time only)   | Done        |
+| F2b    | Farmer: listings (image upload, create, edit, delete), orders on my listings                             | Not started |
 | F3     | Buyer: browse, listing detail, checkout, M-Pesa payment polling, my orders                               | Not started |
 | F4     | Admin: dashboard, users, invites, moderation, orders, payments, reconciliation, accuracy                 | Not started |
 | F5     | Polish: end to end tests (Playwright), performance, accessibility review                                 | Not started |
@@ -44,6 +45,7 @@ Node 24 LTS (`.nvmrc`), npm. JavaScript only (`.js`, `.jsx`), no TypeScript sour
 | eslint-plugin-jsx-a11y    | 6.10.2  | prettier                                          | 3.9.10                        |
 | globals                   | 17.13.0 | react-hook-form                                   | 7.90.0                        |
 | zod                       | 4.6.7   | @hookform/resolvers                               | 5.9.1                         |
+| recharts                  | 3.10.1  |                                                   |                               |
 
 Version and dependency decisions:
 
@@ -62,6 +64,14 @@ Version and dependency decisions:
   between them for the auth forms (named in the F1 task). Together with the auth screens and the
   dropdown menu they raised the initial JavaScript from 149.9 kB to 212.6 kB gzip (budget 250 kB).
 - **Dropdown menu** (F1, account menu): `src/components/ui/dropdown-menu.jsx`, from `radix-ui` (no new package).
+- **recharts** (F2a, named in the F2a task): the price trend chart only. It is imported only by
+  `src/components/display/TrendChartCanvas.jsx`, which `TrendChart` loads with `React.lazy`, so it is a
+  separate lazy chunk (99.5 kB gzip) and never in the initial JavaScript (216.1 kB gzip after F2a).
+  Its peer `react-is` was not installed separately (the task allows only the named packages): npm
+  satisfies the peer range with the `react-is@17.0.2` already in the tree. That version does not
+  recognise React 19 elements for `isFragment`, so never pass a Fragment as a child of a Recharts
+  component. Add `react-is` matching React (19.x) if that becomes a problem.
+- The explanation bars are not drawn with Recharts (see `docs/forecast-display.md`).
 
 ```bash
 npm ci                    # install exactly from package-lock.json
@@ -86,16 +96,18 @@ src/
   api/          client.js, errors.js, endpoints/<area>.js, schema.d.ts (generated, do not edit)
   auth/         session.js, guards.jsx, roles.js, paths.js, auth.js (signIn, signOut, sign in hold),
                 useAuth.js, redirects.js, revalidate.js
+  api/queries/  TanStack Query hooks (useMarkets, useCurrentPrices, usePriceTrends, useForecast), keys.js, policy.js
   components/auth/  AuthLayout, FormField, PasswordField, CodeInput, FormErrorSummary, CountdownButton,
                 PasswordRequirements, SignedInNotice, ResendCode, FormNotices, useServerProblem
   lib/          env.js, format.js, queryClient.js, utils.js, validation.js, messages.js, formErrors.js,
-                connectivity.js, useCountdown.js, usePageTitle.js
+                connectivity.js, useCountdown.js, usePageTitle.js, useReducedMotion.js,
+                relativeTime.js, forecast.js, shapSchema.js, trends.js (F2a)
   styles/       tokens.css (all colours), index.css
   dev/          DevRoleSwitcher.jsx (development only)
   test/         setup.js, msw/, fixtures/, helpers (render, axe, openapi, contrast)
   App.jsx, main.jsx, routes.jsx (the single route table)
 scripts/        check-contract.mjs, check-build.mjs, tokens.mjs
-docs/           backend/, architecture.md, auth.md, design-system.md, security-headers.md
+docs/           backend/, architecture.md, auth.md, design-system.md, forecast-display.md, security-headers.md
 ```
 
 - Import with the `@/` alias (`@/api/endpoints`). Tests sit next to the code as `*.test.js(x)`.
@@ -116,12 +128,38 @@ docs/           backend/, architecture.md, auth.md, design-system.md, security-h
   New backend codes go into `ERROR_MESSAGES` in `src/api/errors.js`.
 - Contract workflow: copy `openapi.json` and `frontend_contract.md` into `docs/backend/` (see
   `docs/backend/README.md`), run `npm run gen:types`, then `npm run check:contract` and `npm test`.
-- **isSuperAdmin is not available from the backend:** `/auth/me` (`UserOut`) returns no `is_super_admin`.
-  F1 keeps `isSuperAdmin` false (it is read from the profile only if the backend adds the field) and lists
-  the gap in the README. Do not guess it. The contract's workaround (`GET /admin/users?role=admin&q=<email>`,
-  then `setSuperAdmin()`) is the option for F4 if the backend is not changed.
+- **isSuperAdmin:** `isSuperAdmin` stays false until the backend exposes `is_super_admin` in the user
+  object. Do not infer it from any other endpoint. (`/auth/me` (`UserOut`) does not return it today; the
+  README lists the gap under "Known backend gaps".)
 - The backend is the single authority for roles, prices, totals, stock and order state. Show `can_pay` /
   `can_cancel` and server totals as returned; never recompute them.
+
+## 4a. Prices and forecasts conventions (F2a, details in `docs/forecast-display.md`)
+
+- Hooks in `src/api/queries/`: `staleTime` 5 minutes, no retry on 4xx, at most 2 retries on network
+  errors, timeouts and 5xx (`policy.js`). Keys (`keys.js`) hold only market, crop, horizon and months.
+- **`getForecast()` returns a result, not only data:** `{ status: 'ok', data }` or, for 404
+  `forecast_unavailable` only, `{ status: 'unavailable', reason: 'no_forecast' | 'stale' }`. Every other
+  error (including 404 `market_not_available`) throws `ApiError`. Never show an older forecast.
+- **Explanation shape:** draw the SHAP bars from the backend's `shap_values` whenever `parseShap()`
+  (`src/lib/shapSchema.js`, Zod schema) accepts it; otherwise keep the price and show the fallback
+  message. There is no reconciliation against the headline: the backend rounds the top level
+  `predicted_log_change` to 2 decimals, and the ML pipeline already checks the sum before storing.
+- **Relative time only** on the farmer price, trend and forecast screens: no month name, year, date or
+  "updated" time anywhere a person can read or hear it (including `aria-label`, the title and the URL).
+  Use `src/lib/relativeTime.js` ("Latest", "3 months ago", "In 1 month", "1 month older"); never
+  `formatMonth`, `formatDateTime`, `new Date(` or `Intl.DateTimeFormat` in `src/screens/farmer/`,
+  `src/components/display/` or the forecast logic. Do not display the backend's `as_of_note`.
+- **Wording:** describe how the model reached a forecast, never a cause of real price movements; "the
+  model expects", never "will"; no guarantees; plain English; Boost and Drag always next to the colour.
+- Derived values are display only: the 90 kg bag price, the approximate KES per group, the summary
+  sentence. Everything else is the server's number.
+- **Chart tokens** `chart-1` to `chart-4` in `tokens.css`, used through `var(--chart-N)`; series also
+  differ by line style and end labels.
+- **Lazy chart rule:** only `TrendChartCanvas.jsx` imports Recharts, and only through `React.lazy`.
+  `npm run check:build` fails if Recharts reaches the initial JavaScript or a lazy chunk exceeds 250 kB gzip.
+- Screen selections live in the URL query string (validated, invalid values removed); `usePageTitle`
+  moves focus to the heading on a pathname change only, not on a query string change.
 
 ## 5. Security rules
 

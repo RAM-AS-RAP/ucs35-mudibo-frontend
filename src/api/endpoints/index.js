@@ -1,3 +1,5 @@
-// One file per backend area. Later modules add markets.js, listings.js, orders.js, admin.js.
+// One file per backend area. Later modules add listings.js, orders.js, admin.js.
 export * from './system';
 export * from './auth';
+export * from './prices';
+export * from './forecasts';

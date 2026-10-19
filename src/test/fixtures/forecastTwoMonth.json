@@ -1,0 +1,46 @@
+{
+  "market": "Nairobi",
+  "crop": "maize",
+  "horizon": "two_month",
+  "origin_month": "2026-08-01",
+  "target_month": "2026-10-01",
+  "origin_price": 40.0,
+  "predicted_price": 38.6,
+  "predicted_log_change": -0.0356,
+  "expected_change_pct": -3.5,
+  "shap_values": {
+    "origin_price": 40.0,
+    "predicted_price": 38.6,
+    "predicted_log_change": -0.0356,
+    "expected_change_pct": -3.5,
+    "base_value": 0.003,
+    "typical_change": {
+      "label": "Typical change for this market and crop",
+      "log_value": 0.004,
+      "pct_value": 0.4
+    },
+    "groups": [
+      {
+        "label": "Time of year",
+        "log_contribution": -0.025,
+        "pct_contribution": -2.47,
+        "direction": "decreases"
+      },
+      {
+        "label": "Recent price momentum",
+        "log_contribution": -0.01,
+        "pct_contribution": -1.0,
+        "direction": "decreases"
+      },
+      {
+        "label": "Price compared with its recent average",
+        "log_contribution": -0.0046,
+        "pct_contribution": -0.46,
+        "direction": "decreases"
+      }
+    ]
+  },
+  "generated_at": "2026-09-03T06:20:00Z",
+  "based_on": "2026-08-01",
+  "for_month": "2026-10-01"
+}
