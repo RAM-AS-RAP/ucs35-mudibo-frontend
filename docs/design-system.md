@@ -29,6 +29,10 @@ palette, so only token colours exist. shadcn's semantic variables (`background`,
 | `negative`                    | `#DC2626`                 | Negative icons and chart outlines                                 |
 | `negative-soft`               | `#FCA5A5`                 | Negative chart bar fill                                           |
 | `negative-text`               | `#B91C1C`                 | Negative text                                                     |
+| `chart-1`                     | `#1B5E3B`                 | First chart series (primary green), solid line                    |
+| `chart-2`                     | `#B45309`                 | Second chart series (amber), dashed line                          |
+| `chart-3`                     | `#6D28D9`                 | Reserved: third series (violet), dotted line                      |
+| `chart-4`                     | `#0E7490`                 | Reserved: fourth series (teal), dash dot line                     |
 | `focus-ring`                  | `#1B5E3B`                 | 2px focus ring with a 2px offset                                  |
 | `overlay`                     | `rgb(17 24 39 / 0.5)`     | Dialog and drawer backdrop                                        |
 
@@ -46,6 +50,11 @@ Two starting values failed the contrast test on the mint canvas and were moved t
 - **Never colour alone.** Every meaning has an icon or sign and a word: "+4.5% Increasing", "-2.0% Falling",
   "Boost" or "Drag" on explanation bars, status badges with an icon and a label (`DeltaTag`, `StatusBadge`).
 - **Chart bars** use the soft fill plus the strong outline (`positive-soft` with `positive`, `negative-soft` with `negative`).
+- **Chart lines** use `chart-1` to `chart-4`, read in the chart through CSS variables (`var(--chart-1)`),
+  never as hex values in a component. Series are also told apart by line style (solid, dashed, dotted,
+  dash dot) and by a direct label at the end of each line, never by colour alone.
+- **Dates on the farmer price and forecast screens** are never absolute: time is counted in months
+  before the latest price ("3 months ago", "In 1 month"). See [forecast-display.md](forecast-display.md).
 - **Sidebar and canvas** share the mint, separated by a visible `border` line.
 - **Cards** are white with a subtle border or shadow.
 - **Touch targets** are at least 44 by 44 pixels (`min-h-11`, `size-11` on buttons, inputs, nav items).
@@ -68,6 +77,7 @@ From `src/styles/tokens.test.js`, which reads `tokens.css` (print with
 | text on canvas                      | 15.86 | 4.5     |
 | text on neutral-bg                  | 16.12 | 4.5     |
 | text on positive-soft               | 12.63 | 4.5     |
+| text on negative-soft               | 9.35  | 4.5     |
 | text-secondary on card              | 7.56  | 4.5     |
 | text-secondary on canvas            | 6.76  | 4.5     |
 | text-secondary on neutral-bg        | 6.87  | 4.5     |
@@ -87,6 +97,10 @@ From `src/styles/tokens.test.js`, which reads `tokens.css` (print with
 | negative on canvas                  | 4.32  | 3       |
 | focus-ring on card                  | 7.75  | 3       |
 | focus-ring on canvas                | 6.92  | 3       |
+| chart-1 on card                     | 7.75  | 3       |
+| chart-2 on card                     | 5.02  | 3       |
+| chart-3 on card                     | 7.10  | 3       |
+| chart-4 on card                     | 5.36  | 3       |
 
 ## Components
 
@@ -101,7 +115,13 @@ From `src/styles/tokens.test.js`, which reads `tokens.css` (print with
   (icon plus a word, `positive-text`), `InfoMessage`. Field errors use `negative-text` with an icon.
 - `components/feedback/`: `ErrorBoundary`, `ErrorState`, `EmptyState`, `LoadingState`, `OfflineBanner`,
   `ApiStatus`, `PwaUpdatePrompt`.
-- `components/display/`: `PageHeader`, `StatCard`, `DeltaTag`, `StatusBadge`, `Money`, `ComingSoon`.
+- `components/display/`: `PageHeader`, `StatCard`, `DeltaTag` (optionally with a `direction` from
+  `directionOf` and a `suffix`), `StatusBadge`, `Money`, `ComingSoon`, and for F2a: `PriceCard`
+  (and `PriceChange`), `MarketChips` (toggle buttons, `aria-pressed`, one always selected), `Segmented`
+  (native radio group, 44 px options), `FreshnessNote`, `Recommendation` (tinted box with an icon and
+  title), `ExplainabilityBars` (accessible list with `div` bars), `TrendChart` (wrapper with
+  `role="img"` and a summary; lazily loads `TrendChartCanvas`, the only file that imports Recharts)
+  and `DataTable` (caption, column and row headers).
 
 The PWA icon (`public/favicon.svg`, a leaf on the primary green) is a **placeholder**. Its fill must match
 the `primary` token (a test checks this). Regenerate the PNG icons with `npm run gen:icons`.
