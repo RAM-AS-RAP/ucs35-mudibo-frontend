@@ -78,7 +78,10 @@ export function apiErrorFromResponse(response, body) {
 
 export const GENERIC_MESSAGE = 'Something went wrong. Please try again.';
 
-/** Code to message, from docs/backend/frontend_contract.md. */
+/**
+ * Code to message, from docs/backend/frontend_contract.md. The listing codes use the wording
+ * of the F2b task, which names the farmer's next step.
+ */
 export const ERROR_MESSAGES = Object.freeze({
   invalid_credentials: 'Wrong phone/email or password.',
   password_change_required: 'Please set a new password to continue.',
@@ -98,14 +101,15 @@ export const ERROR_MESSAGES = Object.freeze({
   not_implemented: 'This feature is not available yet.',
   market_not_available: 'No price data for this market yet.',
   forecast_unavailable: 'Forecast not available yet for this market and crop.',
-  listing_not_found: 'This listing is no longer available.',
-  listing_limit_reached: 'You have reached the maximum number of active listings.',
-  listing_removed: "This listing was removed and can't be edited.",
+  listing_not_found: 'This listing could not be found.',
+  listing_limit_reached:
+    'You already have 50 active listings. Remove or sell one before adding another.',
+  listing_removed: 'This listing was removed and can no longer be changed.',
   listing_has_pending_orders:
-    'This listing has orders awaiting payment. Try again in a few minutes.',
-  no_changes: 'Nothing to update.',
-  invalid_image: 'Use a JPEG or PNG photo.',
-  image_too_large: 'The photo is too large. Please choose a smaller one.',
+    'A buyer has started paying for this listing. Try again in a few minutes.',
+  no_changes: 'Nothing was changed.',
+  invalid_image: 'That photo could not be used. Choose a JPEG or PNG photo.',
+  image_too_large: 'That photo is too large.',
   listing_unavailable: 'This listing is not available any more.',
   insufficient_stock: 'Not enough stock left for this quantity.',
   order_too_small: 'The order total is below the minimum.',
