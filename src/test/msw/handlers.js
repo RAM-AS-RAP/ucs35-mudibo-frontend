@@ -214,9 +214,89 @@ export const listingHandlers = [
   ),
 ];
 
+/** Markets the backend knows for the buyer filter; others answer 422 (as the backend does). */
+const BROWSE_MARKETS = new Set(['Nairobi', 'Kisumu', 'Mombasa', 'Nakuru']);
+
+/**
+ * GET /listings over a set of listings, as the backend answers it: only active listings with
+ * stock; crop, market and price filters; sort; paging. 422 for an unknown market or a minimum
+ * above the maximum. Returns a Response.
+ * @param {Array<Record<string, any>>} listings
+ * @param {URL} url
+ */
+export function browseResponse(listings, url) {
+  const q = url.searchParams;
+  const crop = q.get('crop');
+  const market = q.get('market');
+  const min = q.get('min_price');
+  const max = q.get('max_price');
+  const sort = q.get('sort') ?? 'newest';
+  if (market && !BROWSE_MARKETS.has(market)) {
+    return validationErrorResponse([{ field: 'market', message: 'Unknown market.' }]);
+  }
+  if (min !== null && max !== null && Number(min) > Number(max)) {
+    return validationErrorResponse([
+      { field: 'min_price', message: 'min_price must not be above max_price.' },
+    ]);
+  }
+  let items = listings.filter(
+    (l) =>
+      l.status === 'active' &&
+      l.quantity_available > 0 &&
+      (!crop || l.crop === crop) &&
+      (!market || l.market === market) &&
+      (min === null || l.price_per_unit >= Number(min)) &&
+      (max === null || l.price_per_unit <= Number(max)),
+  );
+  if (sort === 'price_asc') items = [...items].sort((a, b) => a.price_per_unit - b.price_per_unit);
+  if (sort === 'price_desc') items = [...items].sort((a, b) => b.price_per_unit - a.price_per_unit);
+  return HttpResponse.json(pageOf(items, url));
+}
+
+/**
+ * GET /orders/mine over a set of orders: one `status`, paged, newest first as given.
+ * @param {Array<{ status: string }>} orders
+ * @param {URL} url
+ */
+export function buyerOrdersResponse(orders, url) {
+  const status = url.searchParams.get('status');
+  return pageOf(status ? orders.filter((o) => o.status === status) : orders, url);
+}
+
+/** Every order the default handlers know, by id. */
+const KNOWN_ORDERS = [fixtures.orderPending, ...fixtures.buyerOrdersPage.items.slice(1)];
+
+export const buyerHandlers = [
+  http.get(apiUrl('/api/v1/listings'), ({ request }) =>
+    browseResponse(fixtures.publicListingsPage.items, new URL(request.url)),
+  ),
+  http.get(apiUrl('/api/v1/listings/:listingId'), ({ params }) => {
+    const listing = fixtures.publicListingsPage.items.find((l) => l.id === params.listingId);
+    if (!listing) return errorResponse(404, 'listing_not_found');
+    return HttpResponse.json({ ...listing, available: listing.quantity_available > 0 });
+  }),
+  http.post(apiUrl('/api/v1/orders'), () =>
+    HttpResponse.json(fixtures.orderPending, { status: 201 }),
+  ),
+  http.get(apiUrl('/api/v1/orders/mine'), ({ request }) =>
+    HttpResponse.json(buyerOrdersResponse(fixtures.buyerOrdersPage.items, new URL(request.url))),
+  ),
+  http.get(apiUrl('/api/v1/orders/:orderId'), ({ params }) => {
+    const order = KNOWN_ORDERS.find((o) => o.id === params.orderId);
+    return order ? HttpResponse.json(order) : errorResponse(404, 'order_not_found');
+  }),
+  http.post(apiUrl('/api/v1/orders/:orderId/pay'), () =>
+    HttpResponse.json(fixtures.paymentStarted, { status: 202 }),
+  ),
+  http.post(apiUrl('/api/v1/orders/:orderId/cancel'), () =>
+    HttpResponse.json(fixtures.orderCancelled),
+  ),
+];
+
 export const handlers = [
   ...priceHandlers,
   ...listingHandlers,
+  ...buyerHandlers,
   http.get(apiUrl('/api/v1/health'), () => HttpResponse.json(fixtures.health)),
   http.get(apiUrl('/api/v1/health/db'), () => HttpResponse.json(fixtures.dbHealth)),
 

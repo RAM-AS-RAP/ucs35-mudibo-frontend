@@ -32,3 +32,17 @@ export function validateResponse({ path, method, status }, data) {
 }
 
 export { openapi };
+
+/**
+ * Validate data against one named schema of openapi.json (components.schemas[name]).
+ * @param {string} name
+ * @param {unknown} data
+ * @returns {{ valid: boolean, errors: string }}
+ */
+export function validateComponent(name, data) {
+  if (!openapi.components.schemas[name]) throw new Error(`No schema ${name} in openapi.json`);
+  const schema = { $ref: `#/components/schemas/${name}`, components: openapi.components };
+  const validate = ajv.compile(schema);
+  const valid = validate(data);
+  return { valid: Boolean(valid), errors: ajv.errorsText(validate.errors) };
+}

@@ -1,0 +1,13 @@
+{
+  "id": "7a1b2c3d-0000-4000-8000-000000000002",
+  "crop": "beans",
+  "market": "Kisumu",
+  "quantity_available": 40,
+  "unit": "kg",
+  "price_per_unit": 112.56,
+  "image_url": null,
+  "seller_name": "Peter Otieno",
+  "status": "active",
+  "created_at": "2026-10-18T08:00:00Z",
+  "available": true
+}
