@@ -55,7 +55,8 @@ function backendFor(role, { mustChangePassword = false, name = 'Wanjiku Kamau' }
 describe('LoginScreen', () => {
   it.each([
     ['farmer', '/farmer'],
-    ['buyer', '/buyer'],
+    // The buyer home /buyer redirects to the browse screen (F3).
+    ['buyer', '/buyer/browse'],
     ['admin', '/admin'],
   ])('signs a %s in and opens %s with the name from /auth/me', async (role, home) => {
     backendFor(role);
@@ -63,7 +64,15 @@ describe('LoginScreen', () => {
     const { router } = renderApp('/login');
     await signIn(user);
     await waitFor(() => expect(router.state.location.pathname).toBe(home));
-    expect(await screen.findByText('Welcome, Wanjiku Kamau')).toBeInTheDocument();
+    // The account menu of every role shows the name (the buyer home no longer has a welcome line).
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /account menu/i })).toHaveTextContent(
+        'Wanjiku Kamau',
+      ),
+    );
+    if (role !== 'buyer') {
+      expect(await screen.findByText('Welcome, Wanjiku Kamau')).toBeInTheDocument();
+    }
     expect(getSession()).toMatchObject({ role, name: 'Wanjiku Kamau' });
   });
 
