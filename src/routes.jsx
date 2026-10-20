@@ -27,7 +27,11 @@ const MyListingsScreen = lazy(() => import('@/screens/farmer/MyListingsScreen'))
 const CreateListingScreen = lazy(() => import('@/screens/farmer/CreateListingScreen'));
 const EditListingScreen = lazy(() => import('@/screens/farmer/EditListingScreen'));
 const OrdersScreen = lazy(() => import('@/screens/farmer/OrdersScreen'));
-const BuyerHomeScreen = lazy(() => import('@/screens/buyer/BuyerHomeScreen'));
+// Buyer screens (F3): each lazily loaded, so farmers and admins never download them.
+const BrowseScreen = lazy(() => import('@/screens/buyer/BrowseScreen'));
+const ListingDetailScreen = lazy(() => import('@/screens/buyer/ListingDetailScreen'));
+const OrderScreen = lazy(() => import('@/screens/buyer/OrderScreen'));
+const MyOrdersScreen = lazy(() => import('@/screens/buyer/MyOrdersScreen'));
 const AdminHomeScreen = lazy(() => import('@/screens/admin/AdminHomeScreen'));
 
 // Development only. In production builds this is null and the module is not bundled.
@@ -119,7 +123,15 @@ export const routes = [
       {
         path: '/buyer',
         element: <RoleLayout role={ROLES.BUYER} />,
-        children: roleChildren(<BuyerHomeScreen />),
+        children: [
+          // The buyer home (ROLE_HOME) opens the browse screen.
+          { index: true, element: <Navigate to="/buyer/browse" replace /> },
+          { path: 'browse', element: <BrowseScreen /> },
+          { path: 'listings/:listingId', element: <ListingDetailScreen /> },
+          { path: 'orders', element: <MyOrdersScreen /> },
+          { path: 'orders/:orderId', element: <OrderScreen /> },
+          { path: '*', element: <NotFoundScreen embedded /> },
+        ],
       },
       {
         path: '/admin',

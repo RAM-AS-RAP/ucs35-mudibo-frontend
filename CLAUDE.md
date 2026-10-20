@@ -16,7 +16,7 @@ Roles: `farmer` (prices, forecasts, listings, orders on their listings), `buyer`
 | F1     | Authentication: login, register, password change and reset, accept invite, session handling              | Done        |
 | F2a    | Farmer decision support: dashboard, prices, price trends, forecast with SHAP bars (relative time only)   | Done        |
 | F2b    | Farmer: listings (image upload, create, edit, delete), orders on my listings                             | Done        |
-| F3     | Buyer: browse, listing detail, checkout, M-Pesa payment polling, my orders                               | Not started |
+| F3     | Buyer: browse, listing detail, checkout, M-Pesa payment polling, my orders                               | Done        |
 | F4     | Admin: dashboard, users, invites, moderation, orders, payments, reconciliation, accuracy                 | Not started |
 | F5     | Polish: end to end tests (Playwright), performance, accessibility review                                 | Not started |
 
@@ -75,6 +75,10 @@ Version and dependency decisions:
 - **F2b added no dependency.** The photo helper uses the browser canvas API; money arithmetic uses
   BigInt; the confirmation dialogs reuse `src/components/ui/dialog.jsx`. Initial JavaScript after F2b:
   222.2 kB gzip (5 files); the photo helper is its own lazy chunk (0.9 kB gzip).
+- **F3 added no dependency.** Idempotency keys use `crypto.randomUUID` (with a
+  `crypto.getRandomValues` fallback); the estimate uses BigInt. Initial JavaScript after F3:
+  224.5 kB gzip (6 files; the +2.3 kB is the navigation badge's count hook); the buyer screens are
+  lazy chunks of 1.5 to 4.5 kB gzip each.
 
 ```bash
 npm ci                    # install exactly from package-lock.json
@@ -87,7 +91,7 @@ npm test                  # Vitest, run mode
 npm run gen:types         # docs/backend/openapi.json -> src/api/schema.d.ts
 npm run gen:icons         # public/favicon.svg -> PWA icons in public/
 npm run check:contract    # schema.d.ts current, endpoint paths and methods exist in openapi.json
-npm run check:build       # after build: manifest, no runtime caching, no dev code, JS budgets, lazy Recharts and photo helper
+npm run check:build       # after build: manifest, no runtime caching, no dev code, JS budgets, lazy Recharts, photo helper, buyer screens
 ```
 
 ## 3. Structure and conventions
@@ -95,25 +99,29 @@ npm run check:build       # after build: manifest, no runtime caching, no dev co
 ```
 src/
   screens/      auth/, farmer/, buyer/, admin/, shared/   one screen per file, default export, *Screen.jsx
-  components/   ui/ (shadcn), layout/, feedback/, display/, listings/, orders/   named exports
+  components/   ui/ (shadcn), layout/, feedback/, display/, listings/, orders/, buyer/   named exports
   api/          client.js, errors.js, endpoints/<area>.js, schema.d.ts (generated, do not edit)
   auth/         session.js, guards.jsx, roles.js, paths.js, auth.js (signIn, signOut, sign in hold),
                 useAuth.js, redirects.js, revalidate.js
   api/queries/  TanStack Query hooks (useMarkets, useCurrentPrices, usePriceTrends, useForecast; listings.js:
-                useMyListings, useMyListing, useMyOrders, counts, useCreate/Update/RemoveListing), keys.js, policy.js
+                useMyListings, useMyListing, useMyOrders, counts, useCreate/Update/RemoveListing; buyer.js:
+                useBrowseListings, useListing, useOrder, useMyBuyerOrders, useCreate/Pay/CancelOrder;
+                waitingCount.js: useWaitingOrdersCount), keys.js, policy.js
   components/auth/  AuthLayout, FormField, PasswordField, CodeInput, FormErrorSummary, CountdownButton,
                 PasswordRequirements, SignedInNotice, ResendCode, FormNotices, useServerProblem
   lib/          env.js, format.js, queryClient.js, utils.js, validation.js, messages.js, formErrors.js,
                 connectivity.js, useCountdown.js, usePageTitle.js, useReducedMotion.js,
                 relativeTime.js, forecast.js, shapSchema.js, trends.js (F2a),
-                decimal.js, priceCheck.js, image.js, safeImageUrl.js (F2b)
+                decimal.js, priceCheck.js, image.js, safeImageUrl.js (F2b),
+                constants.js, orderTotals.js, idempotency.js, orderView.js, polling.js, payErrors.js,
+                filterParams.js, buyerMessages.js (F3)
   styles/       tokens.css (all colours), index.css
   dev/          DevRoleSwitcher.jsx (development only)
   test/         setup.js, msw/, fixtures/, helpers (render, axe, openapi, contrast)
   App.jsx, main.jsx, routes.jsx (the single route table)
 scripts/        check-contract.mjs, check-build.mjs, tokens.mjs
 docs/           backend/, architecture.md, auth.md, design-system.md, forecast-display.md,
-                listings-orders.md, security-headers.md
+                listings-orders.md, buyer-checkout.md, security-headers.md
 ```
 
 - Import with the `@/` alias (`@/api/endpoints`). Tests sit next to the code as `*.test.js(x)`.
@@ -190,6 +198,40 @@ docs/           backend/, architecture.md, auth.md, design-system.md, forecast-d
 - Farmers cannot fetch one listing: use `useMyListing(id)` (cache, then pages of
   `GET /listings/mine?limit=100`, at most 5).
 - Never show or request a buyer contact detail.
+
+## 4c. Buyer checkout and payment conventions (F3, details in `docs/buyer-checkout.md`)
+
+- Endpoints: `endpoints/buyerListings.js` (`browseListings`, `getListing`), `endpoints/orders.js`
+  (`createOrder`, `getOrder`, `getMyOrders` exported from the index as `getMyBuyerOrders`,
+  `cancelOrder`, `existingOrderId`), `endpoints/payments.js` (`payOrder`). The farmer's
+  `getMyOrders` and `useMyOrders` keep their names; the buyer's are `getMyBuyerOrders` and
+  `useMyBuyerOrders`.
+- `ApiError.extra` holds every field of the error object that is not a named property (for
+  example `existing_order_id`); read the open order with `existingOrderId(error)`.
+- **Idempotency key:** only `payments.js` sets `Idempotency-Key`, only `lib/idempotency.js`
+  creates keys, and the pay request has no body. One new key per deliberate click; keep the same
+  key only after `network_error` or `timeout` (the button reads "Check payment request"); discard
+  it on a 202 or any error with an HTTP status. The key lives in a `useRef` only, never in storage,
+  a URL, router state, a query key or mutation variables (`usePayOrder(orderId, keyRef)`).
+- **Server clock:** `useOrder` exposes `offsetMs = Date.parse(server_time) - dataUpdatedAt`;
+  every remaining time goes through `remainingSecondsUntil`/`deriveOrderView` with it. Never count
+  down on the device clock alone.
+- **Polling constants** live in `lib/constants.js`: `POLL_INTERVAL_MS` 3000, `POLL_WINDOW_MS`
+  150000; `nextPollInterval` decides. TanStack pauses the interval while the tab is hidden; polling
+  stops on final states, on unmount and after a 4xx. Lists (browse, My orders) never poll.
+- **Buttons follow the server:** `deriveOrderView` copies `can_pay` and `can_cancel`; never
+  enable Pay or Cancel otherwise. The minimums in `lib/constants.js` only explain a disabled button.
+- **Never retry order creation** (or pay, or cancel): `useMutation` with `writePolicy`, a ref guard
+  against double clicks, and after a timeout or network failure only a link to My orders.
+- The buyer files are not in the relative time list (`RELATIVE_ONLY`): they may use
+  `formatDateTime` (the source check allows `components/buyer/` and `screens/buyer/`).
+- Buyers get 403 from prices, forecasts and `GET /markets`: never call them from buyer code (a
+  source check and every buyer screen test enforce it). The browse market filter uses
+  `BUYER_MARKETS`.
+- Buyer screen text lives in `lib/buyerMessages.js`; order and payment status words in
+  `lib/messages.js` (`ORDER_STATUS_WORDS`, `PAYMENT_STATUS_WORDS`) through `StatusBadge`.
+- Never ask for, show or store an M-Pesa PIN; `SandboxNote` shows the PIN warning. Show only the
+  masked prompt target (`stk_target_masked`).
 
 ## 5. Security rules
 

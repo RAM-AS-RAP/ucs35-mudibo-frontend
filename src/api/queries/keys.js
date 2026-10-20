@@ -35,4 +35,34 @@ export const queryKeys = Object.freeze({
     ]),
   /** @param {{ status: string }} params */
   myOrderCount: ({ status }) => /** @type {const} */ (['farmer-orders', 'count', { status }]),
+
+  /** Every query of the buyer's browse list and listing detail (F3). */
+  browseRoot: () => /** @type {const} */ (['browse']),
+  /**
+   * @param {{ crop: string | null, market: string | null, minPrice: string | null, maxPrice: string | null, sort: string }} filters
+   */
+  browseListings: ({ crop, market, minPrice, maxPrice, sort }) =>
+    /** @type {const} */ ([
+      'browse',
+      'list',
+      {
+        crop: crop ?? 'all',
+        market: market ?? 'all',
+        minPrice: minPrice ?? '',
+        maxPrice: maxPrice ?? '',
+        sort,
+      },
+    ]),
+  /** @param {string} id */
+  listing: (id) => /** @type {const} */ (['browse', 'one', { id }]),
+
+  /** One of the buyer's orders. Never holds an idempotency key. @param {string} id */
+  order: (id) => /** @type {const} */ (['order', { id }]),
+  /** The buyer's order lists and the waiting count (refreshed after every order write). */
+  buyerOrdersRoot: () => /** @type {const} */ (['buyer-orders']),
+  /** @param {{ status: string | null }} params  null means all statuses */
+  buyerOrders: ({ status }) =>
+    /** @type {const} */ (['buyer-orders', 'list', { status: status ?? 'all' }]),
+  waitingOrdersCount: () =>
+    /** @type {const} */ (['buyer-orders', 'count', { status: 'pending_payment' }]),
 });

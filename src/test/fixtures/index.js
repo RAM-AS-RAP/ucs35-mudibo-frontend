@@ -20,6 +20,12 @@ import forecastTwoMonth from './forecastTwoMonth.json';
 import myListingsPage from './myListingsPage.json';
 import listingCreated from './listingCreated.json';
 import farmerOrdersPage from './farmerOrdersPage.json';
+import publicListingsPage from './publicListingsPage.json';
+import listingDetail from './listingDetail.json';
+import orderPending from './orderPending.json';
+import paymentStarted from './paymentStarted.json';
+import orderCancelled from './orderCancelled.json';
+import buyerOrdersPage from './buyerOrdersPage.json';
 
 export const fixtures = {
   health,
@@ -42,6 +48,12 @@ export const fixtures = {
   myListingsPage,
   listingCreated,
   farmerOrdersPage,
+  publicListingsPage,
+  listingDetail,
+  orderPending,
+  paymentStarted,
+  orderCancelled,
+  buyerOrdersPage,
 };
 
 /** Fixture name to the OpenAPI response it must match. */
@@ -70,4 +82,13 @@ export const FIXTURE_CONTRACT = {
   myListingsPage: { path: '/api/v1/listings/mine', method: 'get', status: '200' },
   listingCreated: { path: '/api/v1/listings', method: 'post', status: '201' },
   farmerOrdersPage: { path: '/api/v1/listings/mine/orders', method: 'get', status: '200' },
+  // Buyer (F3). PublicListingOut, OrderOut and PaymentStartOut also name their fields without
+  // types; OrderListingSummary and OrderPaymentSummary are typed but OrderOut does not $ref
+  // them, so src/test/buyer.contract.test.js checks the nested objects against those schemas.
+  publicListingsPage: { path: '/api/v1/listings', method: 'get', status: '200' },
+  listingDetail: { path: '/api/v1/listings/{listing_id}', method: 'get', status: '200' },
+  orderPending: { path: '/api/v1/orders', method: 'post', status: '201' },
+  paymentStarted: { path: '/api/v1/orders/{order_id}/pay', method: 'post', status: '202' },
+  orderCancelled: { path: '/api/v1/orders/{order_id}/cancel', method: 'post', status: '200' },
+  buyerOrdersPage: { path: '/api/v1/orders/mine', method: 'get', status: '200' },
 };

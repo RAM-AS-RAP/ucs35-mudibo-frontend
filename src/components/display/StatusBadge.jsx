@@ -10,7 +10,7 @@ import {
   XCircle,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { LISTING_STATUS_WORDS, ORDER_STATUS_WORDS } from '@/lib/messages';
+import { LISTING_STATUS_WORDS, ORDER_STATUS_WORDS, PAYMENT_STATUS_WORDS } from '@/lib/messages';
 
 /**
  * @typedef {{ label: string, variant: 'positive' | 'negative' | 'neutral' | 'outline', Icon: import('react').ComponentType<any> }} StatusStyle
@@ -41,14 +41,18 @@ export const LISTING_STATUS = {
   removed: { label: LISTING_STATUS_WORDS.removed, variant: 'outline', Icon: Ban },
 };
 
-/** Payment statuses (PaymentStatus in openapi.json). @type {Record<string, StatusStyle>} */
+/**
+ * Payment statuses (PaymentStatus in openapi.json), words from PAYMENT_STATUS_WORDS in
+ * lib/messages (F3). The spinner icon does not spin here: motion is left to the panel.
+ * @type {Record<string, StatusStyle>}
+ */
 export const PAYMENT_STATUS = {
-  initiating: { label: 'Sending request', variant: 'neutral', Icon: Loader2 },
-  initiated: { label: 'Check your phone', variant: 'outline', Icon: Smartphone },
-  completed: { label: 'Payment received', variant: 'positive', Icon: CheckCircle2 },
-  cancelled: { label: 'Cancelled', variant: 'neutral', Icon: XCircle },
-  timeout: { label: 'Timed out', variant: 'negative', Icon: Clock },
-  failed: { label: 'Failed', variant: 'negative', Icon: XCircle },
+  initiating: { label: PAYMENT_STATUS_WORDS.initiating, variant: 'neutral', Icon: Loader2 },
+  initiated: { label: PAYMENT_STATUS_WORDS.initiated, variant: 'outline', Icon: Smartphone },
+  completed: { label: PAYMENT_STATUS_WORDS.completed, variant: 'positive', Icon: CheckCircle2 },
+  failed: { label: PAYMENT_STATUS_WORDS.failed, variant: 'negative', Icon: XCircle },
+  cancelled: { label: PAYMENT_STATUS_WORDS.cancelled, variant: 'neutral', Icon: Ban },
+  timeout: { label: PAYMENT_STATUS_WORDS.timeout, variant: 'negative', Icon: Clock },
 };
 
 /** @param {string} status */

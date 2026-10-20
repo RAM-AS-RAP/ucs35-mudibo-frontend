@@ -25,6 +25,8 @@ const PAIRS = [
   ['neutral-text', 'card', 4.5],
   ['on-primary', 'primary', 4.5],
   ['on-primary', 'primary-hover', 4.5],
+  // The navigation count badge (F3): white text on the negative text colour.
+  ['on-primary', 'negative-text', 4.5],
   ['primary', 'card', 4.5],
   ['primary', 'canvas', 4.5],
   ['positive', 'card', 3],

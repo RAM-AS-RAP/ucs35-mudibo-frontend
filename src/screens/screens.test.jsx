@@ -14,19 +14,19 @@ afterEach(() => {
 });
 
 describe('role home placeholders and shared screens', () => {
-  it.each([
-    ['buyer', 'F3 (buyer)'],
-    ['admin', 'F4 (admin)'],
-  ])('%s home renders ComingSoon inside the shell without axe violations', async (role, module) => {
-    loginAs(role);
-    const { container } = renderApp(`/${role}`);
-    expect(
-      await screen.findByText(`This screen is built in module ${module}.`),
-    ).toBeInTheDocument();
-    // No profile loaded: a generic greeting.
-    expect(screen.getByText('Welcome')).toBeInTheDocument();
-    await expectNoAxeViolations(container, { page: true });
-  });
+  it.each([['admin', 'F4 (admin)']])(
+    '%s home renders ComingSoon inside the shell without axe violations',
+    async (role, module) => {
+      loginAs(role);
+      const { container } = renderApp(`/${role}`);
+      expect(
+        await screen.findByText(`This screen is built in module ${module}.`),
+      ).toBeInTheDocument();
+      // No profile loaded: a generic greeting.
+      expect(screen.getByText('Welcome')).toBeInTheDocument();
+      await expectNoAxeViolations(container, { page: true });
+    },
+  );
 
   it('Forbidden and NotFound have no axe violations', async () => {
     loginAs('farmer');

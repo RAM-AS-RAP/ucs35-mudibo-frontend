@@ -15,6 +15,7 @@ import { ROLE_HOME } from '@/auth/roles';
 import { cn } from '@/lib/utils';
 import { AccountMenu } from './AccountMenu';
 import { BOTTOM_NAV_ROLES, getNavItems } from './navConfig';
+import { NavBadge } from './NavBadge';
 const BOTTOM_COLS = {
   1: 'grid-cols-1',
   2: 'grid-cols-2',
@@ -29,7 +30,7 @@ const BOTTOM_COLS = {
 function SideNavList({ items, onNavigate }) {
   return (
     <ul className="flex flex-col gap-1 p-3">
-      {items.map(({ label, to, icon: Icon, end }) => (
+      {items.map(({ label, to, icon: Icon, end, badge }) => (
         <li key={to}>
           <NavLink
             to={to}
@@ -44,6 +45,7 @@ function SideNavList({ items, onNavigate }) {
           >
             <Icon aria-hidden="true" className="size-5 shrink-0" />
             <span>{label}</span>
+            {badge && <NavBadge kind={badge} />}
           </NavLink>
         </li>
       ))}
@@ -59,7 +61,7 @@ function BottomNav({ items }) {
       className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-sidebar pb-[env(safe-area-inset-bottom)] lg:hidden"
     >
       <ul className={cn('grid', BOTTOM_COLS[/** @type {1|2|3|4|5} */ (Math.min(items.length, 5))])}>
-        {items.map(({ label, to, icon: Icon, end }) => (
+        {items.map(({ label, to, icon: Icon, end, badge }) => (
           <li key={to}>
             <NavLink
               to={to}
@@ -71,7 +73,10 @@ function BottomNav({ items }) {
                 )
               }
             >
-              <Icon aria-hidden="true" className="size-5" />
+              <span className="relative">
+                <Icon aria-hidden="true" className="size-5" />
+                {badge && <NavBadge kind={badge} compact />}
+              </span>
               <span>{label}</span>
             </NavLink>
           </li>

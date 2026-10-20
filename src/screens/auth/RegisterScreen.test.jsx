@@ -105,7 +105,8 @@ describe('RegisterScreen', () => {
 
   it.each([
     ['farmer', '/api/v1/auth/register/farmer', '/farmer'],
-    ['buyer', '/api/v1/auth/register/buyer', '/buyer'],
+    // The buyer home /buyer redirects to the browse screen (F3).
+    ['buyer', '/api/v1/auth/register/buyer', '/buyer/browse'],
   ])(
     'a %s registers on its own endpoint, signs in with the normalised phone and goes home',
     async (role, path, home) => {

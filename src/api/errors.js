@@ -80,7 +80,8 @@ export const GENERIC_MESSAGE = 'Something went wrong. Please try again.';
 
 /**
  * Code to message, from docs/backend/frontend_contract.md. The listing codes use the wording
- * of the F2b task, which names the farmer's next step.
+ * of the F2b task, which names the farmer's next step; the order and payment codes use the
+ * wording of the F3 task, which names the buyer's next step.
  */
 export const ERROR_MESSAGES = Object.freeze({
   invalid_credentials: 'Wrong phone/email or password.',
@@ -110,22 +111,24 @@ export const ERROR_MESSAGES = Object.freeze({
   no_changes: 'Nothing was changed.',
   invalid_image: 'That photo could not be used. Choose a JPEG or PNG photo.',
   image_too_large: 'That photo is too large.',
-  listing_unavailable: 'This listing is not available any more.',
-  insufficient_stock: 'Not enough stock left for this quantity.',
-  order_too_small: 'The order total is below the minimum.',
-  pending_order_exists: 'You already have an order awaiting payment for this listing.',
-  too_many_pending_orders: 'Pay or cancel your open orders first.',
-  order_not_found: 'Order not found.',
+  listing_unavailable: 'This listing is no longer available.',
+  insufficient_stock: 'There is not enough produce left. Choose a smaller quantity.',
+  order_too_small: 'The total is below the minimum order of KES 10.',
+  pending_order_exists: 'You already have an order waiting for payment for this listing.',
+  too_many_pending_orders: 'You have 3 orders waiting for payment. Pay for or cancel one first.',
+  order_not_found: 'This order could not be found.',
   order_not_cancellable: 'This order can no longer be cancelled.',
   order_not_payable: 'This order can no longer be paid.',
   order_expiring: 'This order is about to expire. Please place a new order.',
   payment_in_progress: 'A payment is already in progress. Check your phone.',
-  max_attempts_reached: 'Too many payment attempts for this order. Please place a new order.',
+  max_attempts_reached:
+    'You have tried to pay for this order 3 times. Cancel it and start a new order.',
   idempotency_key_required: GENERIC_MESSAGE,
   invalid_idempotency_key: GENERIC_MESSAGE,
-  too_many_payment_attempts: 'Too many payment requests to this phone. Please try later.',
+  too_many_payment_attempts:
+    'Too many payment attempts for this phone number. Please try again later.',
   payment_request_failed: 'Could not start the M-Pesa prompt. Please try again.',
-  payments_unavailable: 'Payments are not available right now.',
+  payments_unavailable: 'Payments are temporarily unavailable. Please try again soon.',
   invalid_or_expired_code: 'The code is invalid or has expired.',
   codes_unavailable: 'This feature is temporarily unavailable.',
   user_exists: 'An account with this phone number or email already exists.',

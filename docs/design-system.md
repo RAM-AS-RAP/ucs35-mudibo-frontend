@@ -89,6 +89,7 @@ From `src/styles/tokens.test.js`, which reads `tokens.css` (print with
 | neutral-text on card                | 10.31 | 4.5     |
 | white (on-primary) on primary       | 7.75  | 4.5     |
 | white (on-primary) on primary-hover | 10.53 | 4.5     |
+| white (on-primary) on negative-text | 6.47  | 4.5     |
 | primary on card                     | 7.75  | 4.5     |
 | primary on canvas                   | 6.92  | 4.5     |
 | positive on card                    | 3.37  | 3       |
@@ -129,6 +130,15 @@ From `src/styles/tokens.test.js`, which reads `tokens.css` (print with
   `ListingForm` (create and edit), `PhotoPicker` (two buttons, hidden file inputs, preview, live
   status), `PriceGuidance`, `ListingsSummary` (dashboard). `components/orders/`: `OrderCard`.
   `components/feedback/ConfirmDialog` (shadcn dialog; focus returns to the opener).
+- `components/buyer/` (F3): `BuyerListingCard` (the whole card is one link), `ProducePhoto`,
+  `QuantityStepper` (44 px minus and plus buttons), `CheckoutSummary`, `OrderSummaryCard`,
+  `ExpiryCountdown` (announces only at 60 s, 30 s and the end), `PaymentStatusPanel` (an icon, a
+  headline and words for each state; the border tone is extra, never the only signal) and
+  `SandboxNote`. `StatusBadge kind="payment"` shows "Sending request", "Waiting for your phone",
+  "Payment received", "Payment failed", "Payment cancelled" and "Timed out" with the existing
+  variants. The navigation count badge (`components/layout/NavBadge.jsx`) is white
+  (`on-primary`) on `negative-text` (6.47:1), with its number hidden from screen readers and a
+  spoken label ("2 orders waiting for payment") instead. No new colour tokens.
 
 The PWA icon (`public/favicon.svg`, a leaf on the primary green) is a **placeholder**. Its fill must match
 the `primary` token (a test checks this). Regenerate the PNG icons with `npm run gen:icons`.
