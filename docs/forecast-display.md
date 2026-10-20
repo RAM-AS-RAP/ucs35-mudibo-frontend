@@ -10,11 +10,11 @@ contribution.
 
 ## Screens and endpoints
 
-| Screen    | Path               | What it shows                                                                                                                                                                      | Endpoints                                                                                                                                                                                |
-| --------- | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Dashboard | `/farmer`          | Greeting; latest maize and beans prices per market with the change against the month before; the one month forecast for maize and beans in the first market; a link to My listings | `GET /markets`, `GET /prices/current?crop=maize`, `GET /prices/current?crop=beans` (in parallel), then `GET /forecasts?market=<first>&crop=maize\|beans&horizon=one_month` (in parallel) |
-| Prices    | `/farmer/prices`   | Crop control; a price card per market; the price trend for the selected markets and range, with a data table                                                                       | `GET /prices/current?crop=`, `GET /markets`, `GET /prices/trends?market=&crop=&months=` (one per selected market, in parallel)                                                           |
-| Forecast  | `/farmer/forecast` | Market, crop and horizon controls; headline; horizon strip; recommendation; "Why the model expects this"; unavailable state; "Plan a listing"; limitations                         | `GET /markets`, `GET /forecasts?market=&crop=&horizon=one_month` and `two_month` (in parallel), `GET /prices/current?crop=` (only when a forecast is unavailable)                        |
+| Screen    | Path               | What it shows                                                                                                                                                                                                                                                 | Endpoints                                                                                                                                                                                                                                                                                               |
+| --------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Dashboard | `/farmer`          | Greeting; latest maize and beans prices per market with the change against the month before; the one month forecast for maize and beans in the first market; a summary of active listings and paid orders (F2b, see [listings-orders.md](listings-orders.md)) | `GET /markets`, `GET /prices/current?crop=maize`, `GET /prices/current?crop=beans` and the two counts `GET /listings/mine?status=active&limit=1`, `GET /listings/mine/orders?status=paid&limit=1` (in parallel), then `GET /forecasts?market=<first>&crop=maize\|beans&horizon=one_month` (in parallel) |
+| Prices    | `/farmer/prices`   | Crop control; a price card per market; the price trend for the selected markets and range, with a data table                                                                                                                                                  | `GET /prices/current?crop=`, `GET /markets`, `GET /prices/trends?market=&crop=&months=` (one per selected market, in parallel)                                                                                                                                                                          |
+| Forecast  | `/farmer/forecast` | Market, crop and horizon controls; headline; horizon strip; recommendation; "Why the model expects this"; unavailable state; "Plan a listing"; limitations                                                                                                    | `GET /markets`, `GET /forecasts?market=&crop=&horizon=one_month` and `two_month` (in parallel), `GET /prices/current?crop=` (only when a forecast is unavailable)                                                                                                                                       |
 
 Selections live in the URL query string (`crop`, `markets`, `range`, `market`, `horizon`), so a
 screen can be bookmarked or shared. Only these non sensitive values are stored. Each is checked
@@ -47,8 +47,9 @@ URL. Time is counted in whole months back from the latest published price, which
   `month`) are used only to compute differences in whole months. The backend's `as_of_note` is not
   shown. "Current price" in the report means the latest published monthly price.
 - `src/lib/relativeTime.js` parses `YYYY-MM-DD` by splitting it into integers and never uses `Date`,
-  `Intl` or the device clock. A source check enforces this for the farmer screens, the display
-  components and the forecast logic, and a test runs the functions under two time zones.
+  `Intl` or the device clock. A source check enforces this for an explicit list of files (`RELATIVE_ONLY` in
+  `src/test/source.test.js`: the price, trend, forecast and dashboard price files, the display
+  components of these screens, the forecast logic and the listing form's `PriceGuidance`), and a test runs the functions under two time zones.
 
 **Why:** a month count is simpler for farmers to read than a date, and it removes the risk of a wrong
 label from a phone with a wrong clock or time zone. The prices are monthly figures, so "how many
@@ -171,7 +172,7 @@ shown.
 ### Next step and limitations
 
 "Plan a listing" links to `/farmer/listings/new?crop=<crop>&market=<market>` with "You choose the
-price you ask for." (module F2b builds that screen). At the bottom: "These forecasts use monthly
+price you ask for." The listing form preselects that crop and market and shows the same guidance (`PriceGuidance`, also relative time only). At the bottom: "These forecasts use monthly
 prices published by FEWS NET. A model trained on past prices can be wrong, especially after sudden
 events."
 

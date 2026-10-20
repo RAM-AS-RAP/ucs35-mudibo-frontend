@@ -15,7 +15,7 @@ Roles: `farmer` (prices, forecasts, listings, orders on their listings), `buyer`
 | F0     | Foundation: scaffold, tooling, API layer, session, guards, shells, design system, PWA shell, tests, docs | Done        |
 | F1     | Authentication: login, register, password change and reset, accept invite, session handling              | Done        |
 | F2a    | Farmer decision support: dashboard, prices, price trends, forecast with SHAP bars (relative time only)   | Done        |
-| F2b    | Farmer: listings (image upload, create, edit, delete), orders on my listings                             | Not started |
+| F2b    | Farmer: listings (image upload, create, edit, delete), orders on my listings                             | Done        |
 | F3     | Buyer: browse, listing detail, checkout, M-Pesa payment polling, my orders                               | Not started |
 | F4     | Admin: dashboard, users, invites, moderation, orders, payments, reconciliation, accuracy                 | Not started |
 | F5     | Polish: end to end tests (Playwright), performance, accessibility review                                 | Not started |
@@ -72,6 +72,9 @@ Version and dependency decisions:
   recognise React 19 elements for `isFragment`, so never pass a Fragment as a child of a Recharts
   component. Add `react-is` matching React (19.x) if that becomes a problem.
 - The explanation bars are not drawn with Recharts (see `docs/forecast-display.md`).
+- **F2b added no dependency.** The photo helper uses the browser canvas API; money arithmetic uses
+  BigInt; the confirmation dialogs reuse `src/components/ui/dialog.jsx`. Initial JavaScript after F2b:
+  222.2 kB gzip (5 files); the photo helper is its own lazy chunk (0.9 kB gzip).
 
 ```bash
 npm ci                    # install exactly from package-lock.json
@@ -84,7 +87,7 @@ npm test                  # Vitest, run mode
 npm run gen:types         # docs/backend/openapi.json -> src/api/schema.d.ts
 npm run gen:icons         # public/favicon.svg -> PWA icons in public/
 npm run check:contract    # schema.d.ts current, endpoint paths and methods exist in openapi.json
-npm run check:build       # after build: manifest, no runtime caching, no dev code, JS budget
+npm run check:build       # after build: manifest, no runtime caching, no dev code, JS budgets, lazy Recharts and photo helper
 ```
 
 ## 3. Structure and conventions
@@ -92,22 +95,25 @@ npm run check:build       # after build: manifest, no runtime caching, no dev co
 ```
 src/
   screens/      auth/, farmer/, buyer/, admin/, shared/   one screen per file, default export, *Screen.jsx
-  components/   ui/ (shadcn), layout/, feedback/, display/   named exports
+  components/   ui/ (shadcn), layout/, feedback/, display/, listings/, orders/   named exports
   api/          client.js, errors.js, endpoints/<area>.js, schema.d.ts (generated, do not edit)
   auth/         session.js, guards.jsx, roles.js, paths.js, auth.js (signIn, signOut, sign in hold),
                 useAuth.js, redirects.js, revalidate.js
-  api/queries/  TanStack Query hooks (useMarkets, useCurrentPrices, usePriceTrends, useForecast), keys.js, policy.js
+  api/queries/  TanStack Query hooks (useMarkets, useCurrentPrices, usePriceTrends, useForecast; listings.js:
+                useMyListings, useMyListing, useMyOrders, counts, useCreate/Update/RemoveListing), keys.js, policy.js
   components/auth/  AuthLayout, FormField, PasswordField, CodeInput, FormErrorSummary, CountdownButton,
                 PasswordRequirements, SignedInNotice, ResendCode, FormNotices, useServerProblem
   lib/          env.js, format.js, queryClient.js, utils.js, validation.js, messages.js, formErrors.js,
                 connectivity.js, useCountdown.js, usePageTitle.js, useReducedMotion.js,
-                relativeTime.js, forecast.js, shapSchema.js, trends.js (F2a)
+                relativeTime.js, forecast.js, shapSchema.js, trends.js (F2a),
+                decimal.js, priceCheck.js, image.js, safeImageUrl.js (F2b)
   styles/       tokens.css (all colours), index.css
   dev/          DevRoleSwitcher.jsx (development only)
   test/         setup.js, msw/, fixtures/, helpers (render, axe, openapi, contrast)
   App.jsx, main.jsx, routes.jsx (the single route table)
 scripts/        check-contract.mjs, check-build.mjs, tokens.mjs
-docs/           backend/, architecture.md, auth.md, design-system.md, forecast-display.md, security-headers.md
+docs/           backend/, architecture.md, auth.md, design-system.md, forecast-display.md,
+                listings-orders.md, security-headers.md
 ```
 
 - Import with the `@/` alias (`@/api/endpoints`). Tests sit next to the code as `*.test.js(x)`.
@@ -148,8 +154,11 @@ docs/           backend/, architecture.md, auth.md, design-system.md, forecast-d
 - **Relative time only** on the farmer price, trend and forecast screens: no month name, year, date or
   "updated" time anywhere a person can read or hear it (including `aria-label`, the title and the URL).
   Use `src/lib/relativeTime.js` ("Latest", "3 months ago", "In 1 month", "1 month older"); never
-  `formatMonth`, `formatDateTime`, `new Date(` or `Intl.DateTimeFormat` in `src/screens/farmer/`,
-  `src/components/display/` or the forecast logic. Do not display the backend's `as_of_note`.
+  `formatMonth`, `formatDateTime`, `new Date(` or `Intl.DateTimeFormat` in the files listed in
+  `RELATIVE_ONLY` in `src/test/source.test.js` (the price, trend, forecast and dashboard price files,
+  the F2a display components and `PriceGuidance`). The listing and order files may use
+  `formatDateTime`. Add a new price or forecast file to that list. Do not display the backend's
+  `as_of_note`.
 - **Wording:** describe how the model reached a forecast, never a cause of real price movements; "the
   model expects", never "will"; no guarantees; plain English; Boost and Drag always next to the colour.
 - Derived values are display only: the 90 kg bag price, the approximate KES per group, the summary
@@ -160,6 +169,27 @@ docs/           backend/, architecture.md, auth.md, design-system.md, forecast-d
   `npm run check:build` fails if Recharts reaches the initial JavaScript or a lazy chunk exceeds 250 kB gzip.
 - Screen selections live in the URL query string (validated, invalid values removed); `usePageTitle`
   moves focus to the heading on a pathname change only, not on a query string change.
+
+## 4b. Listings and orders conventions (F2b, details in `docs/listings-orders.md`)
+
+- **Multipart only in the API layer:** `buildListingForm` in `src/api/endpoints/listings.js` builds
+  every `FormData` from a plain object (allowed names only, defined values only, decimals as strings,
+  never `unit`, `status` or `farmer_id`) and sends it with an identity body serializer and no
+  `Content-Type`, so the browser sets the boundary. A source check keeps `new FormData(` in `src/api/`.
+- **Never retry a write:** create, edit and remove use `useMutation` with `writePolicy`
+  (`retry: false`). After a timeout or network failure, say the result is unknown and link to My
+  listings; never resend automatically. Guard every submit against a double click.
+- **Money:** parse typed decimals with `parseDecimalInput`, send them as strings, compute display
+  estimates with `multiplyMoney` (BigInt, half up), compare with `sameDecimal`. Never do floating point
+  arithmetic on money; show server amounts (`total_amount`) as returned.
+- **Images:** render every `image_url` through `safeImageUrl` (https, or localhost in development).
+  Prepare uploads with `prepareImage` (`src/lib/image.js`), loaded only with a dynamic import; only it
+  and `PhotoPicker` create object URLs, and both revoke them.
+- **Status words** for listings and orders live in `LISTING_STATUS_WORDS` and `ORDER_STATUS_WORDS`
+  (`src/lib/messages.js`) and are shown through `StatusBadge` (`kind="listing"` for listings).
+- Farmers cannot fetch one listing: use `useMyListing(id)` (cache, then pages of
+  `GET /listings/mine?limit=100`, at most 5).
+- Never show or request a buyer contact detail.
 
 ## 5. Security rules
 
