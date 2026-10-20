@@ -32,3 +32,22 @@ export const queryPolicy = Object.freeze({
   retry: shouldRetry,
   retryDelay,
 });
+
+/**
+ * The farmer's own listings and orders: the same retry rule, but a short stale time because
+ * they change when the farmer or a buyer acts.
+ */
+export const ACCOUNT_STALE_TIME_MS = 30 * 1000;
+
+export const accountQueryPolicy = Object.freeze({
+  staleTime: ACCOUNT_STALE_TIME_MS,
+  retry: shouldRetry,
+  retryDelay,
+});
+
+/**
+ * Writes (create, edit, remove) are never retried automatically: a retry after a timeout could
+ * create a second listing. The mutation is forgotten as soon as it settles, so a photo held in
+ * its variables is released.
+ */
+export const writePolicy = Object.freeze({ retry: false, gcTime: 0 });
