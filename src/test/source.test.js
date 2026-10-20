@@ -116,22 +116,35 @@ describe('source checks', () => {
   });
 
   describe('farmer price, trend and forecast files show no absolute dates', () => {
-    const relativeOnly = (path) =>
-      path.startsWith('src/screens/farmer/') ||
-      path.startsWith('src/components/display/') ||
-      ['src/lib/forecast.js', 'src/lib/relativeTime.js', 'src/lib/trends.js'].includes(path);
+    // An explicit list (F2b): the listing and order files may show dates (formatDateTime), the
+    // price, trend, forecast and dashboard price files and the price guidance may not.
+    const RELATIVE_ONLY = [
+      'src/screens/farmer/DashboardScreen.jsx',
+      'src/screens/farmer/PricesScreen.jsx',
+      'src/screens/farmer/ForecastScreen.jsx',
+      'src/screens/farmer/params.js',
+      'src/components/display/DataTable.jsx',
+      'src/components/display/DeltaTag.jsx',
+      'src/components/display/ExplainabilityBars.jsx',
+      'src/components/display/FreshnessNote.jsx',
+      'src/components/display/MarketChips.jsx',
+      'src/components/display/PriceCard.jsx',
+      'src/components/display/Recommendation.jsx',
+      'src/components/display/Segmented.jsx',
+      'src/components/display/TrendChart.jsx',
+      'src/components/display/TrendChartCanvas.jsx',
+      'src/components/listings/PriceGuidance.jsx',
+      'src/components/listings/useLatestPrice.js',
+      'src/components/listings/ListingsSummary.jsx',
+      'src/lib/forecast.js',
+      'src/lib/relativeTime.js',
+      'src/lib/trends.js',
+      'src/lib/shapSchema.js',
+    ];
+    const relativeOnly = (/** @type {string} */ path) => RELATIVE_ONLY.includes(path);
 
-    it('covers the expected files', () => {
-      for (const path of [
-        'src/screens/farmer/ForecastScreen.jsx',
-        'src/screens/farmer/PricesScreen.jsx',
-        'src/screens/farmer/DashboardScreen.jsx',
-        'src/components/display/PriceCard.jsx',
-        'src/lib/relativeTime.js',
-        'src/lib/forecast.js',
-      ]) {
-        expect(files).toContain(path);
-      }
+    it('covers the expected files, and every listed file exists', () => {
+      for (const path of RELATIVE_ONLY) expect(files).toContain(path);
     });
 
     it.each([
@@ -146,6 +159,69 @@ describe('source checks', () => {
       ],
     ])('never uses %s', (_name, pattern) => {
       expect(offenders(pattern, relativeOnly)).toEqual([]);
+    });
+
+    it('uses formatDateTime only in the order and listing files', () => {
+      const users = sources
+        .filter(({ text }) => /\bformatDateTime\(/.test(text))
+        .map(({ path }) => path)
+        .filter((path) => path !== 'src/lib/format.js');
+      expect(users.length).toBeGreaterThan(0);
+      for (const path of users) {
+        expect(path).toMatch(
+          /^src\/(components\/(orders|listings)\/|screens\/farmer\/(Orders|MyListings|CreateListing|EditListing)Screen\.jsx$)/,
+        );
+      }
+    });
+  });
+
+  describe('listing uploads (F2b)', () => {
+    it('builds FormData only in the API layer', () => {
+      expect(offenders(/new FormData\(/, (path) => !path.startsWith('src/api/'))).toEqual([]);
+    });
+
+    it('creates object URLs only in the photo helper and the photo picker, and revokes each', () => {
+      const allowed = ['src/components/listings/PhotoPicker.jsx', 'src/lib/image.js'];
+      const creators = sources.filter(({ text }) => /createObjectURL\(/.test(text));
+      expect(creators.map(({ path }) => path).sort()).toEqual(allowed);
+      for (const { path, text } of creators) {
+        expect(text, path).toMatch(/revokeObjectURL\(/);
+      }
+    });
+
+    it('loads the photo helper only with a dynamic import', () => {
+      expect(offenders(/^\s*import .*['"]@\/lib\/image['"]/)).toEqual([]);
+      const picker = sources.find(({ path }) => path.endsWith('listings/PhotoPicker.jsx'));
+      expect(picker?.text).toMatch(/await import\('@\/lib\/image'\)/);
+    });
+
+    it('renders listing photos only through safeImageUrl', () => {
+      const withImageUrl = sources.filter(
+        ({ text }) => /image_url/.test(text) && /<img/.test(text),
+      );
+      expect(withImageUrl.length).toBeGreaterThan(0);
+      for (const { path, text } of withImageUrl) expect(text, path).toMatch(/safeImageUrl\(/);
+    });
+
+    it('never sends unit, status or farmer_id in a listing write', () => {
+      const text = sources.find(({ path }) => path === 'src/api/endpoints/listings.js')?.text ?? '';
+      const fields = /CREATE_FIELDS = Object\.freeze\(\[([^\]]*)\]/.exec(text)?.[1] ?? '';
+      const updates = /UPDATE_FIELDS = Object\.freeze\(\[([^\]]*)\]/.exec(text)?.[1] ?? '';
+      expect(fields).toBeTruthy();
+      expect(updates).toBeTruthy();
+      for (const name of ['unit', 'status', 'farmer_id']) {
+        expect(fields).not.toContain(`'${name}'`);
+        expect(updates).not.toContain(`'${name}'`);
+      }
+    });
+
+    it('never retries a listing write automatically', () => {
+      const text = sources.find(({ path }) => path === 'src/api/queries/listings.js')?.text ?? '';
+      const mutations = text.split('useMutation({').slice(1);
+      expect(mutations).toHaveLength(3);
+      for (const block of mutations) expect(block).toContain('...writePolicy');
+      const policy = sources.find(({ path }) => path === 'src/api/queries/policy.js')?.text ?? '';
+      expect(policy).toMatch(/writePolicy = Object\.freeze\(\{ retry: false/);
     });
   });
 
