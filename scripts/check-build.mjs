@@ -23,6 +23,9 @@ const RECHARTS_MARKER = 'recharts-wrapper';
 // The photo helper's error name (src/lib/image.js). The helper is loaded with a dynamic import
 // when a farmer picks a photo, so it must never be in the initial JavaScript.
 const IMAGE_HELPER_MARKER = 'ImageError';
+// Text only the buyer payment screen contains (src/lib/buyerMessages.js). The buyer screens are
+// lazily loaded routes, so it must never be in the initial JavaScript (F3).
+const BUYER_SCREEN_MARKER = 'Check payment request';
 
 const DIST = 'dist';
 const DEV_SWITCHER_MARKER = 'agrisence-dev-role-switcher';
@@ -204,6 +207,14 @@ for (const chunk of imageChunks) {
 if (imageChunks.length === 0)
   fail('The photo helper (src/lib/image.js) was not found in the build.');
 else console.log(`  Photo helper: lazy chunk(s) ${imageChunks.map((c) => c.file).join(', ')}`);
+
+const buyerChunks = chunks.filter((chunk) => read(chunk.file).includes(BUYER_SCREEN_MARKER));
+for (const chunk of buyerChunks) {
+  if (initial.has(chunk.file))
+    fail(`The buyer screens are in the initial JavaScript (${chunk.file}); load them lazily.`);
+}
+if (buyerChunks.length === 0) fail('The buyer payment screen was not found in the build.');
+else console.log(`  Buyer screens: lazy chunk(s) ${buyerChunks.map((c) => c.file).join(', ')}`);
 
 if (failures.length) {
   console.error('check:build FAILED');

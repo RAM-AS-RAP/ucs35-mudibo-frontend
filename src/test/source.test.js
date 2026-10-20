@@ -169,7 +169,7 @@ describe('source checks', () => {
       expect(users.length).toBeGreaterThan(0);
       for (const path of users) {
         expect(path).toMatch(
-          /^src\/(components\/(orders|listings)\/|screens\/farmer\/(Orders|MyListings|CreateListing|EditListing)Screen\.jsx$)/,
+          /^src\/(components\/(orders|listings|buyer)\/|screens\/farmer\/(Orders|MyListings|CreateListing|EditListing)Screen\.jsx$|screens\/buyer\/)/,
         );
       }
     });
@@ -222,6 +222,70 @@ describe('source checks', () => {
       for (const block of mutations) expect(block).toContain('...writePolicy');
       const policy = sources.find(({ path }) => path === 'src/api/queries/policy.js')?.text ?? '';
       expect(policy).toMatch(/writePolicy = Object\.freeze\(\{ retry: false/);
+    });
+  });
+
+  describe('buyer checkout and payment (F3)', () => {
+    const isBuyerFile = (/** @type {string} */ path) =>
+      path.startsWith('src/screens/buyer/') ||
+      path.startsWith('src/components/buyer/') ||
+      path === 'src/api/queries/buyer.js' ||
+      path === 'src/components/layout/NavBadge.jsx';
+
+    it('covers the buyer files', () => {
+      expect(files.filter(isBuyerFile).length).toBeGreaterThanOrEqual(12);
+    });
+
+    it('sets the Idempotency-Key header only in src/api/endpoints/payments.js', () => {
+      const payments = 'src/api/endpoints/payments.js';
+      expect(offenders(/Idempotency-Key/i, (path) => path !== payments)).toEqual([]);
+      const text = sources.find(({ path }) => path === payments)?.text ?? '';
+      expect(text).toContain("header: { 'Idempotency-Key': idempotencyKey }");
+      // The pay request carries no body.
+      expect(text).not.toMatch(/\bbody\s*:/);
+    });
+
+    it('creates random keys (crypto.randomUUID) only in src/lib/idempotency.js', () => {
+      expect(offenders(/randomUUID/, (path) => path !== 'src/lib/idempotency.js')).toEqual([]);
+    });
+
+    it('sends exactly listing_id and quantity when creating an order', () => {
+      const text = sources.find(({ path }) => path === 'src/api/endpoints/orders.js')?.text ?? '';
+      expect(text).toContain('{ body: { listing_id: listingId, quantity } }');
+    });
+
+    it('clears every interval and timeout in the buyer files', () => {
+      for (const { path, text } of sources.filter(({ path }) => isBuyerFile(path))) {
+        const count = (/** @type {RegExp} */ re) => (text.match(re) ?? []).length;
+        expect(count(/clearInterval\(/g), path).toBeGreaterThanOrEqual(count(/setInterval\(/g));
+        expect(count(/clearTimeout\(/g), path).toBeGreaterThanOrEqual(count(/setTimeout\(/g));
+      }
+    });
+
+    it('never calls prices, forecasts or markets from the buyer files', () => {
+      const priceApi =
+        /useMarkets|useCurrentPrices|usePriceTrends|useForecast|useLatestPrice|getMarkets|getCurrentPrices|getPriceTrends|getForecast|\/api\/v1\/(markets|prices|forecasts)/;
+      expect(offenders(priceApi, isBuyerFile)).toEqual([]);
+    });
+
+    it('never asks for a PIN or a password in the buyer files', () => {
+      const pinInput = /type=["']password["']|PasswordField|name=["']pin["']/i;
+      expect(offenders(pinInput, isBuyerFile)).toEqual([]);
+    });
+
+    it('never retries a buyer write automatically', () => {
+      const text = sources.find(({ path }) => path === 'src/api/queries/buyer.js')?.text ?? '';
+      const mutations = text.split('useMutation({').slice(1);
+      expect(mutations).toHaveLength(3);
+      for (const block of mutations) expect(block).toContain('...writePolicy');
+    });
+
+    it('renders every <img> through safeImageUrl', () => {
+      const withImg = sources.filter(
+        ({ path, text }) => path.endsWith('.jsx') && /<img\b/.test(text),
+      );
+      expect(withImg.length).toBeGreaterThan(0);
+      for (const { path, text } of withImg) expect(text, path).toMatch(/safeImageUrl\(/);
     });
   });
 
