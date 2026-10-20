@@ -27,6 +27,12 @@ Screen (src/screens/...)
   retried (`writePolicy`). A successful write invalidates the listing and order keys, which include
   the dashboard counts. Multipart bodies are built in `src/api/endpoints/listings.js` only. Details:
   [listings-orders.md](listings-orders.md).
+- Buyer hooks (F3) live in `src/api/queries/buyer.js`: infinite queries for browse and My orders,
+  `useOrder` (polls every 3 seconds for up to 150 seconds while a payment prompt is open, paused
+  while the tab is hidden, and exposes the server clock offset), and order, pay and cancel
+  mutations that are never retried. The navigation badge's count hook is in `waitingCount.js` so
+  the shell does not load the other buyer hooks. Only `endpoints/payments.js` sets the
+  `Idempotency-Key` header. Details: [buyer-checkout.md](buyer-checkout.md).
 - Screen selections (crop, market, horizon, range) are kept in the URL query string and validated.
   `usePageTitle` moves focus to the heading when the pathname changes, not when only the query string does.
 
