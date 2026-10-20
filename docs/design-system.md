@@ -121,7 +121,14 @@ From `src/styles/tokens.test.js`, which reads `tokens.css` (print with
   (native radio group, 44 px options), `FreshnessNote`, `Recommendation` (tinted box with an icon and
   title), `ExplainabilityBars` (accessible list with `div` bars), `TrendChart` (wrapper with
   `role="img"` and a summary; lazily loads `TrendChartCanvas`, the only file that imports Recharts)
-  and `DataTable` (caption, column and row headers).
+  and `DataTable` (caption, column and row headers). `StatusBadge` also takes `kind="listing"`
+  (Active, Sold out, Removed) and shows the F2b order words ("Paid (test payment)", "Waiting for
+  payment", "Not paid, expired", ...), with the existing positive, negative, neutral and outline
+  variants (no new colours).
+- `components/listings/` (F2b): `ListingCard` (photo through `safeImageUrl` or a leaf placeholder),
+  `ListingForm` (create and edit), `PhotoPicker` (two buttons, hidden file inputs, preview, live
+  status), `PriceGuidance`, `ListingsSummary` (dashboard). `components/orders/`: `OrderCard`.
+  `components/feedback/ConfirmDialog` (shadcn dialog; focus returns to the opener).
 
 The PWA icon (`public/favicon.svg`, a leaf on the primary green) is a **placeholder**. Its fill must match
 the `primary` token (a test checks this). Regenerate the PNG icons with `npm run gen:icons`.

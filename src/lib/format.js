@@ -84,6 +84,29 @@ export function formatPctUnsigned(value) {
   return `${unsignedPctFormat.format(n)}%`;
 }
 
+const quantityFormat = new Intl.NumberFormat(LOCALE, { maximumFractionDigits: 2 });
+
+/**
+ * Format a quantity in kg without the unit: `1,200`, `120.5`.
+ * @param {number | string | null | undefined} value
+ */
+export function formatQuantity(value) {
+  const n = toNumber(value);
+  if (n === null) return PLACEHOLDER;
+  return quantityFormat.format(n);
+}
+
+/**
+ * Format a byte count for a photo: `240 kB`, `1.4 MB`.
+ * @param {number | null | undefined} bytes
+ */
+export function formatBytes(bytes) {
+  const n = toNumber(bytes);
+  if (n === null || n < 0) return PLACEHOLDER;
+  if (n < 1000 * 1000) return `${Math.max(1, Math.round(n / 1000))} kB`;
+  return `${(n / (1000 * 1000)).toFixed(1)} MB`;
+}
+
 /**
  * Format a percentage value (4.5 means 4.5%) with an explicit sign: `+4.5%`, `-2.0%`, `0.0%`.
  * @param {number | string | null | undefined} value

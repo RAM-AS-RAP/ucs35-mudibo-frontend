@@ -22,7 +22,7 @@ import {
  * @property {boolean} [superAdminOnly]
  */
 
-/** Navigation per role. Farmer listings and orders arrive in F2b, buyer in F3, admin in F4. */
+/** Navigation per role. Buyer screens arrive in F3, admin screens in F4. */
 /** @type {Record<string, NavItem[]>} */
 export const NAV_ITEMS = {
   farmer: [

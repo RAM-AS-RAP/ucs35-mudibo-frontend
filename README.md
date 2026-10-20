@@ -15,8 +15,8 @@ The AgriSence web app: crop price forecasts with SHAP explanations and a farmer 
 for smallholder farmers in Kenya. It is a React single page application, installable as a PWA, that
 talks to the AgriSence backend API (a separate repository). Payments use the M-Pesa sandbox only.
 
-Current state: modules F0 (foundation), F1 (authentication) and F2a (farmer decision support) are
-done. The farmer's listings and orders (F2b), the buyer screens (F3) and the admin screens (F4) are
+Current state: modules F0 (foundation), F1 (authentication), F2a (farmer decision support) and F2b
+(farmer listings and orders) are done. The buyer screens (F3) and the admin screens (F4) are
 placeholders that later modules replace. See [CLAUDE.md](CLAUDE.md) for the roadmap and status.
 
 ## Requirements
@@ -50,33 +50,49 @@ redirect rules: [docs/auth.md](docs/auth.md).
 ## Farmer screens (F2a)
 
 - **Dashboard** (`/farmer`): the latest maize and beans prices in every market with the change against
-  the month before, a one month forecast snapshot for the first market, and a link to My listings.
+  the month before, a one month forecast snapshot for the first market, and a summary of active
+  listings and paid orders.
 - **Prices** (`/farmer/prices`): a price card per market (price per kg, about the price of a 90 kg bag,
   change, and a "1 month older" tag when a market's latest price lags), and a price trend chart for
   the selected markets over 12, 24 or up to 60 months, with a data table as its text alternative.
 - **Forecast** (`/farmer/forecast`): the predicted price in 1 and 2 months for a market and crop, a
   recommendation that leaves the decision to the farmer, and "Why the model expects this": the
   model's SHAP explanation as Boost and Drag bars, shown whenever the backend's explanation has the expected shape.
-  A "Plan a listing" button leads to the listing form (built in F2b).
+  A "Plan a listing" button leads to the listing form with the crop and market filled in.
 - These screens never show calendar dates: time is counted in months before the latest published
   price ("3 months ago", "In 1 month"). Selections are kept in the URL so a view can be bookmarked.
   Details: [docs/forecast-display.md](docs/forecast-display.md).
 
+## Farmer listings and orders (F2b)
+
+- **My listings** (`/farmer/listings`): the farmer's listings by status (All, Active, Sold out,
+  Removed), 20 at a time, with Edit, Remove (after a confirmation) and View orders.
+- **New listing** (`/farmer/listings/new`) and **Edit listing** (`/farmer/listings/:id/edit`): crop,
+  market, quantity available now, asking price per kg and an optional photo, with price guidance, an
+  estimate, and a check that asks the farmer to confirm a price far from the latest market price
+  (a price per bag typed as per kg). Photos are resized and re-encoded as JPEG in the browser, which
+  also removes their location data. Edit sends only the fields that changed. Writes are never retried
+  automatically.
+- **Orders** (`/farmer/orders`): orders on the farmer's listings with status filters, a filter for one
+  listing, Load more and Refresh. Payments are M-Pesa sandbox confirmations; no buyer contact detail
+  is shown; delivery is agreed outside the platform.
+- Details: [docs/listings-orders.md](docs/listings-orders.md).
+
 ## Scripts
 
-| Script                   | What it does                                                                                                                                                                                                                  |
-| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `npm run dev`            | Vite dev server                                                                                                                                                                                                               |
-| `npm run build`          | Production build into `dist/`                                                                                                                                                                                                 |
-| `npm run preview`        | Serve the production build                                                                                                                                                                                                    |
-| `npm run lint`           | ESLint                                                                                                                                                                                                                        |
-| `npm run format`         | Prettier                                                                                                                                                                                                                      |
-| `npm test`               | Unit, component, accessibility and contract tests (Vitest)                                                                                                                                                                    |
-| `npm run gen:types`      | Generate `src/api/schema.d.ts` from `docs/backend/openapi.json`                                                                                                                                                               |
-| `npm run gen:icons`      | Generate the PWA icons from `public/favicon.svg`                                                                                                                                                                              |
-| `npm run check:contract` | Fail if the generated types are stale or an endpoint path or method is not in the contract                                                                                                                                    |
-| `npm run check:build`    | After a build: check the manifest, the service worker (no API caching), no dev code, no source maps, the initial JavaScript budget, the lazy chunk budget, and that Recharts is only in a lazy chunk; prints every chunk size |
-| `npm run e2e`            | Placeholder: end to end tests arrive in F5                                                                                                                                                                                    |
+| Script                   | What it does                                                                                                                                                                                                                                       |
+| ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run dev`            | Vite dev server                                                                                                                                                                                                                                    |
+| `npm run build`          | Production build into `dist/`                                                                                                                                                                                                                      |
+| `npm run preview`        | Serve the production build                                                                                                                                                                                                                         |
+| `npm run lint`           | ESLint                                                                                                                                                                                                                                             |
+| `npm run format`         | Prettier                                                                                                                                                                                                                                           |
+| `npm test`               | Unit, component, accessibility and contract tests (Vitest)                                                                                                                                                                                         |
+| `npm run gen:types`      | Generate `src/api/schema.d.ts` from `docs/backend/openapi.json`                                                                                                                                                                                    |
+| `npm run gen:icons`      | Generate the PWA icons from `public/favicon.svg`                                                                                                                                                                                                   |
+| `npm run check:contract` | Fail if the generated types are stale or an endpoint path or method is not in the contract                                                                                                                                                         |
+| `npm run check:build`    | After a build: check the manifest, the service worker (no API caching), no dev code, no source maps, the initial JavaScript budget, the lazy chunk budget, and that Recharts and the photo helper are only in lazy chunks; prints every chunk size |
+| `npm run e2e`            | Placeholder: end to end tests arrive in F5                                                                                                                                                                                                         |
 
 ## Environment variables
 
@@ -103,10 +119,11 @@ and `npm test`. Details: [docs/backend/README.md](docs/backend/README.md).
 ```
 src/
   screens/      one file per screen: auth/, farmer/, buyer/, admin/, shared/
-  components/   ui/ (shadcn/ui), layout/, feedback/, display/
+  components/   ui/ (shadcn/ui), layout/, feedback/, display/, listings/, orders/
   api/          client.js, errors.js, endpoints/, queries/ (TanStack Query hooks), schema.d.ts (generated)
   auth/         session.js, guards.jsx, roles.js
-  lib/          env.js, format.js, queryClient.js, utils.js, relativeTime.js, forecast.js, shapSchema.js, trends.js
+  lib/          env.js, format.js, queryClient.js, utils.js, relativeTime.js, forecast.js, shapSchema.js, trends.js,
+                decimal.js, priceCheck.js, image.js, safeImageUrl.js
   styles/       tokens.css (all colours), index.css
   dev/          development only role preview
   test/         test setup, MSW handlers, fixtures, helpers
@@ -128,6 +145,7 @@ from the server; offline, the app only shows a message that a connection is need
 - [docs/auth.md](docs/auth.md): authentication flows, messages, redirect rules and limitations
 - [docs/design-system.md](docs/design-system.md): tokens, usage rules, contrast ratios
 - [docs/forecast-display.md](docs/forecast-display.md): what the farmer price and forecast screens show, the explanation shape check, wording and relative time rules
+- [docs/listings-orders.md](docs/listings-orders.md): the listing and order screens, quantity and price rules, the photo pipeline, uncertain writes and limitations
 - [docs/security-headers.md](docs/security-headers.md): headers for the later deployment
 - [docs/backend/](docs/backend/): the backend contract and how to refresh it
 
@@ -143,6 +161,10 @@ from the server; offline, the app only shows a message that a connection is need
   the frontend keeps `isSuperAdmin` false and the super admin's "Invites" item stays hidden.
   `isSuperAdmin` stays false until the backend exposes `is_super_admin` in the user object; it is not
   inferred from any other endpoint (the contract's `GET /admin/users` lookup is not used).
+- backend gap: farmers cannot fetch a single listing. `GET /listings/{listing_id}` is the buyer's
+  route and answers 403 to a farmer, so the edit screen reads the listing from the cached list or
+  pages through `GET /listings/mine?limit=100` (at most 5 pages). A farmer route such as
+  `GET /listings/mine/{listing_id}` would remove the lookup.
 
 ## Troubleshooting
 

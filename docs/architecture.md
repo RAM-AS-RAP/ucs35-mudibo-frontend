@@ -22,6 +22,11 @@ Screen (src/screens/...)
   at most two retries with exponential back off on network errors, timeouts and 5xx. `getForecast()`
   returns `{ status: 'ok', data }` or, for 404 `forecast_unavailable` only, `{ status: 'unavailable', reason }`.
   Display rules for these screens: [forecast-display.md](forecast-display.md).
+- Listing and order hooks (F2b) live in `src/api/queries/listings.js`: infinite queries with offset
+  pages of 20 (30 second stale time, the orders refetch on window focus) and mutations that are never
+  retried (`writePolicy`). A successful write invalidates the listing and order keys, which include
+  the dashboard counts. Multipart bodies are built in `src/api/endpoints/listings.js` only. Details:
+  [listings-orders.md](listings-orders.md).
 - Screen selections (crop, market, horizon, range) are kept in the URL query string and validated.
   `usePageTitle` moves focus to the heading when the pathname changes, not when only the query string does.
 

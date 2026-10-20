@@ -18,12 +18,15 @@ import AcceptInviteScreen from '@/screens/auth/AcceptInviteScreen';
 import ChangePasswordScreen from '@/screens/auth/ChangePasswordScreen';
 import NotFoundScreen from '@/screens/shared/NotFoundScreen';
 
-// Farmer screens: each lazily loaded; the trend chart loads Recharts lazily on top of that.
-const FarmerHomeScreen = lazy(() => import('@/screens/farmer/FarmerHomeScreen'));
+// Farmer screens: each lazily loaded. The trend chart loads Recharts lazily on top of that, and
+// the listing form loads the photo helper (lib/image.js) lazily when a photo is chosen.
 const DashboardScreen = lazy(() => import('@/screens/farmer/DashboardScreen'));
 const PricesScreen = lazy(() => import('@/screens/farmer/PricesScreen'));
 const ForecastScreen = lazy(() => import('@/screens/farmer/ForecastScreen'));
-const NewListingScreen = lazy(() => import('@/screens/farmer/NewListingScreen'));
+const MyListingsScreen = lazy(() => import('@/screens/farmer/MyListingsScreen'));
+const CreateListingScreen = lazy(() => import('@/screens/farmer/CreateListingScreen'));
+const EditListingScreen = lazy(() => import('@/screens/farmer/EditListingScreen'));
+const OrdersScreen = lazy(() => import('@/screens/farmer/OrdersScreen'));
 const BuyerHomeScreen = lazy(() => import('@/screens/buyer/BuyerHomeScreen'));
 const AdminHomeScreen = lazy(() => import('@/screens/admin/AdminHomeScreen'));
 
@@ -106,9 +109,11 @@ export const routes = [
           { index: true, element: <DashboardScreen /> },
           { path: 'prices', element: <PricesScreen /> },
           { path: 'forecast', element: <ForecastScreen /> },
-          // F2b replaces these placeholders (listings and orders).
-          { path: 'listings/new', element: <NewListingScreen /> },
-          { path: '*', element: <FarmerHomeScreen /> },
+          { path: 'listings', element: <MyListingsScreen /> },
+          { path: 'listings/new', element: <CreateListingScreen /> },
+          { path: 'listings/:id/edit', element: <EditListingScreen /> },
+          { path: 'orders', element: <OrdersScreen /> },
+          { path: '*', element: <NotFoundScreen embedded /> },
         ],
       },
       {

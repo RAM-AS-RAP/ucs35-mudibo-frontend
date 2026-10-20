@@ -97,6 +97,24 @@ describe('StatusBadge', () => {
     expect(container.querySelector('svg')).not.toBeNull();
   });
 
+  it.each([
+    ['active', 'Active'],
+    ['sold_out', 'Sold out'],
+    ['removed', 'Removed'],
+  ])('listing status %s shows an icon and "%s"', (status, words) => {
+    const { container } = render(<StatusBadge status={status} kind="listing" />);
+    expect(container.firstElementChild?.textContent).toBe(words);
+    expect(container.querySelector('svg')).not.toBeNull();
+  });
+
+  it('every listing status in openapi.json has words', () => {
+    for (const status of openapi.components.schemas.ListingStatus.enum) {
+      const { container, unmount } = render(<StatusBadge status={status} kind="listing" />);
+      expect(container.querySelector('[data-status]')?.textContent).not.toBe(status);
+      unmount();
+    }
+  });
+
   it('renders readable text for an unknown status', async () => {
     const { container } = render(<StatusBadge status="on_hold" />);
     expect(screen.getByText('On hold')).toBeInTheDocument();

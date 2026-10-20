@@ -134,8 +134,89 @@ export const priceHandlers = [
   }),
 ];
 
+/**
+ * A page of items as the backend returns it, honouring `limit` and `offset` in the URL.
+ * @template T
+ * @param {T[]} items  already filtered
+ * @param {URL} url
+ */
+export function pageOf(items, url) {
+  const limit = Number(url.searchParams.get('limit') ?? 20);
+  const offset = Number(url.searchParams.get('offset') ?? 0);
+  return { items: items.slice(offset, offset + limit), total: items.length, limit, offset };
+}
+
+/**
+ * GET /listings/mine over a set of listings: `status` filter, newest first as given, paged.
+ * @param {Array<{ status: string }>} listings
+ * @param {URL} url
+ */
+export function myListingsResponse(listings, url) {
+  const status = url.searchParams.get('status');
+  const filtered = status ? listings.filter((l) => l.status === status) : listings;
+  return pageOf(filtered, url);
+}
+
+/**
+ * GET /listings/mine/orders over a set of orders: one `status`, `listing_id`, paged, with the note.
+ * @param {Array<{ status: string, listing_id: string }>} orders
+ * @param {URL} url
+ * @param {string} [note]
+ */
+export function myOrdersResponse(orders, url, note = fixtures.farmerOrdersPage.note) {
+  const status = url.searchParams.get('status');
+  const listingId = url.searchParams.get('listing_id');
+  const filtered = orders.filter(
+    (o) => (!status || o.status === status) && (!listingId || o.listing_id === listingId),
+  );
+  return { ...pageOf(filtered, url), note };
+}
+
+/**
+ * Apply PATCH /listings/{id} form fields to a listing, as the backend does (quantity 0 makes it
+ * sold_out, a positive quantity on a sold_out listing makes it active).
+ * @param {Record<string, any>} listing
+ * @param {FormData} form
+ */
+export function applyListingChanges(listing, form) {
+  const next = { ...listing, updated_at: '2026-10-19T09:00:00Z' };
+  const quantity = form.get('quantity_available');
+  const price = form.get('price_per_unit');
+  if (typeof quantity === 'string') {
+    next.quantity_available = Number(quantity);
+    if (next.quantity_available === 0) next.status = 'sold_out';
+    else if (listing.status === 'sold_out') next.status = 'active';
+  }
+  if (typeof price === 'string') next.price_per_unit = Number(price);
+  if (form.get('image')) next.image_url = 'https://images.agrisence.test/listings/new.jpg';
+  if (form.get('remove_image') === 'true') next.image_url = null;
+  return next;
+}
+
+export const listingHandlers = [
+  http.get(apiUrl('/api/v1/listings/mine'), ({ request }) =>
+    HttpResponse.json(myListingsResponse(fixtures.myListingsPage.items, new URL(request.url))),
+  ),
+  http.post(apiUrl('/api/v1/listings'), () =>
+    HttpResponse.json(fixtures.listingCreated, { status: 201 }),
+  ),
+  // The body is not read: under jsdom a handler cannot read a request that holds a File.
+  // Tests that need the changes applied use applyListingChanges with text only requests.
+  http.patch(apiUrl('/api/v1/listings/:listingId'), ({ params }) => {
+    const listing = fixtures.myListingsPage.items.find((l) => l.id === params.listingId);
+    if (!listing) return errorResponse(404, 'listing_not_found');
+    if (listing.status === 'removed') return errorResponse(409, 'listing_removed');
+    return HttpResponse.json(listing);
+  }),
+  http.delete(apiUrl('/api/v1/listings/:listingId'), () => new HttpResponse(null, { status: 204 })),
+  http.get(apiUrl('/api/v1/listings/mine/orders'), ({ request }) =>
+    HttpResponse.json(myOrdersResponse(fixtures.farmerOrdersPage.items, new URL(request.url))),
+  ),
+];
+
 export const handlers = [
   ...priceHandlers,
+  ...listingHandlers,
   http.get(apiUrl('/api/v1/health'), () => HttpResponse.json(fixtures.health)),
   http.get(apiUrl('/api/v1/health/db'), () => HttpResponse.json(fixtures.dbHealth)),
 

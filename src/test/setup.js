@@ -29,6 +29,12 @@ if (!globalThis.ResizeObserver) {
   };
 }
 if (!Element.prototype.scrollIntoView) Element.prototype.scrollIntoView = () => {};
+// Object URLs for photo previews (jsdom has none). Tests spy on these to check revocation.
+if (!URL.createObjectURL) {
+  let next = 0;
+  URL.createObjectURL = () => `blob:test-${(next += 1)}`;
+}
+if (!URL.revokeObjectURL) URL.revokeObjectURL = () => {};
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 afterEach(() => {

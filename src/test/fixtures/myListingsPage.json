@@ -1,0 +1,46 @@
+{
+  "items": [
+    {
+      "id": "6f0f2a1e-3b8c-4d5e-9f10-111111111111",
+      "farmer_id": "0b5e2c3d-4e5f-4a6b-8c7d-aaaaaaaaaaaa",
+      "crop": "maize",
+      "market": "Nairobi",
+      "quantity_available": 120.5,
+      "unit": "kg",
+      "price_per_unit": 42.0,
+      "image_url": "https://images.agrisence.test/listings/111.jpg",
+      "status": "active",
+      "created_at": "2026-10-12T07:30:00Z",
+      "updated_at": "2026-10-12T07:30:00Z"
+    },
+    {
+      "id": "6f0f2a1e-3b8c-4d5e-9f10-222222222222",
+      "farmer_id": "0b5e2c3d-4e5f-4a6b-8c7d-aaaaaaaaaaaa",
+      "crop": "beans",
+      "market": "Kisumu",
+      "quantity_available": 0.0,
+      "unit": "kg",
+      "price_per_unit": 95.5,
+      "image_url": null,
+      "status": "sold_out",
+      "created_at": "2026-10-05T10:00:00Z",
+      "updated_at": "2026-10-09T15:20:00Z"
+    },
+    {
+      "id": "6f0f2a1e-3b8c-4d5e-9f10-333333333333",
+      "farmer_id": "0b5e2c3d-4e5f-4a6b-8c7d-aaaaaaaaaaaa",
+      "crop": "maize",
+      "market": "Kisumu",
+      "quantity_available": 30.0,
+      "unit": "kg",
+      "price_per_unit": 38.0,
+      "image_url": "https://images.agrisence.test/listings/333.jpg",
+      "status": "removed",
+      "created_at": "2026-09-20T08:00:00Z",
+      "updated_at": "2026-09-28T09:00:00Z"
+    }
+  ],
+  "total": 3,
+  "limit": 20,
+  "offset": 0
+}

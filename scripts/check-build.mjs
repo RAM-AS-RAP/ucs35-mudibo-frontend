@@ -5,7 +5,7 @@
 // - the development role switcher is not in the build;
 // - no source maps or .env content are emitted;
 // - the initial JavaScript stays within the performance budget;
-// - no lazy chunk is over its own budget, and Recharts is only in a lazy chunk.
+// - no lazy chunk is over its own budget, and Recharts and the photo helper are only in lazy chunks.
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 import { gzipSync } from 'node:zlib';
@@ -20,6 +20,9 @@ const LAZY_CHUNK_BUDGET_KB = 250;
 // A string only Recharts' code contains (its wrapper class name). It must never be in the
 // initial JavaScript: the trend chart loads Recharts lazily.
 const RECHARTS_MARKER = 'recharts-wrapper';
+// The photo helper's error name (src/lib/image.js). The helper is loaded with a dynamic import
+// when a farmer picks a photo, so it must never be in the initial JavaScript.
+const IMAGE_HELPER_MARKER = 'ImageError';
 
 const DIST = 'dist';
 const DEV_SWITCHER_MARKER = 'agrisence-dev-role-switcher';
@@ -172,7 +175,7 @@ if (initialGzip > INITIAL_JS_BUDGET_KB * 1024) {
   );
 }
 
-// 6. Lazy chunks: each within its own budget; Recharts only in a lazy chunk.
+// 6. Lazy chunks: each within its own budget; Recharts and the photo helper only in lazy chunks.
 const lazyChunks = chunks.filter((chunk) => !initial.has(chunk.file));
 const largestLazy = lazyChunks[0];
 if (largestLazy)
@@ -192,6 +195,15 @@ for (const chunk of rechartsChunks) {
 }
 if (rechartsChunks.length > 0)
   console.log(`  Recharts: lazy chunk(s) ${rechartsChunks.map((c) => c.file).join(', ')}`);
+
+const imageChunks = chunks.filter((chunk) => read(chunk.file).includes(IMAGE_HELPER_MARKER));
+for (const chunk of imageChunks) {
+  if (initial.has(chunk.file))
+    fail(`The photo helper is in the initial JavaScript (${chunk.file}); load it lazily.`);
+}
+if (imageChunks.length === 0)
+  fail('The photo helper (src/lib/image.js) was not found in the build.');
+else console.log(`  Photo helper: lazy chunk(s) ${imageChunks.map((c) => c.file).join(', ')}`);
 
 if (failures.length) {
   console.error('check:build FAILED');

@@ -290,3 +290,212 @@ export function groupDescription(label) {
     ? GROUP_DESCRIPTIONS[/** @type {keyof typeof GROUP_DESCRIPTIONS} */ (label)]
     : 'Another pattern the model found in past prices.';
 }
+
+/*
+ * Farmer listings and orders (F2b). Status words are used with an icon and the word, never by
+ * colour alone. Wording is plain English; amounts always come from the server.
+ */
+
+/** Listing status words (ListingStatus in openapi.json). */
+export const LISTING_STATUS_WORDS = Object.freeze({
+  active: 'Active',
+  sold_out: 'Sold out',
+  removed: 'Removed',
+});
+
+/** Order status words on the farmer's orders screen (OrderStatus in openapi.json). */
+export const ORDER_STATUS_WORDS = Object.freeze({
+  paid: 'Paid (test payment)',
+  pending_payment: 'Waiting for payment',
+  expired: 'Not paid, expired',
+  cancelled: 'Cancelled',
+  payment_failed: 'Payment failed',
+  needs_reconciliation: 'Under review',
+});
+
+/** Messages for the photo preparation errors (ImageError codes in lib/image.js). */
+export const IMAGE_ERROR_MESSAGES = Object.freeze({
+  unsupported_type: 'Choose a JPEG or PNG photo. Other file types cannot be used.',
+  input_too_large: 'That photo is larger than 20 MB. Choose a smaller photo.',
+  decode_failed: 'That photo could not be opened. Choose another photo.',
+  too_many_pixels: 'That photo is too big to prepare on this phone. Choose a smaller photo.',
+  still_too_large: 'That photo could not be made small enough to upload. Choose another photo.',
+});
+
+/**
+ * The message for a photo preparation error code.
+ * @param {unknown} code
+ */
+export function imageErrorMessage(code) {
+  return typeof code === 'string' &&
+    Object.prototype.hasOwnProperty.call(IMAGE_ERROR_MESSAGES, code)
+    ? IMAGE_ERROR_MESSAGES[/** @type {keyof typeof IMAGE_ERROR_MESSAGES} */ (code)]
+    : IMAGE_ERROR_MESSAGES.decode_failed;
+}
+
+export const PHOTO_TEXT = Object.freeze({
+  legend: 'Photo (optional)',
+  takePhoto: 'Take a photo',
+  chooseGallery: 'Choose from gallery',
+  removePhoto: 'Remove photo',
+  preparing: 'Preparing photo',
+  /** @param {string} size  "240 kB" */
+  ready: (size) => `Photo ready, ${size}`,
+  removed: 'Photo removed.',
+  current: 'Current photo',
+  willRemove: 'The current photo will be removed when you save.',
+  undoRemove: 'Keep the current photo',
+  sizeNote: 'Photos are resized automatically. Location data in photos is removed.',
+  previewAlt: 'Preview of the chosen photo',
+});
+
+export const LISTING_TEXT = Object.freeze({
+  myListingsTitle: 'My listings',
+  newListing: 'New listing',
+  editTitle: 'Edit listing',
+  statusLegend: 'Show',
+  /** @param {number} shown @param {number} total */
+  showing: (shown, total) => `Showing ${shown} of ${total}`,
+  loadMore: 'Load more',
+  loadingMore: 'Loading more…',
+  loading: 'Loading your listings…',
+  errorTitle: 'Your listings could not be loaded',
+  emptyTitle: 'You have no listings yet.',
+  emptyText: 'Create a listing so buyers can find your produce.',
+  /** @param {string} status  "sold out" */
+  emptyFilteredTitle: (status) => `No ${status} listings.`,
+  createFirst: 'Create your first listing',
+  checkForecast: 'Check the forecast first',
+  /** @param {string} qty  "120.5" */
+  available: (qty) => `${qty} kg available`,
+  /** @param {string} price  "KES 42.00" */
+  perKg: (price) => `${price} per kg`,
+  edit: 'Edit',
+  remove: 'Remove',
+  viewOrders: 'View orders',
+  /** @param {string} crop  "maize" */
+  photoAlt: (crop) => `Photo of ${crop} listing`,
+  removeTitle: 'Remove this listing?',
+  removeText: 'Buyers will no longer see it. Orders that are already paid are not affected.',
+  removeConfirm: 'Remove listing',
+  removing: 'Removing…',
+  cancel: 'Cancel',
+  close: 'Close',
+  removed: 'Listing removed',
+  created: 'Listing created',
+  saved: 'Changes saved',
+  notFoundRefreshed: 'This listing could not be found. The list has been refreshed.',
+
+  cropLegend: 'Crop',
+  marketLabel: 'Market',
+  marketPlaceholder: 'Choose a market',
+  marketsLoading: 'Loading markets…',
+  noMarkets:
+    'There are no markets with price data yet, so a listing cannot be created. Please check again soon.',
+  noMarketsTitle: 'No markets available',
+  quantityLabel: 'Quantity (kg)',
+  quantityHint: 'How much you can sell now',
+  quantityEditHint:
+    'Quantity available now. Orders waiting for payment are already taken out of this number.',
+  priceLabel: 'Asking price',
+  priceSuffix: 'KES per kg',
+  priceHint: 'Enter the price for 1 kg, not for a bag',
+  /** @param {string} qty @param {string} total  "KES 4,200.00" */
+  estimate: (qty, total) => `If all ${qty} kg sell at this price: ${total}`,
+  estimateLabel: 'Estimate',
+  /** @param {string} words  "about 60% above" @param {string} market */
+  caution: (words, market) =>
+    `This is ${words} the latest price in ${market}. Check that the price is for 1 kg.`,
+  /** @param {string} words @param {string} market @param {string} latest  "KES 40.00" */
+  confirm: (words, market, latest) =>
+    `This is ${words} the latest price in ${market} (${latest} per kg). Check that the price is for 1 kg, not for a bag.`,
+  confirmCheckbox: 'The price is for 1 kg and is correct',
+  submitCreate: 'Create listing',
+  submitEdit: 'Save changes',
+  saving: 'Saving…',
+  preparingPhoto: 'Preparing photo',
+  noChanges: 'Change the quantity, the price or the photo to save.',
+  uncertainCreate:
+    'We could not confirm whether your listing was saved. Check My listings before trying again.',
+  uncertainEdit:
+    'We could not confirm whether your changes were saved. Check My listings before trying again.',
+  goToMyListings: 'Go to My listings',
+  summaryTitle: 'The listing was not saved',
+  marketUnavailable: 'This market has no price data yet. Choose another market.',
+
+  readOnlyCropMarket: 'To change the crop or market, remove this listing and create a new one.',
+  removedNotice: 'This listing was removed and can no longer be changed.',
+  removedNoticeTitle: 'Removed listing',
+  notFound: 'This listing could not be found.',
+  notFoundTitle: 'Listing not found',
+  backToListings: 'Back to My listings',
+  zeroTitle: 'Mark as sold out?',
+  zeroText: 'Setting the quantity to 0 marks this listing as sold out.',
+  zeroConfirm: 'Save as sold out',
+  reactivateHint: 'This listing will become active again.',
+  findingListing: 'Loading the listing…',
+
+  leaveTitle: 'Leave without saving?',
+  leaveText: 'Your changes to this listing will be lost.',
+  leaveConfirm: 'Leave',
+  stay: 'Stay on this page',
+});
+
+export const GUIDANCE_TEXT = Object.freeze({
+  title: 'Price guidance',
+  chooseMarket: 'Choose a market to see its latest price.',
+  noPrice: 'There is no recent price for this market.',
+  priceUnavailable: 'The latest price could not be loaded. You can still save the listing.',
+  forecastUnavailable: 'No forecast for this market yet.',
+  seeForecast: 'See the forecast',
+  loading: 'Loading price guidance…',
+});
+
+export const ORDER_TEXT = Object.freeze({
+  title: 'Orders',
+  noteFallback:
+    'Payments run in a test environment. A paid order is a test confirmation and no real money moves.',
+  delivery:
+    'AgriSence does not arrange delivery or share contact details in this prototype. Agree handover directly with the buyer through your own channels.',
+  filterLegend: 'Show',
+  oneListingChip: 'Showing orders for one listing',
+  clearListing: 'Show orders for all listings',
+  refresh: 'Refresh',
+  loadMore: 'Load more',
+  loadingMore: 'Loading more…',
+  /** @param {number} shown @param {number} total */
+  showing: (shown, total) => `Showing ${shown} of ${total}`,
+  /** @param {number} shown @param {number} loaded @param {number} total */
+  notPaidShowing: (shown, loaded, total) =>
+    `${shown} not paid among the ${loaded} of ${total} orders loaded.`,
+  notPaidNote:
+    'Not paid groups expired, cancelled and failed orders from the orders loaded so far. Load more to check older orders.',
+  emptyTitle: 'No orders yet.',
+  emptyText: 'Orders appear here when a buyer starts paying for one of your listings.',
+  emptyFilteredTitle: 'No orders with this status.',
+  loading: 'Loading orders…',
+  errorTitle: 'Orders could not be loaded',
+  /** @param {string} qty @param {string} price  "KES 42.00" */
+  quantityLine: (qty, price) => `${qty} kg at ${price} per kg`,
+  total: 'Total',
+  buyer: 'Buyer',
+  ordered: 'Ordered',
+  paidAt: 'Payment completed',
+  /** @param {string} receipt */
+  paidWithReceipt: (receipt) => `Test payment received, receipt ${receipt}`,
+  paidNoReceipt: 'Test payment received',
+  waiting: 'The buyer has not completed the payment yet.',
+  notPaid: 'No payment was received.',
+  review: 'An administrator is checking this payment.',
+});
+
+export const DASHBOARD_LISTINGS_TEXT = Object.freeze({
+  title: 'My listings and orders',
+  activeListings: 'Active listings',
+  paidOrders: 'Paid orders',
+  countError: 'This number could not be loaded.',
+  /** @param {string} label */
+  loading: (label) => `Loading ${label.toLowerCase()}…`,
+  seeListings: 'See my listings',
+  seeOrders: 'See orders',
+});

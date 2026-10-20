@@ -17,6 +17,9 @@ import trendNairobiBeans from './trendNairobiBeans.json';
 import trendKisumuBeans from './trendKisumuBeans.json';
 import forecastOneMonth from './forecastOneMonth.json';
 import forecastTwoMonth from './forecastTwoMonth.json';
+import myListingsPage from './myListingsPage.json';
+import listingCreated from './listingCreated.json';
+import farmerOrdersPage from './farmerOrdersPage.json';
 
 export const fixtures = {
   health,
@@ -36,6 +39,9 @@ export const fixtures = {
   trendKisumuBeans,
   forecastOneMonth,
   forecastTwoMonth,
+  myListingsPage,
+  listingCreated,
+  farmerOrdersPage,
 };
 
 /** Fixture name to the OpenAPI response it must match. */
@@ -59,4 +65,9 @@ export const FIXTURE_CONTRACT = {
   // Zod schema in src/lib/shapSchema.js (src/lib/shapSchema.test.js).
   forecastOneMonth: { path: '/api/v1/forecasts', method: 'get', status: '200' },
   forecastTwoMonth: { path: '/api/v1/forecasts', method: 'get', status: '200' },
+  // ListingOut and FarmerOrderOut name their fields without types in openapi.json, so these
+  // checks cover the required fields; the screens read the types documented in the endpoints.
+  myListingsPage: { path: '/api/v1/listings/mine', method: 'get', status: '200' },
+  listingCreated: { path: '/api/v1/listings', method: 'post', status: '201' },
+  farmerOrdersPage: { path: '/api/v1/listings/mine/orders', method: 'get', status: '200' },
 };
