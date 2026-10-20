@@ -20,9 +20,10 @@ import {
  * @property {import('react').ComponentType<any>} icon
  * @property {boolean} [end]  match the path exactly (role home)
  * @property {boolean} [superAdminOnly]
+ * @property {'waitingOrders'} [badge]  a count next to the label (NAV_BADGES in NavBadge.jsx)
  */
 
-/** Navigation per role. Buyer screens arrive in F3, admin screens in F4. */
+/** Navigation per role. Admin screens arrive in F4. */
 /** @type {Record<string, NavItem[]>} */
 export const NAV_ITEMS = {
   farmer: [
@@ -33,8 +34,8 @@ export const NAV_ITEMS = {
     { label: 'Orders', to: '/farmer/orders', icon: ClipboardList },
   ],
   buyer: [
-    { label: 'Browse', to: '/buyer', icon: Store, end: true },
-    { label: 'My orders', to: '/buyer/orders', icon: ShoppingBag },
+    { label: 'Browse', to: '/buyer/browse', icon: Store },
+    { label: 'My orders', to: '/buyer/orders', icon: ShoppingBag, badge: 'waitingOrders' },
   ],
   admin: [
     { label: 'Overview', to: '/admin', icon: Gauge, end: true },
