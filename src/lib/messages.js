@@ -313,6 +313,16 @@ export const ORDER_STATUS_WORDS = Object.freeze({
   needs_reconciliation: 'Under review',
 });
 
+/** Payment status words (PaymentStatus in openapi.json), shown with an icon by StatusBadge (F3). */
+export const PAYMENT_STATUS_WORDS = Object.freeze({
+  initiating: 'Sending request',
+  initiated: 'Waiting for your phone',
+  completed: 'Payment received',
+  failed: 'Payment failed',
+  cancelled: 'Payment cancelled',
+  timeout: 'Timed out',
+});
+
 /** Messages for the photo preparation errors (ImageError codes in lib/image.js). */
 export const IMAGE_ERROR_MESSAGES = Object.freeze({
   unsupported_type: 'Choose a JPEG or PNG photo. Other file types cannot be used.',
