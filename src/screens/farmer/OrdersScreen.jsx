@@ -11,10 +11,10 @@ import { LoadingState } from '@/components/feedback/LoadingState';
 import { OrderCard } from '@/components/orders/OrderCard';
 import { ORDER_TEXT } from '@/lib/messages';
 import { usePageTitle } from '@/lib/usePageTitle';
+import { filterNotPaid } from '@/lib/filterParams';
 import {
   cleanFilterParams,
   isUuid,
-  NOT_PAID_STATUSES,
   ORDER_FILTER_OPTIONS,
   ORDER_FILTERS,
   pickValue,
@@ -63,9 +63,7 @@ export default function OrdersScreen() {
   const pages = query.data?.pages ?? [];
   const loaded = pages.flatMap((page) => page.items);
   const total = pages.length ? pages[pages.length - 1].total : 0;
-  const items = notPaid
-    ? loaded.filter((order) => NOT_PAID_STATUSES.includes(order.status))
-    : loaded;
+  const items = notPaid ? filterNotPaid(loaded) : loaded;
   const serverNote = pages[0]?.note;
   const note =
     typeof serverNote === 'string' && serverNote.trim() ? serverNote : ORDER_TEXT.noteFallback;
