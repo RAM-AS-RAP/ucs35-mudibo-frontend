@@ -4,6 +4,7 @@ import { http } from 'msw';
 import { server } from '@/test/msw/server';
 import { apiUrl, errorResponse } from '@/test/msw/handlers';
 import { loginAs, logout, renderApp } from '@/test/render';
+import { fixtures } from '@/test/fixtures';
 import { api, unwrap } from '@/api/client';
 
 afterEach(() => logout());
@@ -81,15 +82,13 @@ describe('guards and routes', () => {
     expect(router.state.location.pathname).toBe('/admin');
   });
 
-  it('renders each role home inside its shell', async () => {
+  it('renders a farmer section inside the shell', async () => {
     loginAs('farmer');
     renderApp('/farmer/listings');
     expect(
       await screen.findByRole('heading', { name: 'My listings', level: 1 }),
     ).toBeInTheDocument();
-    expect(
-      screen.getByText('This screen is built in module F2b (farmer listings).'),
-    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /account menu/i })).toBeInTheDocument();
   });
 
   it('shows NotFound for an unknown route', async () => {
@@ -125,7 +124,7 @@ describe('guards and routes', () => {
     },
   );
 
-  it('names the farmer home "Dashboard" and keeps My listings and Orders as placeholders', async () => {
+  it('names the farmer home "Dashboard" and opens My listings, Orders and New listing', async () => {
     loginAs('farmer');
     const { router } = renderApp('/farmer');
     expect(await screen.findByRole('heading', { name: 'Dashboard', level: 1 })).toBeInTheDocument();
@@ -134,16 +133,55 @@ describe('guards and routes', () => {
       'aria-current',
       'page',
     );
+    expect(within(nav).getByRole('link', { name: 'My listings' })).toHaveAttribute(
+      'href',
+      '/farmer/listings',
+    );
+    expect(within(nav).getByRole('link', { name: 'Orders' })).toHaveAttribute(
+      'href',
+      '/farmer/orders',
+    );
     for (const [path, title] of [
       ['/farmer/listings', 'My listings'],
       ['/farmer/orders', 'Orders'],
       ['/farmer/listings/new?crop=maize&market=Nairobi', 'New listing'],
+      [`/farmer/listings/${fixtures.myListingsPage.items[0].id}/edit`, 'Edit listing'],
     ]) {
       await router.navigate(path);
       expect(await screen.findByRole('heading', { name: title, level: 1 })).toBeInTheDocument();
-      expect(screen.getByText(/This screen is built in module F2b/)).toBeInTheDocument();
+      expect(screen.queryByText(/This screen is built in module/)).not.toBeInTheDocument();
     }
   });
+
+  it('shows NotFound inside the farmer shell for an unknown farmer section', async () => {
+    loginAs('farmer');
+    renderApp('/farmer/nowhere');
+    expect(await screen.findByRole('heading', { name: 'Page not found' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /account menu/i })).toBeInTheDocument();
+  });
+
+  it.each([
+    '/farmer/listings',
+    '/farmer/listings/new',
+    `/farmer/listings/${fixtures.myListingsPage.items[0].id}/edit`,
+    '/farmer/orders',
+  ])('a buyer cannot open %s and no listing or order request is sent', async (path) => {
+    loginAs('buyer');
+    const seen = [];
+    server.events.on('request:start', ({ request }) => seen.push(request.url));
+    renderApp(path);
+    expect(await screen.findByRole('heading', { name: 'No access' })).toBeInTheDocument();
+    expect(seen.filter((url) => /listings|orders/.test(url))).toEqual([]);
+    server.events.removeAllListeners();
+  });
+
+  it.each(['/farmer/listings', '/farmer/listings/new', '/farmer/orders?status=paid'])(
+    'sends an anonymous visitor of %s to /login',
+    async (path) => {
+      const { router } = renderApp(path);
+      await waitFor(() => expect(router.state.location.pathname).toBe('/login'));
+    },
+  );
 
   it('a 401 from the API logs out and navigates to /login through the router', async () => {
     loginAs('farmer');

@@ -88,3 +88,61 @@ export function cleanParams(params, rules) {
   }
   return next.toString() === params.toString() ? null : next;
 }
+
+/** My listings filter (the `status` query parameter); "all" sends no status. */
+export const LISTING_FILTERS = /** @type {const} */ (['all', 'active', 'sold_out', 'removed']);
+export const LISTING_FILTER_OPTIONS = [
+  { value: /** @type {const} */ ('all'), label: 'All' },
+  { value: /** @type {const} */ ('active'), label: 'Active' },
+  { value: /** @type {const} */ ('sold_out'), label: 'Sold out' },
+  { value: /** @type {const} */ ('removed'), label: 'Removed' },
+];
+
+/**
+ * Orders filter (the `status` query parameter). The API filters by one status; "not_paid"
+ * groups expired, cancelled and payment_failed on the client (see OrdersScreen).
+ */
+export const ORDER_FILTERS = /** @type {const} */ ([
+  'all',
+  'paid',
+  'pending_payment',
+  'not_paid',
+  'needs_reconciliation',
+]);
+export const ORDER_FILTER_OPTIONS = [
+  { value: /** @type {const} */ ('all'), label: 'All' },
+  { value: /** @type {const} */ ('paid'), label: 'Paid' },
+  { value: /** @type {const} */ ('pending_payment'), label: 'Waiting for payment' },
+  { value: /** @type {const} */ ('not_paid'), label: 'Not paid' },
+  { value: /** @type {const} */ ('needs_reconciliation'), label: 'Under review' },
+];
+export const NOT_PAID_STATUSES = Object.freeze(['expired', 'cancelled', 'payment_failed']);
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Whether a value is a UUID (a listing id in the URL).
+ * @param {string | null | undefined} value
+ */
+export function isUuid(value) {
+  return typeof value === 'string' && UUID.test(value);
+}
+
+/**
+ * The query string with an invalid `status` (and, when `listing` is allowed, an invalid
+ * `listing` id) removed; null when nothing needs to change.
+ * @param {URLSearchParams} params
+ * @param {{ statuses: readonly string[], listing?: boolean }} rules
+ */
+export function cleanFilterParams(params, { statuses, listing = false }) {
+  const next = new URLSearchParams(params);
+  const status = next.get('status');
+  if (status !== null && (status === 'all' || !statuses.includes(status))) next.delete('status');
+  if (listing) {
+    const id = next.get('listing');
+    if (id !== null && !isUuid(id)) next.delete('listing');
+  } else {
+    next.delete('listing');
+  }
+  return next.toString() === params.toString() ? null : next;
+}

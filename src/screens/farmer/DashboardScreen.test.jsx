@@ -10,6 +10,7 @@ import {
 } from '@/test/msw/handlers';
 import { logout } from '@/test/render';
 import { recordRequests, renderFarmer } from '@/test/farmer';
+import { makeListings, serveListings, serveOrders } from '@/test/listings';
 import { setProfile } from '@/auth/session';
 import { fixtures } from '@/test/fixtures';
 import { queryClient } from '@/lib/queryClient';
@@ -45,24 +46,32 @@ describe('DashboardScreen', () => {
     expect(screen.getAllByText('Prices are monthly figures from FEWS NET.')).toHaveLength(1);
   });
 
-  it('issues its requests in parallel: markets, both crops, then both forecasts', async () => {
+  it('issues its requests in parallel: markets, both crops and both counts, then both forecasts', async () => {
     const recorder = recordRequests();
     await openDashboard();
     const calls = recorder.requests.map((r) => `${r.path}?${new URLSearchParams(r.query)}`);
     expect(calls.sort()).toEqual([
       '/api/v1/forecasts?market=Nairobi&crop=beans&horizon=one_month',
       '/api/v1/forecasts?market=Nairobi&crop=maize&horizon=one_month',
+      '/api/v1/listings/mine/orders?status=paid&limit=1',
+      '/api/v1/listings/mine?status=active&limit=1',
       '/api/v1/markets?',
       '/api/v1/prices/current?crop=beans',
       '/api/v1/prices/current?crop=maize',
     ]);
-    // The first three start together, before any answer arrives.
+    // The first five start together, before any answer arrives.
     expect(
       recorder.requests
-        .slice(0, 3)
+        .slice(0, 5)
         .map((r) => r.path)
         .sort(),
-    ).toEqual(['/api/v1/markets', '/api/v1/prices/current', '/api/v1/prices/current']);
+    ).toEqual([
+      '/api/v1/listings/mine',
+      '/api/v1/listings/mine/orders',
+      '/api/v1/markets',
+      '/api/v1/prices/current',
+      '/api/v1/prices/current',
+    ]);
   });
 
   it('lists the latest prices per crop with their changes and links', async () => {
@@ -131,11 +140,44 @@ describe('DashboardScreen', () => {
     expect(cardIn('Forecast snapshot', 'Beans')).toHaveTextContent('KES 42.49');
   });
 
-  it('links to My listings', async () => {
+  it('summarises active listings and paid orders from two limit=1 requests', async () => {
+    serveListings(makeListings(4));
+    serveOrders(fixtures.farmerOrdersPage.items);
     await openDashboard();
-    expect(screen.getByRole('link', { name: /^My listings\s*See and manage/ })).toHaveAttribute(
-      'href',
-      '/farmer/listings',
+    const region = screen.getByRole('region', { name: 'My listings and orders' });
+    expect(within(region).getByTestId('count-active-listings')).toHaveTextContent(
+      'Active listings4',
     );
+    // Two of the seven fixture orders are paid.
+    expect(within(region).getByTestId('count-paid-orders')).toHaveTextContent('Paid orders2');
+    expect(within(region).getByRole('link', { name: 'New listing' })).toHaveAttribute(
+      'href',
+      '/farmer/listings/new',
+    );
+    expect(within(region).getByRole('link', { name: 'See my listings' })).toHaveAttribute(
+      'href',
+      '/farmer/listings?status=active',
+    );
+    expect(within(region).getByRole('link', { name: 'See orders' })).toHaveAttribute(
+      'href',
+      '/farmer/orders?status=paid',
+    );
+  });
+
+  it('a failed count shows a short message in its card only', async () => {
+    server.use(
+      http.get(apiUrl('/api/v1/listings/mine/orders'), () =>
+        errorResponse(500, 'internal_error', { requestId: 'req-orders-500' }),
+      ),
+    );
+    await openDashboard();
+    await waitFor(() =>
+      expect(screen.getByTestId('count-paid-orders')).toHaveTextContent(
+        'This number could not be loaded.',
+      ),
+    );
+    expect(screen.getByTestId('count-active-listings')).toHaveTextContent('Active listings1');
+    // The rest of the dashboard still works.
+    expect(cardIn('Latest prices', 'Maize')).toHaveTextContent('KES 40.00');
   });
 });

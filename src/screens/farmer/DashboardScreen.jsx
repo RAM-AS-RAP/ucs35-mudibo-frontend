@@ -1,5 +1,5 @@
 import { Link } from 'react-router';
-import { ArrowRight, Package } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { useCurrentPrices, useForecast, useMarkets } from '@/api/queries';
 import { useSession } from '@/auth/session';
 import { Badge } from '@/components/ui/badge';
@@ -12,6 +12,7 @@ import { PriceChange } from '@/components/display/PriceCard';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { ErrorState } from '@/components/feedback/ErrorState';
 import { LoadingState } from '@/components/feedback/LoadingState';
+import { ListingsSummary } from '@/components/listings/ListingsSummary';
 import { directionOf } from '@/lib/forecast';
 import { formatKES } from '@/lib/format';
 import { cropLabel, FORECAST_TEXT, FRESHNESS_PRICES, MESSAGES, PRICE_TEXT } from '@/lib/messages';
@@ -186,7 +187,7 @@ function ForecastSnapshot() {
   );
 }
 
-/** The farmer's home: latest prices, a forecast snapshot and a link to the listings. */
+/** The farmer's home: latest prices, a forecast snapshot, and a summary of listings and orders. */
 export default function DashboardScreen() {
   const headingRef = usePageTitle('Dashboard');
   const session = useSession();
@@ -217,17 +218,7 @@ export default function DashboardScreen() {
         <ForecastSnapshot />
       </section>
 
-      <Link
-        to="/farmer/listings"
-        className="flex min-h-11 items-center gap-3 rounded-xl border border-border bg-card p-4 text-text shadow-sm hover:bg-canvas"
-      >
-        <Package aria-hidden="true" className="size-6 shrink-0 text-primary" />
-        <span className="flex flex-col">
-          <span className="font-semibold">My listings</span>
-          <span className="text-sm text-text-secondary">See and manage the produce you sell.</span>
-        </span>
-        <ArrowRight aria-hidden="true" className="ml-auto size-5 shrink-0" />
-      </Link>
+      <ListingsSummary />
     </div>
   );
 }
