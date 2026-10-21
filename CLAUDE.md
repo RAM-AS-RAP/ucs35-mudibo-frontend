@@ -195,8 +195,9 @@ docs/           backend/, architecture.md, auth.md, design-system.md, forecast-d
   and `PhotoPicker` create object URLs, and both revoke them.
 - **Status words** for listings and orders live in `LISTING_STATUS_WORDS` and `ORDER_STATUS_WORDS`
   (`src/lib/messages.js`) and are shown through `StatusBadge` (`kind="listing"` for listings).
-- Farmers cannot fetch one listing: use `useMyListing(id)` (cache, then pages of
-  `GET /listings/mine?limit=100`, at most 5).
+- One of the farmer's listings: `useMyListing(id)` (a cached page first, then
+  `GET /listings/mine/{id}`; a 404 `listing_not_found` gives `null`). The edit screen then goes back
+  to My listings. Never call the buyer's `GET /listings/{id}` from farmer code (403).
 - Never show or request a buyer contact detail.
 
 ## 4c. Buyer checkout and payment conventions (F3, details in `docs/buyer-checkout.md`)

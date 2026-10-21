@@ -436,8 +436,6 @@ export const LISTING_TEXT = Object.freeze({
   readOnlyCropMarket: 'To change the crop or market, remove this listing and create a new one.',
   removedNotice: 'This listing was removed and can no longer be changed.',
   removedNoticeTitle: 'Removed listing',
-  notFound: 'This listing could not be found.',
-  notFoundTitle: 'Listing not found',
   backToListings: 'Back to My listings',
   zeroTitle: 'Mark as sold out?',
   zeroText: 'Setting the quantity to 0 marks this listing as sold out.',

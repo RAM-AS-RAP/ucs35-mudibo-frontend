@@ -9,7 +9,7 @@ document is also material for the thesis report.
 | -------------- | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
 | My listings    | `/farmer/listings`          | The farmer's listings, newest first, 20 at a time ("Load more", "Showing X of Y"), filtered by status (All, Active, Sold out, Removed; `?status=` in the URL). Each card: photo, crop and market, quantity available, price per kg, status, Edit, Remove, View orders. | `GET /listings/mine?status=&limit=20&offset=`, `DELETE /listings/{id}`                                      |
 | New listing    | `/farmer/listings/new`      | Crop, market, quantity, asking price per kg, optional photo, with price guidance. `?crop=&market=` (from the forecast screen's "Plan a listing") preselect valid values only.                                                                                          | `GET /markets`, `GET /prices/current`, `GET /forecasts` (guidance), `POST /listings` (multipart)            |
-| Edit listing   | `/farmer/listings/:id/edit` | Quantity, price and photo of one listing; crop and market are read only. Only changed fields are sent.                                                                                                                                                                 | `GET /listings/mine` (lookup, see below), `PATCH /listings/{id}` (multipart)                                |
+| Edit listing   | `/farmer/listings/:id/edit` | Quantity, price and photo of one listing; crop and market are read only. Only changed fields are sent.                                                                                                                                                                 | `GET /listings/mine/{id}` (see below), `PATCH /listings/{id}` (multipart)                                   |
 | Orders         | `/farmer/orders`            | Orders on the farmer's listings with status filters, an optional one listing filter (`?listing=`), "Load more" and "Refresh". Refreshes when the window regains focus; never polls.                                                                                    | `GET /listings/mine/orders?status=&listing_id=&limit=20&offset=`                                            |
 | Dashboard card | `/farmer`                   | Number of active listings and paid orders, a New listing button and links to both screens. A failed count shows a short message in that card only.                                                                                                                     | `GET /listings/mine?status=active&limit=1`, `GET /listings/mine/orders?status=paid&limit=1` (reads `total`) |
 
@@ -17,10 +17,12 @@ Removing a listing asks first ("Remove this listing? Buyers will no longer see i
 already paid are not affected."). A 409 `listing_has_pending_orders` is shown inside the dialog with
 only a Close button; a 404 closes the dialog and refreshes the list.
 
-There is no endpoint for a farmer to fetch one listing (`GET /listings/{id}` is the buyer's and
-answers 403 to a farmer). The edit screen reads the listing from the cached list, or pages through
-`GET /listings/mine?limit=100` (at most 5 pages) until the id is found; otherwise it shows "This
-listing could not be found." The README lists this under Known backend gaps.
+The edit screen (`useMyListing(id)`) shows a listing from a cached page of My listings at once and
+otherwise loads it with `GET /listings/mine/{id}` (any status; a removed listing is shown read only).
+`GET /listings/{id}` is the buyer's route and answers 403 to a farmer. A 404 `listing_not_found`,
+on load or on save, means the listing does not exist or is not the farmer's: the screen refreshes
+the listing data, shows "This listing could not be found. The list has been refreshed." and goes
+back to My listings. Any other load error shows the error state with "Try again".
 
 ## Quantity: available now
 

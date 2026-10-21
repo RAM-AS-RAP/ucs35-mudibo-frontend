@@ -158,6 +158,17 @@ export function myListingsResponse(listings, url) {
 }
 
 /**
+ * GET /listings/mine/{id} over a set of listings: the listing in any status, or 404
+ * listing_not_found. Returns a Response.
+ * @param {Array<{ id: string }>} listings
+ * @param {unknown} id
+ */
+export function myListingResponse(listings, id) {
+  const listing = listings.find((l) => l.id === id);
+  return listing ? HttpResponse.json(listing) : errorResponse(404, 'listing_not_found');
+}
+
+/**
  * GET /listings/mine/orders over a set of orders: one `status`, `listing_id`, paged, with the note.
  * @param {Array<{ status: string, listing_id: string }>} orders
  * @param {URL} url
@@ -211,6 +222,10 @@ export const listingHandlers = [
   http.delete(apiUrl('/api/v1/listings/:listingId'), () => new HttpResponse(null, { status: 204 })),
   http.get(apiUrl('/api/v1/listings/mine/orders'), ({ request }) =>
     HttpResponse.json(myOrdersResponse(fixtures.farmerOrdersPage.items, new URL(request.url))),
+  ),
+  // After /mine/orders, so that path is never read as a listing id.
+  http.get(apiUrl('/api/v1/listings/mine/:listingId'), ({ params }) =>
+    myListingResponse(fixtures.myListingsPage.items, params.listingId),
   ),
 ];
 

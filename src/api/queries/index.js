@@ -78,10 +78,8 @@ export function useForecast({ market, crop, horizon }) {
 
 export {
   findCachedListing,
-  findMyListing,
+  fetchMyListing,
   invalidateListingData,
-  LOOKUP_MAX_PAGES,
-  LOOKUP_PAGE_SIZE,
   nextOffset,
   PAGE_SIZE,
   useCreateListing,

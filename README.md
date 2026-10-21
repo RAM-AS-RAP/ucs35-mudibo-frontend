@@ -179,10 +179,6 @@ from the server; offline, the app only shows a message that a connection is need
 
 ## Known backend gaps
 
-- backend gap: farmers cannot fetch a single listing. `GET /listings/{listing_id}` is the buyer's
-  route and answers 403 to a farmer, so the edit screen reads the listing from the cached list or
-  pages through `GET /listings/mine?limit=100` (at most 5 pages). A farmer route such as
-  `GET /listings/mine/{listing_id}` would remove the lookup.
 - backend gap: buyers cannot list markets, so the browse filter shows all four markets and some
   return no listings. `GET /markets` answers 403 to a buyer, so the filter uses the constant
   `BUYER_MARKETS` (Nairobi, Kisumu, Mombasa, Nakuru) in `src/lib/constants.js`. A buyer readable

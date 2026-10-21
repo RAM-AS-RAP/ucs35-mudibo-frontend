@@ -176,15 +176,15 @@ describe('New listing', () => {
 
 describe('Edit listing', () => {
   it('loading', async () => {
-    hang('/api/v1/listings/mine');
+    hang(`/api/v1/listings/mine/${active.id}`);
     await check(`/farmer/listings/${active.id}/edit`, () =>
       screen.findByText('Loading the listing…'),
     );
   });
-  it('not found', async () => {
+  it('not found (back on My listings)', async () => {
     serveListings([]);
     await check(`/farmer/listings/${active.id}/edit`, () =>
-      screen.findByText('This listing could not be found.'),
+      screen.findByRole('heading', { name: 'My listings', level: 1 }),
     );
   });
   it('success', async () => {

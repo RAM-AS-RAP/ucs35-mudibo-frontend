@@ -3,8 +3,10 @@
  * offset pages; writes use useMutation and are never retried automatically.
  */
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { ApiError } from '../errors';
 import {
   createListing,
+  getMyListing,
   getMyListings,
   getMyOrders,
   removeListing,
@@ -21,9 +23,6 @@ import { accountQueryPolicy, writePolicy } from './policy';
 /** @typedef {import('@tanstack/react-query').InfiniteData<ListingPage>} ListingPages */
 
 export const PAGE_SIZE = 20;
-/** The edit screen's search when a listing is not in the cache: pages of 100, at most 5. */
-export const LOOKUP_PAGE_SIZE = 100;
-export const LOOKUP_MAX_PAGES = 5;
 
 /**
  * The offset of the next page, or undefined when every item is loaded.
@@ -67,38 +66,32 @@ export function findCachedListing(client, id) {
 }
 
 /**
- * Find one of the farmer's listings. There is no endpoint for a farmer to fetch a single
- * listing (GET /listings/{id} is for buyers and answers 403), so this reads the cache first and
- * then pages through GET /listings/mine?limit=100, stopping after 5 pages.
- * @param {QueryClient} client
+ * GET /listings/mine/{id}, with a 404 listing_not_found turned into null (the listing does not
+ * exist or is not this farmer's). Every other error is thrown.
  * @param {string} id
  * @returns {Promise<Listing | null>}
  */
-export async function findMyListing(client, id) {
-  const cached = findCachedListing(client, id);
-  if (cached) return cached;
-  let offset = 0;
-  for (let page = 0; page < LOOKUP_MAX_PAGES; page += 1) {
-    const result = await getMyListings({ limit: LOOKUP_PAGE_SIZE, offset });
-    const found = result.items.find((item) => item.id === id);
-    if (found) return found;
-    const next = nextOffset(result);
-    if (next === undefined) break;
-    offset = next;
+export async function fetchMyListing(id) {
+  try {
+    return await getMyListing(id);
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404 && error.code === 'listing_not_found') {
+      return null;
+    }
+    throw error;
   }
-  return null;
 }
 
 /**
  * One of the farmer's listings for the edit screen: data is the listing, or null when it was
- * not found.
+ * not found. A listing already in a cached page shows at once.
  * @param {string} id
  */
 export function useMyListing(id) {
   const client = useQueryClient();
   return useQuery({
     queryKey: queryKeys.myListing(id),
-    queryFn: () => findMyListing(client, id),
+    queryFn: () => fetchMyListing(id),
     initialData: () => findCachedListing(client, id),
     ...accountQueryPolicy,
   });
@@ -168,12 +161,20 @@ function storeListing(client, listing) {
 }
 
 /**
- * Refresh the listings, the orders and the dashboard counts after a write.
+ * Refresh the listings, the orders and the dashboard counts after a write. `skipListing` keeps
+ * that one listing's entry as it is (the edit screen leaving a listing that was not found should
+ * not fetch it again).
  * @param {QueryClient} client
+ * @param {{ skipListing?: string }} [options]
  */
-export function invalidateListingData(client) {
+export function invalidateListingData(client, { skipListing } = {}) {
+  const skipped =
+    skipListing === undefined ? null : JSON.stringify(queryKeys.myListing(skipListing));
   return Promise.all([
-    client.invalidateQueries({ queryKey: queryKeys.myListingsRoot() }),
+    client.invalidateQueries({
+      queryKey: queryKeys.myListingsRoot(),
+      predicate: (query) => skipped === null || JSON.stringify(query.queryKey) !== skipped,
+    }),
     client.invalidateQueries({ queryKey: queryKeys.myOrdersRoot() }),
   ]);
 }
