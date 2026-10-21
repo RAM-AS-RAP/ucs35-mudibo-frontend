@@ -502,6 +502,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/listings/markets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Buyer Markets */
+        get: operations["buyer_markets_api_v1_listings_markets_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/listings/mine": {
         parameters: {
             query?: never;
@@ -528,6 +545,23 @@ export interface paths {
         };
         /** Farmer Orders */
         get: operations["farmer_orders_api_v1_listings_mine_orders_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/listings/mine/{listing_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** My Listing */
+        get: operations["my_listing_api_v1_listings_mine__listing_id__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1046,6 +1080,16 @@ export interface components {
              * @default false
              */
             remove_image: boolean;
+        };
+        /**
+         * BuyerMarketOut
+         * @description A market with at least one listing a buyer can buy; no price or market data beyond the count.
+         */
+        BuyerMarketOut: {
+            /** Listing Count */
+            listing_count: number;
+            /** Name */
+            name: string;
         };
         /** ChangePasswordRequest */
         ChangePasswordRequest: {
@@ -1697,6 +1741,8 @@ export interface components {
             access_token: string;
             /** Expires In */
             expires_in: number;
+            /** Is Super Admin */
+            is_super_admin: boolean;
             /** Must Change Password */
             must_change_password: boolean;
             /** Role */
@@ -1780,6 +1826,8 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /** Is Super Admin */
+            is_super_admin: boolean;
             /** Must Change Password */
             must_change_password: boolean;
             /** Name */
@@ -2777,6 +2825,26 @@ export interface operations {
             };
         };
     };
+    buyer_markets_api_v1_listings_markets_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BuyerMarketOut"][];
+                };
+            };
+        };
+    };
     my_listings_api_v1_listings_mine_get: {
         parameters: {
             query?: {
@@ -2831,6 +2899,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["FarmerOrdersPage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    my_listing_api_v1_listings_mine__listing_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                listing_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ListingOut"];
                 };
             };
             /** @description Validation Error */

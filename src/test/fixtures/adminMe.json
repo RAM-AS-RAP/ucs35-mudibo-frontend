@@ -4,6 +4,7 @@
   "phone_number": "254722000111",
   "email": "amina.admin@example.com",
   "role": "admin",
+  "is_super_admin": false,
   "must_change_password": false,
   "created_at": "2026-10-16T08:00:00Z"
 }

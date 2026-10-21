@@ -174,7 +174,6 @@ from the server; offline, the app only shows a message that a connection is need
 
 ## Open items
 
-- `docs/backend/SOURCE.md`: fill in the backend commit hash and export date of the copied contract.
 - `public/favicon.svg` and the generated icons are a placeholder mark; replace with the final logo and run `npm run gen:icons`.
 - Ask the backend team to add the frontend's development (`http://localhost:5173`) and production origins to `CORS_ORIGINS`.
 
