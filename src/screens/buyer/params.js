@@ -3,7 +3,7 @@
  * values are stored, each validated: an invalid value is removed so the default applies.
  */
 import { parseDecimalInput, toHundredths } from '@/lib/decimal';
-import { BUYER_MARKETS, PRICE_FILTER_MAX } from '@/lib/constants';
+import { PRICE_FILTER_MAX } from '@/lib/constants';
 import { pickValue } from '@/lib/filterParams';
 import { cropLabel } from '@/lib/messages';
 
@@ -42,15 +42,31 @@ export function minAboveMax(min, max) {
   return /** @type {bigint} */ (toHundredths(min)) > /** @type {bigint} */ (toHundredths(max));
 }
 
+/** Longest market name kept from the URL before the market list has loaded. */
+export const MARKET_PARAM_MAX = 100;
+
+/**
+ * The market from the URL. With the list from GET /listings/markets, only a name on it is kept;
+ * before the list has loaded (or when it failed), any short non empty name is kept and the
+ * server validates it.
+ * @param {string | null} marketParam
+ * @param {readonly string[] | null} marketNames
+ */
+export function pickMarket(marketParam, marketNames) {
+  if (!marketParam || marketParam.length > MARKET_PARAM_MAX) return null;
+  if (marketNames === null) return marketParam;
+  return marketNames.includes(marketParam) ? marketParam : null;
+}
+
 /**
  * The browse filters from the URL. Invalid values fall back to the defaults; prices that are
  * invalid, or a minimum above the maximum, are dropped.
  * @param {URLSearchParams} params
+ * @param {readonly string[] | null} [marketNames]  the buyer markets, or null while unknown
  */
-export function readBrowseParams(params) {
+export function readBrowseParams(params, marketNames = null) {
   const crop = pickValue(params.get('crop'), BROWSE_CROPS, 'all');
-  const marketParam = params.get('market');
-  const market = marketParam && BUYER_MARKETS.includes(marketParam) ? marketParam : null;
+  const market = pickMarket(params.get('market'), marketNames);
   const sort = pickValue(params.get('sort'), SORTS, DEFAULT_SORT);
   const minParsed = parsePriceFilter(params.get('min'));
   const maxParsed = parsePriceFilter(params.get('max'));

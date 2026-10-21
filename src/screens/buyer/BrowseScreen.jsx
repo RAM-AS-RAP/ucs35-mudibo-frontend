@@ -1,7 +1,7 @@
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router';
 import { AlertCircle, Info, Loader2, SearchX, Sprout, X } from 'lucide-react';
-import { useBrowseListings } from '@/api/queries';
+import { useBrowseListings, useBuyerMarkets } from '@/api/queries';
 import { ApiError, getUserMessage } from '@/api/errors';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,7 +12,6 @@ import { EmptyState } from '@/components/feedback/EmptyState';
 import { ErrorState } from '@/components/feedback/ErrorState';
 import { LoadingState } from '@/components/feedback/LoadingState';
 import { BuyerListingCard } from '@/components/buyer/BuyerListingCard';
-import { BUYER_MARKETS } from '@/lib/constants';
 import { BROWSE_TEXT } from '@/lib/buyerMessages';
 import { usePageTitle } from '@/lib/usePageTitle';
 import {
@@ -49,13 +48,22 @@ function filterProblemText(error) {
  * Browse produce (/buyer/browse): active listings with stock, 20 at a time. Filters live in the
  * URL (`crop`, `market`, `min`, `max`, `sort`), validated on load. The price fields wait 400 ms
  * after typing; an invalid price or a minimum above the maximum shows a message and sends no
- * request. Buyers cannot call GET /markets, so the market filter lists BUYER_MARKETS.
+ * request. The market filter offers the markets from GET /listings/markets (buyers cannot call
+ * GET /markets). A market in the URL waits for that list and is dropped when it is not on it;
+ * if the list cannot be loaded, the URL's market is sent and the server validates it.
  */
 export default function BrowseScreen() {
   const headingRef = usePageTitle(BROWSE_TEXT.title);
   const ids = useId();
   const [params, setParams] = useSearchParams();
-  const filters = readBrowseParams(params);
+  const markets = useBuyerMarkets();
+  const marketNames = useMemo(
+    () => (markets.data ? markets.data.map((m) => m.name) : null),
+    [markets.data],
+  );
+  const filters = readBrowseParams(params, marketNames);
+  // A market from the URL is checked against the list before the first request.
+  const waitingForMarkets = Boolean(filters.market) && markets.isPending;
   const [minText, setMinText] = useState(filters.minPrice ?? '');
   const [maxText, setMaxText] = useState(filters.maxPrice ?? '');
 
@@ -64,13 +72,13 @@ export default function BrowseScreen() {
   const reversed = min.ok && max.ok && minAboveMax(min.value, max.value);
   const priceProblem = !min.ok || !max.ok || reversed;
 
-  const query = useBrowseListings(filters, { enabled: !priceProblem });
+  const query = useBrowseListings(filters, { enabled: !priceProblem && !waitingForMarkets });
 
   // Replace invalid or redundant values in the URL by the defaults.
   useEffect(() => {
-    const clean = writeBrowseParams(readBrowseParams(params));
+    const clean = writeBrowseParams(readBrowseParams(params, marketNames));
     if (clean.toString() !== params.toString()) setParams(clean, { replace: true });
-  }, [params, setParams]);
+  }, [params, setParams, marketNames]);
 
   // Apply the typed prices 400 ms after the last change, only when both are valid.
   useEffect(() => {
@@ -78,7 +86,7 @@ export default function BrowseScreen() {
       const nextMin = parsePriceFilter(minText);
       const nextMax = parsePriceFilter(maxText);
       if (!nextMin.ok || !nextMax.ok || minAboveMax(nextMin.value, nextMax.value)) return;
-      const current = readBrowseParams(params);
+      const current = readBrowseParams(params, marketNames);
       if (current.minPrice === nextMin.value && current.maxPrice === nextMax.value) return;
       setParams(
         writeBrowseParams({ ...current, minPrice: nextMin.value, maxPrice: nextMax.value }),
@@ -86,11 +94,13 @@ export default function BrowseScreen() {
       );
     }, PRICE_DEBOUNCE_MS);
     return () => clearTimeout(id);
-  }, [minText, maxText, params, setParams]);
+  }, [minText, maxText, params, setParams, marketNames]);
 
   /** @param {Partial<ReturnType<typeof readBrowseParams>>} change */
   function update(change) {
-    setParams(writeBrowseParams({ ...readBrowseParams(params), ...change }), { replace: true });
+    setParams(writeBrowseParams({ ...readBrowseParams(params, marketNames), ...change }), {
+      replace: true,
+    });
   }
 
   function clearFilters() {
@@ -117,6 +127,9 @@ export default function BrowseScreen() {
   else if (!max.ok) priceMessage = { id: `${ids}-max`, text: max.error };
   else if (reversed) priceMessage = { id: `${ids}-min`, text: BROWSE_TEXT.minAboveMax };
   const priceMessageId = `${ids}-price-message`;
+  // Until the list loads (or when it failed), still show the market chosen in the URL.
+  const marketOptions =
+    marketNames ?? (filters.market ? [filters.market] : /** @type {string[]} */ ([]));
 
   let body;
   if (priceProblem && !query.data) {
@@ -218,12 +231,26 @@ export default function BrowseScreen() {
               onChange={(event) => update({ market: event.target.value || null })}
             >
               <option value="">{BROWSE_TEXT.allMarkets}</option>
-              {BUYER_MARKETS.map((name) => (
+              {marketOptions.map((name) => (
                 <option key={name} value={name}>
                   {name}
                 </option>
               ))}
             </select>
+            {markets.isError && (
+              <p className="flex flex-wrap items-center gap-x-2 text-sm text-text-secondary">
+                <AlertCircle aria-hidden="true" className="size-4 shrink-0" />
+                <span>{BROWSE_TEXT.marketsError}</span>
+                <Button
+                  type="button"
+                  variant="link"
+                  className="min-h-11 px-0"
+                  onClick={() => markets.refetch()}
+                >
+                  {BROWSE_TEXT.marketsRetry}
+                </Button>
+              </p>
+            )}
           </div>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor={`${ids}-sort`}>{BROWSE_TEXT.sortLabel}</Label>

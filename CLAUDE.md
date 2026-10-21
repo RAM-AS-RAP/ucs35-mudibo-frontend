@@ -105,7 +105,7 @@ src/
                 useAuth.js, redirects.js, revalidate.js
   api/queries/  TanStack Query hooks (useMarkets, useCurrentPrices, usePriceTrends, useForecast; listings.js:
                 useMyListings, useMyListing, useMyOrders, counts, useCreate/Update/RemoveListing; buyer.js:
-                useBrowseListings, useListing, useOrder, useMyBuyerOrders, useCreate/Pay/CancelOrder;
+                useBrowseListings, useBuyerMarkets, useListing, useOrder, useMyBuyerOrders, useCreate/Pay/CancelOrder;
                 waitingCount.js: useWaitingOrdersCount), keys.js, policy.js
   components/auth/  AuthLayout, FormField, PasswordField, CodeInput, FormErrorSummary, CountdownButton,
                 PasswordRequirements, SignedInNotice, ResendCode, FormNotices, useServerProblem
@@ -202,7 +202,7 @@ docs/           backend/, architecture.md, auth.md, design-system.md, forecast-d
 
 ## 4c. Buyer checkout and payment conventions (F3, details in `docs/buyer-checkout.md`)
 
-- Endpoints: `endpoints/buyerListings.js` (`browseListings`, `getListing`), `endpoints/orders.js`
+- Endpoints: `endpoints/buyerListings.js` (`browseListings`, `getListing`, `getBuyerMarkets`), `endpoints/orders.js`
   (`createOrder`, `getOrder`, `getMyOrders` exported from the index as `getMyBuyerOrders`,
   `cancelOrder`, `existingOrderId`), `endpoints/payments.js` (`payOrder`). The farmer's
   `getMyOrders` and `useMyOrders` keep their names; the buyer's are `getMyBuyerOrders` and
@@ -227,8 +227,8 @@ docs/           backend/, architecture.md, auth.md, design-system.md, forecast-d
 - The buyer files are not in the relative time list (`RELATIVE_ONLY`): they may use
   `formatDateTime` (the source check allows `components/buyer/` and `screens/buyer/`).
 - Buyers get 403 from prices, forecasts and `GET /markets`: never call them from buyer code (a
-  source check and every buyer screen test enforce it). The browse market filter uses
-  `BUYER_MARKETS`.
+  source check and every buyer screen test enforce it). The browse market filter offers exactly the
+  names from `GET /listings/markets` (`useBuyerMarkets`); a URL market not on that list is removed.
 - Buyer screen text lives in `lib/buyerMessages.js`; order and payment status words in
   `lib/messages.js` (`ORDER_STATUS_WORDS`, `PAYMENT_STATUS_WORDS`) through `StatusBadge`.
 - Never ask for, show or store an M-Pesa PIN; `SandboxNote` shows the PIN warning. Show only the

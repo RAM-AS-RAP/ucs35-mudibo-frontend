@@ -97,12 +97,16 @@ describe('BrowseScreen', () => {
     expect(await screen.findByText('Showing 1 of 1')).toBeInTheDocument();
   });
 
-  it('offers every buyer market and "All markets" (no GET /markets)', async () => {
+  it('offers the markets from GET /listings/markets and "All markets" (no GET /markets)', async () => {
     await openBrowse();
-    const options = within(screen.getByLabelText('Market'))
-      .getAllByRole('option')
-      .map((o) => o.textContent);
-    expect(options).toEqual(['All markets', 'Nairobi', 'Kisumu', 'Mombasa', 'Nakuru']);
+    await waitFor(() =>
+      expect(
+        within(screen.getByLabelText('Market'))
+          .getAllByRole('option')
+          .map((o) => o.textContent),
+      ).toEqual(['All markets', 'Kisumu', 'Mombasa', 'Nairobi', 'Nakuru']),
+    );
+    expect(recorder.of('GET', '/api/v1/listings/markets')).toHaveLength(1);
     const sorts = within(screen.getByLabelText('Sort by'))
       .getAllByRole('option')
       .map((o) => o.textContent);
@@ -239,6 +243,70 @@ describe('BrowseScreen', () => {
     await user.click(clear[clear.length - 1]);
     await waitFor(() => expect(router.state.location.search).toBe(''));
     expect(await screen.findByText('Showing 5 of 5')).toBeInTheDocument();
+  });
+
+  it('offers only the markets the server lists', async () => {
+    server.use(
+      http.get(apiUrl('/api/v1/listings/markets'), () =>
+        HttpResponse.json([{ name: 'Eldoret', listing_count: 3 }]),
+      ),
+    );
+    await openBrowse();
+    await waitFor(() =>
+      expect(
+        within(screen.getByLabelText('Market'))
+          .getAllByRole('option')
+          .map((o) => o.textContent),
+      ).toEqual(['All markets', 'Eldoret']),
+    );
+  });
+
+  it('offers only "All markets" when no market has listings', async () => {
+    server.use(http.get(apiUrl('/api/v1/listings/markets'), () => HttpResponse.json([])));
+    await openBrowse();
+    await waitFor(() => expect(recorder.of('GET', '/api/v1/listings/markets')).toHaveLength(1));
+    expect(
+      within(screen.getByLabelText('Market'))
+        .getAllByRole('option')
+        .map((o) => o.textContent),
+    ).toEqual(['All markets']);
+  });
+
+  it('waits for the market list before sending a market from the URL', async () => {
+    const { router } = await openBrowse('/buyer/browse?market=Mombasa');
+    expect(await screen.findByText('Showing 1 of 1')).toBeInTheDocument();
+    expect(browseRequests()).toEqual([
+      { market: 'Mombasa', sort: 'newest', limit: '20', offset: '0' },
+    ]);
+    expect(screen.getByLabelText('Market')).toHaveValue('Mombasa');
+    expect(router.state.location.search).toBe('?market=Mombasa');
+  });
+
+  it('drops a market from the URL that the server does not list, without sending it', async () => {
+    const { router } = await openBrowse('/buyer/browse?market=Eldoret');
+    await waitFor(() => expect(router.state.location.search).toBe(''));
+    expect(screen.getByLabelText('Market')).toHaveValue('');
+    expect(browseRequests().every((q) => !('market' in q))).toBe(true);
+  });
+
+  it('keeps browsing when the market list fails, with a way to load it again', async () => {
+    const user = userEvent.setup();
+    let fail = true;
+    server.use(
+      http.get(apiUrl('/api/v1/listings/markets'), () =>
+        fail ? errorResponse(500, 'internal_error') : HttpResponse.json(fixtures.buyerMarkets),
+      ),
+    );
+    await openBrowse('/buyer/browse?market=Kisumu');
+    expect(await screen.findByText('The list of markets could not be loaded.')).toBeInTheDocument();
+    expect(screen.getByLabelText('Market')).toHaveValue('Kisumu');
+    await waitFor(() => expect(browseRequests().at(-1)).toMatchObject({ market: 'Kisumu' }));
+    fail = false;
+    await user.click(screen.getByRole('button', { name: 'Load markets again' }));
+    await waitFor(() =>
+      expect(within(screen.getByLabelText('Market')).getAllByRole('option')).toHaveLength(5),
+    );
+    expect(screen.queryByText('The list of markets could not be loaded.')).not.toBeInTheDocument();
   });
 
   it('shows a 422 from the server as the filter message', async () => {

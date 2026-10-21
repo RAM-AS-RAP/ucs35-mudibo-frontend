@@ -10,6 +10,7 @@ import {
   browseListings,
   cancelOrder,
   createOrder,
+  getBuyerMarkets,
   getListing,
   getMyBuyerOrders,
   getOrder,
@@ -39,6 +40,18 @@ export { useWaitingOrdersCount } from './waitingCount';
  * @property {string | null} maxPrice
  * @property {ListingSort} sort
  */
+
+/**
+ * GET /listings/markets: the markets with listings a buyer can buy, for the browse filter.
+ * Under the browse root, so it is refreshed with the browse list after an order.
+ */
+export function useBuyerMarkets() {
+  return useQuery({
+    queryKey: queryKeys.buyerMarkets(),
+    queryFn: getBuyerMarkets,
+    ...accountQueryPolicy,
+  });
+}
 
 /**
  * GET /listings as an infinite query, 20 per page, with the filters in the key. Refetches when

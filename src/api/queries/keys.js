@@ -55,6 +55,8 @@ export const queryKeys = Object.freeze({
     ]),
   /** @param {string} id */
   listing: (id) => /** @type {const} */ (['browse', 'one', { id }]),
+  /** The markets the buyer browse filter offers (GET /listings/markets). */
+  buyerMarkets: () => /** @type {const} */ (['browse', 'markets']),
 
   /** One of the buyer's orders. Never holds an idempotency key. @param {string} id */
   order: (id) => /** @type {const} */ (['order', { id }]),

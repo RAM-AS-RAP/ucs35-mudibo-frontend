@@ -269,6 +269,24 @@ export function browseResponse(listings, url) {
 }
 
 /**
+ * GET /listings/markets over a set of listings, as the backend answers it: the markets with at
+ * least one active listing with stock, ordered by name, with their counts.
+ * @param {Array<Record<string, any>>} listings
+ */
+export function buyerMarketsResponse(listings) {
+  /** @type {Map<string, number>} */
+  const counts = new Map();
+  for (const l of listings) {
+    if (l.status === 'active' && l.quantity_available > 0) {
+      counts.set(l.market, (counts.get(l.market) ?? 0) + 1);
+    }
+  }
+  return [...counts.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([name, listing_count]) => ({ name, listing_count }));
+}
+
+/**
  * GET /orders/mine over a set of orders: one `status`, paged, newest first as given.
  * @param {Array<{ status: string }>} orders
  * @param {URL} url
@@ -282,6 +300,8 @@ export function buyerOrdersResponse(orders, url) {
 const KNOWN_ORDERS = [fixtures.orderPending, ...fixtures.buyerOrdersPage.items.slice(1)];
 
 export const buyerHandlers = [
+  // Before /listings/:listingId, so "markets" is never read as a listing id.
+  http.get(apiUrl('/api/v1/listings/markets'), () => HttpResponse.json(fixtures.buyerMarkets)),
   http.get(apiUrl('/api/v1/listings'), ({ request }) =>
     browseResponse(fixtures.publicListingsPage.items, new URL(request.url)),
   ),

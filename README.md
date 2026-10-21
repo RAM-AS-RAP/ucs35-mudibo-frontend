@@ -179,10 +179,6 @@ from the server; offline, the app only shows a message that a connection is need
 
 ## Known backend gaps
 
-- backend gap: buyers cannot list markets, so the browse filter shows all four markets and some
-  return no listings. `GET /markets` answers 403 to a buyer, so the filter uses the constant
-  `BUYER_MARKETS` (Nairobi, Kisumu, Mombasa, Nakuru) in `src/lib/constants.js`. A buyer readable
-  list of markets that have listings would remove the constant.
 - backend gap: the KES 10 minimum order total is not in `openapi.json` or `frontend_contract.md`.
   The listing screen mirrors it (`MIN_ORDER_TOTAL_KES`) to explain a disabled button; the server's
   422 `order_too_small` decides.
