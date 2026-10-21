@@ -73,9 +73,9 @@ POST /auth/login -> session.setFromLogin(tokenResponse) -> sessionStorage["agris
 - `src/auth/session.js` holds `{accessToken, role, mustChangePassword, isSuperAdmin, expiresAt, name}`.
   It persists in `sessionStorage` (this tab only), never `localStorage`, a URL, a log line or a query key.
   An expired stored session is discarded on load. `clear()` also clears the TanStack Query cache.
-- `GET /auth/me` (`UserOut`) does **not** return `is_super_admin`. `setProfile()` reads it only if the
-  backend adds it, so it stays false today (listed as a backend gap in the README). `setProfile()` also
-  refreshes the name, the role and `mustChangePassword`.
+- `isSuperAdmin` comes from `is_super_admin` in the login response (`setFromLogin()`) and in
+  `GET /auth/me` (`setProfile()`). `setProfile()` also refreshes the name, the role and
+  `mustChangePassword`.
 - **Flash messages:** `clear(reason)` leaves a one time, in memory message for the login screen
   (`expired`, `password_changed`, `unauthorized`; a sign out leaves a silent one); `setFlash()` sets one
   without a session. The login screen consumes it.

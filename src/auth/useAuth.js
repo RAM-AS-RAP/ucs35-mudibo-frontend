@@ -6,8 +6,7 @@ import { useSession } from './session';
 
 /**
  * The signed in user and the sign in and sign out actions.
- * `isSuperAdmin` comes from the profile only when the backend returns it (GET /auth/me does
- * not today), so it is false otherwise.
+ * `isSuperAdmin` comes from `is_super_admin` in the login response and in GET /auth/me.
  */
 export function useAuth() {
   const session = useSession();

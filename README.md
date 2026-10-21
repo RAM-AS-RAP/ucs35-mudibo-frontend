@@ -179,10 +179,6 @@ from the server; offline, the app only shows a message that a connection is need
 
 ## Known backend gaps
 
-- backend: expose `is_super_admin` in the user object. `GET /auth/me` (`UserOut`) does not return it, so
-  the frontend keeps `isSuperAdmin` false and the super admin's "Invites" item stays hidden.
-  `isSuperAdmin` stays false until the backend exposes `is_super_admin` in the user object; it is not
-  inferred from any other endpoint (the contract's `GET /admin/users` lookup is not used).
 - backend gap: farmers cannot fetch a single listing. `GET /listings/{listing_id}` is the buyer's
   route and answers 403 to a farmer, so the edit screen reads the listing from the cached list or
   pages through `GET /listings/mine?limit=100` (at most 5 pages). A farmer route such as

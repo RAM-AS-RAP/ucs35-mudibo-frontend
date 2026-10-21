@@ -139,17 +139,17 @@ export function setFromLogin(tokenResponse) {
     accessToken: tokenResponse.access_token,
     role: tokenResponse.role,
     mustChangePassword: Boolean(tokenResponse.must_change_password),
-    isSuperAdmin: false,
+    isSuperAdmin: tokenResponse.is_super_admin === true,
     expiresAt: Date.now() + tokenResponse.expires_in * 1000,
     name: null,
   });
 }
 
 /**
- * Merge the profile from GET /auth/me: name, role and must_change_password. That response
- * (UserOut) has no is_super_admin field today; the flag is read only if the backend adds it,
- * and is otherwise left as it is (false after a login). It is never guessed from anything else.
- * @param {import('@/api/schema').components['schemas']['UserOut'] & { is_super_admin?: boolean }} me
+ * Merge the profile from GET /auth/me: name, role, is_super_admin and must_change_password.
+ * The super admin flag comes only from the login response and this profile, never from any
+ * other endpoint; anything but `true` counts as false.
+ * @param {import('@/api/schema').components['schemas']['UserOut']} me
  */
 export function setProfile(me) {
   if (!state) return;
@@ -158,7 +158,7 @@ export function setProfile(me) {
     name: typeof me.name === 'string' && me.name.trim() ? me.name.trim() : state.name,
     role: isKnownRole(me.role) ? me.role : state.role,
     mustChangePassword: Boolean(me.must_change_password),
-    isSuperAdmin: typeof me.is_super_admin === 'boolean' ? me.is_super_admin : state.isSuperAdmin,
+    isSuperAdmin: me.is_super_admin === true,
   });
 }
 

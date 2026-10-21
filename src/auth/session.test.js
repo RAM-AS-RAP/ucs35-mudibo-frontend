@@ -96,13 +96,23 @@ describe('session store', () => {
     expect(session.getLastClearReason()).toBe('logout');
   });
 
-  it('merges the profile and reads is_super_admin only when present', () => {
+  it('reads is_super_admin from the login response', () => {
+    session.setFromLogin({ ...fixtures.tokenResponse, role: 'admin', is_super_admin: true });
+    expect(session.getSession()?.isSuperAdmin).toBe(true);
+    session.setFromLogin({ ...fixtures.tokenResponse, role: 'admin' });
+    expect(session.getSession()?.isSuperAdmin).toBe(false);
+  });
+
+  it('merges the profile and takes is_super_admin from it', () => {
     session.setFromLogin({ ...fixtures.tokenResponse, role: 'admin' });
     session.setProfile(fixtures.userMe);
     expect(session.getSession()).toMatchObject({ name: 'Wanjiku Kamau', isSuperAdmin: false });
     session.setProfile({ ...fixtures.userMe, is_super_admin: true });
     expect(session.getSession()?.isSuperAdmin).toBe(true);
-    session.setSuperAdmin(false);
+    session.setProfile(fixtures.userMe);
+    expect(session.getSession()?.isSuperAdmin).toBe(false);
+    session.setSuperAdmin(true);
+    session.setProfile({ ...fixtures.userMe, is_super_admin: /** @type {any} */ ('true') });
     expect(session.getSession()?.isSuperAdmin).toBe(false);
   });
 

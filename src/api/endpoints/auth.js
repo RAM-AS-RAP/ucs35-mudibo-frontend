@@ -50,7 +50,7 @@ export function registerBuyer(fields) {
 }
 
 /**
- * GET /api/v1/auth/me (token). UserOut has no is_super_admin field.
+ * GET /api/v1/auth/me (token). UserOut includes is_super_admin.
  * @returns {Promise<UserOut>}
  */
 export function getMe() {

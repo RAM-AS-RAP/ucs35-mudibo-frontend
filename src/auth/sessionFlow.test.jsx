@@ -45,6 +45,27 @@ describe('startup revalidation', () => {
     expect(getSession()?.mustChangePassword).toBe(true);
   });
 
+  it('takes is_super_admin from /auth/me and shows or hides Invites', async () => {
+    server.use(
+      http.get(apiUrl('/api/v1/auth/me'), () =>
+        HttpResponse.json({ ...fixtures.adminMe, is_super_admin: true }),
+      ),
+    );
+    restoreStoredSession({ role: 'admin', isSuperAdmin: false });
+    renderApp('/admin');
+    expect((await screen.findAllByRole('link', { name: 'Invites' })).length).toBeGreaterThan(0);
+    expect(getSession()?.isSuperAdmin).toBe(true);
+  });
+
+  it('drops a stored super admin flag when /auth/me says false', async () => {
+    server.use(http.get(apiUrl('/api/v1/auth/me'), () => HttpResponse.json(fixtures.adminMe)));
+    restoreStoredSession({ role: 'admin', isSuperAdmin: true });
+    renderApp('/admin');
+    expect((await screen.findAllByRole('link', { name: 'Users' })).length).toBeGreaterThan(0);
+    expect(screen.queryByRole('link', { name: 'Invites' })).not.toBeInTheDocument();
+    expect(getSession()?.isSuperAdmin).toBe(false);
+  });
+
   it('a 401 clears the session with the expired flash', async () => {
     server.use(
       http.get(apiUrl('/api/v1/auth/me'), () => errorResponse(401, 'invalid_credentials')),
@@ -160,10 +181,15 @@ describe('isSuperAdmin', () => {
     return null;
   }
 
-  it('is false when /auth/me has no is_super_admin', () => {
-    setFromLogin({ ...fixtures.tokenResponse, role: 'admin' });
+  it('is false when /auth/me says is_super_admin: false', () => {
+    setFromLogin({ ...fixtures.tokenResponse, role: 'admin', is_super_admin: true });
     setProfile(fixtures.adminMe);
     expect(getSession()?.isSuperAdmin).toBe(false);
+  });
+
+  it('is read from the login response before /auth/me', () => {
+    setFromLogin({ ...fixtures.tokenResponse, role: 'admin', is_super_admin: true });
+    expect(getSession()?.isSuperAdmin).toBe(true);
   });
 
   it('is read from the profile when present and shown in the account menu', async () => {
