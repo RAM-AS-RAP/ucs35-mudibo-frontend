@@ -33,13 +33,6 @@ export const POLL_INTERVAL_MS = 3000;
 /** Stop polling 150 seconds after a payment started (frontend_contract.md). */
 export const POLL_WINDOW_MS = 150000;
 
-/**
- * Markets offered by the browse filter. Buyers cannot call GET /markets (403), so the filter
- * shows the four markets the price data covers; some may have no listings. The server
- * validates the market (422 for an unknown one) and is the authority.
- */
-export const BUYER_MARKETS = Object.freeze(['Nairobi', 'Kisumu', 'Mombasa', 'Nakuru']);
-
 /** Largest price per kg the browse price filter accepts. The server is the authority. */
 export const PRICE_FILTER_MAX = 100000;
 

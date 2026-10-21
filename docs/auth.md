@@ -45,9 +45,11 @@ here; the frontend checks the same rules early so people get feedback before sub
   created. Please sign in.", "Password updated. Please sign in."). A sign out leaves an empty, silent flash
   so the login screen does not show its "Please sign in to continue." hint right after it. The login screen
   reads the flash once and consumes it.
-- **isSuperAdmin:** `GET /auth/me` (`UserOut`) has no `is_super_admin`, so it stays `false` after a login.
-  `setProfile()` reads the flag only if the backend adds it; nothing else sets it in F1 (the development
-  role switcher's fake session excepted). See the known gaps in the README.
+- **isSuperAdmin:** read from `is_super_admin` in the login response (`TokenResponse`, by
+  `setFromLogin()`) and in `GET /auth/me` (`UserOut`, by `setProfile()`, which also runs on the startup
+  revalidation of a restored session). Only `true` counts; anything else is `false`. It is never
+  inferred from another endpoint (no `GET /admin/users` lookup, no probing the rate limited invite
+  routes). It only shows or hides the super admin screens (Invites); the server checks every request.
 - While a screen signs someone in, `PublicOnly` does not redirect (`useSignInHold`), so the screen decides
   the destination after the profile has loaded. The hold ends when the screen unmounts.
 
@@ -138,4 +140,3 @@ one message, code requests always show the same confirmation, and every code fai
 - No multi factor authentication.
 - The backend's login throttle (by default 5 failures per identifier within a configurable window) is
   kept in memory per backend process, so several server processes each keep their own count.
-- `GET /auth/me` does not return `is_super_admin`, so the super admin is not recognised in F1.

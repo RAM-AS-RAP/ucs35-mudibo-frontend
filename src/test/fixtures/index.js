@@ -26,6 +26,7 @@ import orderPending from './orderPending.json';
 import paymentStarted from './paymentStarted.json';
 import orderCancelled from './orderCancelled.json';
 import buyerOrdersPage from './buyerOrdersPage.json';
+import buyerMarkets from './buyerMarkets.json';
 
 export const fixtures = {
   health,
@@ -54,6 +55,7 @@ export const fixtures = {
   paymentStarted,
   orderCancelled,
   buyerOrdersPage,
+  buyerMarkets,
 };
 
 /** Fixture name to the OpenAPI response it must match. */
@@ -91,4 +93,5 @@ export const FIXTURE_CONTRACT = {
   paymentStarted: { path: '/api/v1/orders/{order_id}/pay', method: 'post', status: '202' },
   orderCancelled: { path: '/api/v1/orders/{order_id}/cancel', method: 'post', status: '200' },
   buyerOrdersPage: { path: '/api/v1/orders/mine', method: 'get', status: '200' },
+  buyerMarkets: { path: '/api/v1/listings/markets', method: 'get', status: '200' },
 };

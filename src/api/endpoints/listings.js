@@ -108,6 +108,20 @@ export async function getMyListings({ status, limit, offset } = {}) {
 }
 
 /**
+ * GET /api/v1/listings/mine/{listing_id} (farmer): one of the farmer's own listings, in any
+ * status (the same shape as a GET /listings/mine item). Errors: 404 listing_not_found when it
+ * does not exist or belongs to another farmer.
+ * @param {string} id
+ * @returns {Promise<Listing>}
+ */
+export async function getMyListing(id) {
+  const listing = await unwrap(
+    api.GET('/api/v1/listings/mine/{listing_id}', { params: { path: { listing_id: id } } }),
+  );
+  return /** @type {Listing} */ (/** @type {unknown} */ (listing));
+}
+
+/**
  * POST /api/v1/listings (farmer, multipart). Errors: 409 listing_limit_reached,
  * 404 market_not_available, 422 validation_error or invalid_image, 413 image_too_large.
  * @param {NewListingFields} fields

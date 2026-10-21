@@ -1,4 +1,3 @@
-import { readFileSync } from 'node:fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -162,27 +161,41 @@ describe('EditListingScreen', () => {
     );
   });
 
-  it('finds the listing through pages of 100 when it is not cached', async () => {
+  it('loads the listing with GET /listings/mine/{id} when it is not cached', async () => {
     const many = makeListings(150);
     const target = many[130];
     serveListings(many);
     const recorder = recordRequests();
     await openEdit(target.id);
     expect(screen.getByLabelText('Quantity (kg)')).toHaveValue(String(target.quantity_available));
-    const lookups = recorder.requests.filter((r) => r.path === '/api/v1/listings/mine');
-    expect(lookups.map((r) => r.query)).toEqual([
-      { limit: '100', offset: '0' },
-      { limit: '100', offset: '100' },
-    ]);
+    expect(recorder.requests.map((r) => r.path)).toContain(`/api/v1/listings/mine/${target.id}`);
+    expect(recorder.requests.filter((r) => r.path === '/api/v1/listings/mine')).toHaveLength(0);
   });
 
-  it('stops after 5 pages and shows "This listing could not be found."', async () => {
-    serveListings(makeListings(700));
+  it('goes back to My listings on a 404 listing_not_found when loading', async () => {
     const recorder = recordRequests();
-    await openEdit('6f0f2a1e-3b8c-4d5e-9f10-999999999999');
-    expect(screen.getByText('This listing could not be found.')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Back to My listings' })).toBeInTheDocument();
-    expect(recorder.requests.filter((r) => r.path === '/api/v1/listings/mine')).toHaveLength(5);
+    const { router } = renderFarmer('/farmer/listings/6f0f2a1e-3b8c-4d5e-9f10-999999999999/edit');
+    await waitFor(() => expect(router.state.location.pathname).toBe('/farmer/listings'));
+    expect(toast.error).toHaveBeenCalledWith(
+      'This listing could not be found. The list has been refreshed.',
+    );
+    expect(
+      recorder.requests.filter(
+        (r) => r.path === '/api/v1/listings/mine/6f0f2a1e-3b8c-4d5e-9f10-999999999999',
+      ),
+    ).toHaveLength(1);
+    await screen.findByRole('heading', { name: 'My listings', level: 1 });
+  });
+
+  it('shows an error with a retry on any other load failure', async () => {
+    server.use(
+      http.get(apiUrl('/api/v1/listings/mine/:listingId'), () => errorResponse(403, 'forbidden')),
+    );
+    const { router } = renderFarmer('/farmer/listings/6f0f2a1e-3b8c-4d5e-9f10-999999999999/edit');
+    expect(await screen.findByRole('button', { name: /try again/i })).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe(
+      '/farmer/listings/6f0f2a1e-3b8c-4d5e-9f10-999999999999/edit',
+    );
   });
 
   it('reads the listing from the cached list without another request', async () => {
@@ -214,14 +227,17 @@ describe('EditListingScreen', () => {
     expect(screen.queryByLabelText('Asking price')).not.toBeInTheDocument();
   });
 
-  it('shows the not found state on listing_not_found', async () => {
+  it('goes back to My listings when a save answers listing_not_found', async () => {
     const user = userEvent.setup();
     answerPatch(() => errorResponse(404, 'listing_not_found'));
-    await openEdit(active.id);
+    const { router } = await openEdit(active.id);
     await user.clear(screen.getByLabelText('Asking price'));
     await user.type(screen.getByLabelText('Asking price'), '45');
     await user.click(save());
-    expect(await screen.findByText('This listing could not be found.')).toBeInTheDocument();
+    await waitFor(() => expect(router.state.location.pathname).toBe('/farmer/listings'));
+    expect(toast.error).toHaveBeenCalledWith(
+      'This listing could not be found. The list has been refreshed.',
+    );
   });
 
   it('shows no_changes as a form message', async () => {
@@ -234,11 +250,5 @@ describe('EditListingScreen', () => {
     expect(
       await screen.findByRole('alert', { name: 'The listing was not saved' }),
     ).toHaveTextContent('Nothing was changed.');
-  });
-
-  it('records the backend gap in the README', () => {
-    const readme = readFileSync('README.md', 'utf8');
-    const gaps = readme.slice(readme.indexOf('## Known backend gaps'));
-    expect(gaps).toMatch(/backend gap: farmers cannot fetch a single listing/);
   });
 });

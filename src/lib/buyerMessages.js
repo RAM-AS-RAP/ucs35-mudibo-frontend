@@ -22,6 +22,8 @@ export const BROWSE_TEXT = Object.freeze({
   allCrops: 'All',
   marketLabel: 'Market',
   allMarkets: 'All markets',
+  marketsError: 'The list of markets could not be loaded.',
+  marketsRetry: 'Load markets again',
   minPriceLabel: 'Lowest price (KES per kg)',
   maxPriceLabel: 'Highest price (KES per kg)',
   priceHint: 'Leave empty for no limit.',

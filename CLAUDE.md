@@ -105,7 +105,7 @@ src/
                 useAuth.js, redirects.js, revalidate.js
   api/queries/  TanStack Query hooks (useMarkets, useCurrentPrices, usePriceTrends, useForecast; listings.js:
                 useMyListings, useMyListing, useMyOrders, counts, useCreate/Update/RemoveListing; buyer.js:
-                useBrowseListings, useListing, useOrder, useMyBuyerOrders, useCreate/Pay/CancelOrder;
+                useBrowseListings, useBuyerMarkets, useListing, useOrder, useMyBuyerOrders, useCreate/Pay/CancelOrder;
                 waitingCount.js: useWaitingOrdersCount), keys.js, policy.js
   components/auth/  AuthLayout, FormField, PasswordField, CodeInput, FormErrorSummary, CountdownButton,
                 PasswordRequirements, SignedInNotice, ResendCode, FormNotices, useServerProblem
@@ -142,9 +142,9 @@ docs/           backend/, architecture.md, auth.md, design-system.md, forecast-d
   New backend codes go into `ERROR_MESSAGES` in `src/api/errors.js`.
 - Contract workflow: copy `openapi.json` and `frontend_contract.md` into `docs/backend/` (see
   `docs/backend/README.md`), run `npm run gen:types`, then `npm run check:contract` and `npm test`.
-- **isSuperAdmin:** `isSuperAdmin` stays false until the backend exposes `is_super_admin` in the user
-  object. Do not infer it from any other endpoint. (`/auth/me` (`UserOut`) does not return it today; the
-  README lists the gap under "Known backend gaps".)
+- **isSuperAdmin:** read it only from `is_super_admin` in the login response (`TokenResponse`) and in
+  `/auth/me` (`UserOut`); only `true` counts. Never infer it from any other endpoint, and never probe the
+  (rate limited) invite routes. It only hides screens; the server checks every request.
 - The backend is the single authority for roles, prices, totals, stock and order state. Show `can_pay` /
   `can_cancel` and server totals as returned; never recompute them.
 
@@ -195,13 +195,14 @@ docs/           backend/, architecture.md, auth.md, design-system.md, forecast-d
   and `PhotoPicker` create object URLs, and both revoke them.
 - **Status words** for listings and orders live in `LISTING_STATUS_WORDS` and `ORDER_STATUS_WORDS`
   (`src/lib/messages.js`) and are shown through `StatusBadge` (`kind="listing"` for listings).
-- Farmers cannot fetch one listing: use `useMyListing(id)` (cache, then pages of
-  `GET /listings/mine?limit=100`, at most 5).
+- One of the farmer's listings: `useMyListing(id)` (a cached page first, then
+  `GET /listings/mine/{id}`; a 404 `listing_not_found` gives `null`). The edit screen then goes back
+  to My listings. Never call the buyer's `GET /listings/{id}` from farmer code (403).
 - Never show or request a buyer contact detail.
 
 ## 4c. Buyer checkout and payment conventions (F3, details in `docs/buyer-checkout.md`)
 
-- Endpoints: `endpoints/buyerListings.js` (`browseListings`, `getListing`), `endpoints/orders.js`
+- Endpoints: `endpoints/buyerListings.js` (`browseListings`, `getListing`, `getBuyerMarkets`), `endpoints/orders.js`
   (`createOrder`, `getOrder`, `getMyOrders` exported from the index as `getMyBuyerOrders`,
   `cancelOrder`, `existingOrderId`), `endpoints/payments.js` (`payOrder`). The farmer's
   `getMyOrders` and `useMyOrders` keep their names; the buyer's are `getMyBuyerOrders` and
@@ -226,8 +227,8 @@ docs/           backend/, architecture.md, auth.md, design-system.md, forecast-d
 - The buyer files are not in the relative time list (`RELATIVE_ONLY`): they may use
   `formatDateTime` (the source check allows `components/buyer/` and `screens/buyer/`).
 - Buyers get 403 from prices, forecasts and `GET /markets`: never call them from buyer code (a
-  source check and every buyer screen test enforce it). The browse market filter uses
-  `BUYER_MARKETS`.
+  source check and every buyer screen test enforce it). The browse market filter offers exactly the
+  names from `GET /listings/markets` (`useBuyerMarkets`); a URL market not on that list is removed.
 - Buyer screen text lives in `lib/buyerMessages.js`; order and payment status words in
   `lib/messages.js` (`ORDER_STATUS_WORDS`, `PAYMENT_STATUS_WORDS`) through `StatusBadge`.
 - Never ask for, show or store an M-Pesa PIN; `SandboxNote` shows the PIN warning. Show only the

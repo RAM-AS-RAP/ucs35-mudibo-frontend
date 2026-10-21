@@ -174,24 +174,11 @@ from the server; offline, the app only shows a message that a connection is need
 
 ## Open items
 
-- `docs/backend/SOURCE.md`: fill in the backend commit hash and export date of the copied contract.
 - `public/favicon.svg` and the generated icons are a placeholder mark; replace with the final logo and run `npm run gen:icons`.
 - Ask the backend team to add the frontend's development (`http://localhost:5173`) and production origins to `CORS_ORIGINS`.
 
 ## Known backend gaps
 
-- backend: expose `is_super_admin` in the user object. `GET /auth/me` (`UserOut`) does not return it, so
-  the frontend keeps `isSuperAdmin` false and the super admin's "Invites" item stays hidden.
-  `isSuperAdmin` stays false until the backend exposes `is_super_admin` in the user object; it is not
-  inferred from any other endpoint (the contract's `GET /admin/users` lookup is not used).
-- backend gap: farmers cannot fetch a single listing. `GET /listings/{listing_id}` is the buyer's
-  route and answers 403 to a farmer, so the edit screen reads the listing from the cached list or
-  pages through `GET /listings/mine?limit=100` (at most 5 pages). A farmer route such as
-  `GET /listings/mine/{listing_id}` would remove the lookup.
-- backend gap: buyers cannot list markets, so the browse filter shows all four markets and some
-  return no listings. `GET /markets` answers 403 to a buyer, so the filter uses the constant
-  `BUYER_MARKETS` (Nairobi, Kisumu, Mombasa, Nakuru) in `src/lib/constants.js`. A buyer readable
-  list of markets that have listings would remove the constant.
 - backend gap: the KES 10 minimum order total is not in `openapi.json` or `frontend_contract.md`.
   The listing screen mirrors it (`MIN_ORDER_TOTAL_KES`) to explain a disabled button; the server's
   422 `order_too_small` decides.

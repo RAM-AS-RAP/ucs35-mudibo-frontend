@@ -2,7 +2,7 @@
 import { expect } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { server } from './msw/server';
-import { apiUrl, browseResponse, buyerOrdersResponse } from './msw/handlers';
+import { apiUrl, browseResponse, buyerMarketsResponse, buyerOrdersResponse } from './msw/handlers';
 import { fixtures } from './fixtures';
 import { loginAs, renderApp } from './render';
 
@@ -129,6 +129,9 @@ export function servePay(answers) {
  */
 export function serveBrowse(listings) {
   server.use(
+    http.get(apiUrl('/api/v1/listings/markets'), () =>
+      HttpResponse.json(buyerMarketsResponse(listings)),
+    ),
     http.get(apiUrl('/api/v1/listings'), ({ request }) =>
       browseResponse(listings, new URL(request.url)),
     ),

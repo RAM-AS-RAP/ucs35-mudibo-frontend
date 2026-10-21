@@ -68,6 +68,17 @@ export async function browseListings({
   return /** @type {PublicListingPage} */ (/** @type {unknown} */ (page));
 }
 
+/** @typedef {Schemas['BuyerMarketOut']} BuyerMarket */
+
+/**
+ * GET /api/v1/listings/markets (buyer): the markets with at least one listing the buyer can buy,
+ * ordered by name, as `{ name, listing_count }` (`[]` when nothing is listed). No price data.
+ * @returns {Promise<BuyerMarket[]>}
+ */
+export function getBuyerMarkets() {
+  return unwrap(api.GET('/api/v1/listings/markets'));
+}
+
 /**
  * GET /api/v1/listings/{listing_id} (buyer). Removed or unknown: 404 listing_not_found.
  * @param {string} id

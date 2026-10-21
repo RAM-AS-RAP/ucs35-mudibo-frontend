@@ -1,14 +1,13 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Ban, SearchX } from 'lucide-react';
+import { ArrowLeft, Ban } from 'lucide-react';
 import { ApiError } from '@/api/errors';
 import { invalidateListingData, useMyListing, useUpdateListing } from '@/api/queries';
 import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/display/PageHeader';
 import { StatusBadge } from '@/components/display/StatusBadge';
-import { EmptyState } from '@/components/feedback/EmptyState';
 import { ErrorState } from '@/components/feedback/ErrorState';
 import { LoadingState } from '@/components/feedback/LoadingState';
 import { ListingForm } from '@/components/listings/ListingForm';
@@ -26,17 +25,6 @@ function BackLink() {
         {LISTING_TEXT.backToListings}
       </Link>
     </Button>
-  );
-}
-
-function NotFound() {
-  return (
-    <EmptyState
-      icon={SearchX}
-      title={LISTING_TEXT.notFoundTitle}
-      description={LISTING_TEXT.notFound}
-      action={<BackLink />}
-    />
   );
 }
 
@@ -63,9 +51,10 @@ function RemovedNotice({ listing }) {
 }
 
 /**
- * Edit listing (/farmer/listings/:id/edit). The listing comes from the cached list or, since a
- * farmer cannot fetch one listing, from pages of GET /listings/mine. Only changed fields are
- * sent. A removed listing is read only.
+ * Edit listing (/farmer/listings/:id/edit). The listing comes from the cached list or from
+ * GET /listings/mine/{id}. Only changed fields are sent. A removed listing is read only. When
+ * the listing is not found (a 404 listing_not_found on load or on save) the farmer goes back to
+ * My listings, which is refreshed.
  */
 export default function EditListingScreen() {
   const headingRef = usePageTitle(LISTING_TEXT.editTitle);
@@ -79,6 +68,17 @@ export default function EditListingScreen() {
 
   /** @type {Listing | null | undefined} */
   const listing = query.data;
+  const notFound = (query.isSuccess && listing === null) || outcome === 'not_found';
+
+  // Leave once only (StrictMode runs effects twice in development).
+  const leftRef = useRef(false);
+  useEffect(() => {
+    if (!notFound || leftRef.current) return;
+    leftRef.current = true;
+    invalidateListingData(client, { skipListing: id });
+    toast.error(LISTING_TEXT.notFoundRefreshed);
+    navigate('/farmer/listings', { replace: true });
+  }, [notFound, client, navigate, id]);
 
   let body;
   if (query.isPending) {
@@ -91,8 +91,8 @@ export default function EditListingScreen() {
         onRetry={() => query.refetch()}
       />
     );
-  } else if (!listing || outcome === 'not_found') {
-    body = <NotFound />;
+  } else if (!listing || notFound) {
+    body = null;
   } else if (listing.status === 'removed' || outcome === 'removed') {
     body = <RemovedNotice listing={listing} />;
   } else {
@@ -126,7 +126,6 @@ export default function EditListingScreen() {
               }
               if (error instanceof ApiError && error.code === 'listing_not_found') {
                 setOutcome('not_found');
-                invalidateListingData(client);
                 return;
               }
               throw error;

@@ -3,5 +3,6 @@
   "token_type": "bearer",
   "expires_in": 3600,
   "role": "farmer",
+  "is_super_admin": false,
   "must_change_password": false
 }

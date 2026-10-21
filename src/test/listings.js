@@ -3,7 +3,7 @@ import { vi } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { api } from '@/api/client';
 import { server } from './msw/server';
-import { apiUrl, myListingsResponse, myOrdersResponse } from './msw/handlers';
+import { apiUrl, myListingResponse, myListingsResponse, myOrdersResponse } from './msw/handlers';
 import { fixtures } from './fixtures';
 
 /**
@@ -63,13 +63,20 @@ export function makeListings(count) {
 }
 
 /**
- * Serve these listings from GET /listings/mine (status filter and paging honoured).
+ * Serve these listings from GET /listings/mine (status filter and paging honoured) and
+ * GET /listings/mine/{id}.
  * @param {Array<Record<string, any>>} listings
  */
 export function serveListings(listings) {
   server.use(
     http.get(apiUrl('/api/v1/listings/mine'), ({ request }) =>
       HttpResponse.json(myListingsResponse(/** @type {any} */ (listings), new URL(request.url))),
+    ),
+    http.get(apiUrl('/api/v1/listings/mine/orders'), ({ request }) =>
+      HttpResponse.json(myOrdersResponse(fixtures.farmerOrdersPage.items, new URL(request.url))),
+    ),
+    http.get(apiUrl('/api/v1/listings/mine/:listingId'), ({ params }) =>
+      myListingResponse(/** @type {any} */ (listings), params.listingId),
     ),
   );
 }
