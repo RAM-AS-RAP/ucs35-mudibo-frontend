@@ -22,7 +22,9 @@ export const BROWSE_TEXT = Object.freeze({
   allCrops: 'All',
   marketLabel: 'Market',
   allMarkets: 'All markets',
-  marketsError: 'The list of markets could not be loaded.',
+  marketsError: 'Market filter is unavailable right now.',
+  /** @param {string} name @param {number} count */
+  marketOption: (name, count) => `${name} (${count})`,
   marketsRetry: 'Load markets again',
   minPriceLabel: 'Lowest price (KES per kg)',
   maxPriceLabel: 'Highest price (KES per kg)',

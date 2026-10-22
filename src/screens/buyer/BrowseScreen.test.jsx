@@ -104,7 +104,7 @@ describe('BrowseScreen', () => {
         within(screen.getByLabelText('Market'))
           .getAllByRole('option')
           .map((o) => o.textContent),
-      ).toEqual(['All markets', 'Kisumu', 'Mombasa', 'Nairobi', 'Nakuru']),
+      ).toEqual(['All markets', 'Kisumu (1)', 'Mombasa (1)', 'Nairobi (2)', 'Nakuru (1)']),
     );
     expect(recorder.of('GET', '/api/v1/listings/markets')).toHaveLength(1);
     const sorts = within(screen.getByLabelText('Sort by'))
@@ -257,7 +257,7 @@ describe('BrowseScreen', () => {
         within(screen.getByLabelText('Market'))
           .getAllByRole('option')
           .map((o) => o.textContent),
-      ).toEqual(['All markets', 'Eldoret']),
+      ).toEqual(['All markets', 'Eldoret (3)']),
     );
   });
 
@@ -289,7 +289,7 @@ describe('BrowseScreen', () => {
     expect(browseRequests().every((q) => !('market' in q))).toBe(true);
   });
 
-  it('keeps browsing when the market list fails, with a way to load it again', async () => {
+  it('keeps browsing with only "All markets" when the market list fails, with a way to load it again', async () => {
     const user = userEvent.setup();
     let fail = true;
     server.use(
@@ -297,16 +297,32 @@ describe('BrowseScreen', () => {
         fail ? errorResponse(500, 'internal_error') : HttpResponse.json(fixtures.buyerMarkets),
       ),
     );
-    await openBrowse('/buyer/browse?market=Kisumu');
-    expect(await screen.findByText('The list of markets could not be loaded.')).toBeInTheDocument();
-    expect(screen.getByLabelText('Market')).toHaveValue('Kisumu');
-    await waitFor(() => expect(browseRequests().at(-1)).toMatchObject({ market: 'Kisumu' }));
+    const { router } = await openBrowse('/buyer/browse?market=Kisumu');
+    expect(await screen.findByText('Market filter is unavailable right now.')).toBeInTheDocument();
+    expect(
+      within(screen.getByLabelText('Market'))
+        .getAllByRole('option')
+        .map((o) => o.textContent),
+    ).toEqual(['All markets']);
+    expect(screen.getByLabelText('Market')).toHaveValue('');
+    await waitFor(() => expect(router.state.location.search).toBe(''));
+    await waitFor(() => expect(browseRequests().length).toBeGreaterThan(0));
+    expect(browseRequests().every((q) => !('market' in q))).toBe(true);
     fail = false;
     await user.click(screen.getByRole('button', { name: 'Load markets again' }));
     await waitFor(() =>
       expect(within(screen.getByLabelText('Market')).getAllByRole('option')).toHaveLength(5),
     );
-    expect(screen.queryByText('The list of markets could not be loaded.')).not.toBeInTheDocument();
+    expect(screen.queryByText('Market filter is unavailable right now.')).not.toBeInTheDocument();
+  });
+
+  it('keeps the market list for 2 minutes before asking again', async () => {
+    const { BUYER_MARKETS_STALE_TIME_MS } = await import('@/api/queries/buyer');
+    expect(BUYER_MARKETS_STALE_TIME_MS).toBe(120000);
+    await openBrowse();
+    await waitFor(() => expect(recorder.of('GET', '/api/v1/listings/markets')).toHaveLength(1));
+    const query = queryClient.getQueryCache().find({ queryKey: ['browse', 'markets'] });
+    expect(query?.isStale()).toBe(false);
   });
 
   it('shows a 422 from the server as the filter message', async () => {

@@ -19,12 +19,14 @@ delivery or exchange contact details: the buyer sees only the seller's name.
 | Navigation badge         | every buyer screen           | "My orders" shows the number of orders waiting for payment ("2 orders waiting for payment" for screen readers). No badge for zero or after a failed request.                                                                                                                                                                          | `GET /orders/mine?status=pending_payment&limit=1` (reads `total`)                                       |
 
 Buyers cannot call `GET /markets`, `GET /prices/*` or `GET /forecasts` (403). No buyer screen calls
-them; a source check and every buyer screen test assert it. The market filter offers exactly the
-markets from `GET /listings/markets` (`useBuyerMarkets`; markets with at least one listing the buyer
-can buy, ordered by name; no price data). A `market` in the URL waits for that list before the first
-browse request and is removed when it is not on the list. If the list cannot be loaded, the URL's
-market is still sent (the server validates it, 422 for an unknown one), and the filter shows "The
-list of markets could not be loaded." with "Load markets again".
+them; a source check and every buyer screen test assert it. The market filter offers "All
+markets" followed by exactly the markets from `GET /listings/markets` with their counts, for
+example "Nairobi (6)" (`useBuyerMarkets`, stale after 2 minutes; markets with at least one listing
+the buyer can buy, ordered by name; no price data). A `market` in the URL is kept as it is until
+that list has loaded (the first browse request waits for it), then removed when it is not on the
+list. If the list cannot be loaded, the filter offers only "All markets" with "Market filter is
+unavailable right now." and "Load markets again", the URL's market is dropped, and browsing goes on
+without a market filter.
 
 **"Not paid" filter.** `GET /orders/mine` accepts one `status`. "Not paid" therefore loads all
 orders and keeps the expired, cancelled and failed ones from the pages loaded so far, exactly as
