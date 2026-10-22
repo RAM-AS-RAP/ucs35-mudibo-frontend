@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { loginAs, logout, renderWithProviders } from '@/test/render';
 import { expectNoAxeViolations } from '@/test/axe';
 import { setSuperAdmin } from '@/auth/session';
@@ -29,19 +30,61 @@ function mainNavLabels() {
 }
 
 describe('AppShell navigation', () => {
-  it('shows the farmer only farmer items, with a bottom bar', () => {
+  it('shows the farmer only farmer items, with a hamburger menu instead of a bottom bar', () => {
     loginAs('farmer');
     renderShell('/farmer');
     expect(mainNavLabels()).toEqual(labelsOf('farmer'));
-    const bottom = screen.getByRole('navigation', { name: 'Quick navigation' });
-    expect(within(bottom).getAllByRole('link')).toHaveLength(5);
-    expect(screen.queryByRole('button', { name: 'Open navigation menu' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('navigation', { name: 'Quick navigation' })).not.toBeInTheDocument();
+    // The farmer has no navigation count, so the button name is the label alone.
+    expect(screen.getByRole('button', { name: 'Open navigation menu' })).toBeInTheDocument();
   });
 
-  it('shows the buyer only buyer items', () => {
+  it('opens the farmer drawer with all five farmer items', async () => {
+    loginAs('farmer');
+    const user = userEvent.setup();
+    renderShell('/farmer/prices');
+    await user.click(screen.getByRole('button', { name: 'Open navigation menu' }));
+    const dialog = await screen.findByRole('dialog', { name: 'AgriSence' });
+    expect(within(dialog).getByText('Farmer menu')).toBeInTheDocument();
+    const drawer = within(dialog).getByRole('navigation', { name: 'Drawer navigation' });
+    expect(
+      within(drawer)
+        .getAllByRole('link')
+        .map((l) => l.textContent),
+    ).toEqual(labelsOf('farmer'));
+    expect(within(drawer).getByRole('link', { name: 'Prices' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+  });
+
+  it('shows the buyer only buyer items, with a hamburger menu instead of a bottom bar', async () => {
     loginAs('buyer');
     renderShell('/buyer');
     expect(mainNavLabels()).toEqual(['Browse', 'My orders']);
+    expect(screen.queryByRole('navigation', { name: 'Quick navigation' })).not.toBeInTheDocument();
+    // The waiting orders count is repeated on the hamburger button while the drawer is closed.
+    const menuButton = await screen.findByRole('button', {
+      name: /^Open navigation menu ?, 1 order waiting for payment$/,
+    });
+    expect(within(menuButton).getByTestId('nav-count-badge')).toHaveTextContent('1');
+  });
+
+  it('opens the buyer drawer with the buyer items and closes it on navigation', async () => {
+    loginAs('buyer');
+    const user = userEvent.setup();
+    renderShell('/buyer/browse');
+    await user.click(screen.getByRole('button', { name: /^Open navigation menu/ }));
+    const dialog = await screen.findByRole('dialog', { name: 'AgriSence' });
+    expect(within(dialog).getByText('Buyer menu')).toBeInTheDocument();
+    const drawer = within(dialog).getByRole('navigation', { name: 'Drawer navigation' });
+    expect(
+      within(drawer)
+        .getAllByRole('link')
+        .map((l) => l.getAttribute('href')),
+    ).toEqual(['/buyer/browse', '/buyer/orders']);
+    await user.click(within(drawer).getByRole('link', { name: /^My orders/ }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
   it('hides Invites from an ordinary admin and uses a drawer instead of a bottom bar', () => {
@@ -49,7 +92,7 @@ describe('AppShell navigation', () => {
     renderShell('/admin');
     expect(mainNavLabels()).toEqual(labelsOf('admin').filter((l) => l !== 'Invites'));
     expect(screen.queryByRole('navigation', { name: 'Quick navigation' })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Open navigation menu' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Open navigation menu/ })).toBeInTheDocument();
   });
 
   it('shows Invites to the super admin', () => {

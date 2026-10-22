@@ -59,7 +59,8 @@ Two starting values failed the contrast test on the mint canvas and were moved t
 - **Cards** are white with a subtle border or shadow.
 - **Touch targets** are at least 44 by 44 pixels (`min-h-11`, `size-11` on buttons, inputs, nav items).
 - **Phone first.** Layouts start at 360px wide with no horizontal scroll; the sidebar appears at `lg`.
-  Farmer and buyer get a bottom navigation bar on small screens, admin gets a drawer.
+  Every role gets a hamburger menu on small screens that opens a drawer with the same items as the
+  sidebar. The hamburger button repeats a navigation count (waiting orders, orders to review).
 - **Text** is never below 16px in inputs (no mobile zoom on focus). System font stack, no web fonts.
 - **Focus** is always visible (2px `focus-ring` with an offset). `prefers-reduced-motion` disables animation.
 - **Money and dates** go through `src/lib/format.js` (`formatKES`, `formatPct`, `formatMonth`,

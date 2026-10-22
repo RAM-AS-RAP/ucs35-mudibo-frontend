@@ -32,7 +32,7 @@ export default function DevRoleSwitcher() {
   return (
     <details
       data-marker={DEV_SWITCHER_MARKER}
-      className="fixed right-3 bottom-20 z-50 max-w-[16rem] rounded-lg border border-border bg-card text-sm shadow-lg lg:bottom-3"
+      className="fixed right-3 bottom-3 z-50 max-w-[16rem] rounded-lg border border-border bg-card text-sm shadow-lg"
     >
       <summary className="flex min-h-11 cursor-pointer items-center px-3 font-medium text-text">
         Dev: role preview

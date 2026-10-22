@@ -48,8 +48,12 @@ export const NAV_ITEMS = {
   ],
 };
 
-/** Roles that get a bottom navigation bar on small screens (admin uses a drawer). */
-export const BOTTOM_NAV_ROLES = new Set(['farmer', 'buyer']);
+/** The drawer's description (read by screen readers when it opens), per role. */
+export const DRAWER_DESCRIPTION = Object.freeze({
+  farmer: 'Farmer menu',
+  buyer: 'Buyer menu',
+  admin: 'Administration menu',
+});
 
 /**
  * Navigation items visible to a session. Hiding an item is a convenience only;

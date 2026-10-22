@@ -14,15 +14,8 @@ import { useSession } from '@/auth/session';
 import { ROLE_HOME } from '@/auth/roles';
 import { cn } from '@/lib/utils';
 import { AccountMenu } from './AccountMenu';
-import { BOTTOM_NAV_ROLES, getNavItems } from './navConfig';
+import { DRAWER_DESCRIPTION, getNavItems } from './navConfig';
 import { NavBadge } from './NavBadge';
-const BOTTOM_COLS = {
-  1: 'grid-cols-1',
-  2: 'grid-cols-2',
-  3: 'grid-cols-3',
-  4: 'grid-cols-4',
-  5: 'grid-cols-5',
-};
 
 /**
  * @param {{ items: import('./navConfig').NavItem[], onNavigate?: () => void }} props
@@ -53,42 +46,11 @@ function SideNavList({ items, onNavigate }) {
   );
 }
 
-/** @param {{ items: import('./navConfig').NavItem[] }} props */
-function BottomNav({ items }) {
-  return (
-    <nav
-      aria-label="Quick navigation"
-      className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-sidebar pb-[env(safe-area-inset-bottom)] lg:hidden"
-    >
-      <ul className={cn('grid', BOTTOM_COLS[/** @type {1|2|3|4|5} */ (Math.min(items.length, 5))])}>
-        {items.map(({ label, to, icon: Icon, end, badge }) => (
-          <li key={to}>
-            <NavLink
-              to={to}
-              end={end}
-              className={({ isActive }) =>
-                cn(
-                  'flex min-h-14 flex-col items-center justify-center gap-0.5 px-1 py-1 text-center text-xs leading-tight font-medium',
-                  isActive ? 'bg-primary text-on-primary' : 'text-text',
-                )
-              }
-            >
-              <span className="relative">
-                <Icon aria-hidden="true" className="size-5" />
-                {badge && <NavBadge kind={badge} compact />}
-              </span>
-              <span>{label}</span>
-            </NavLink>
-          </li>
-        ))}
-      </ul>
-    </nav>
-  );
-}
-
 /**
- * The signed in layout: skip link, top bar (account menu), sidebar on large screens,
- * bottom bar on small screens for farmer and buyer, and a drawer on small screens for admin.
+ * The signed in layout: skip link, top bar (account menu), sidebar on large screens and a
+ * drawer opened by a hamburger button on small screens, for every role. The hamburger button
+ * repeats a navigation count (the buyer's orders waiting for payment, the administrator's
+ * orders to review) so it stays visible while the drawer is closed.
  * @param {{ children?: import('react').ReactNode }} props
  */
 export function AppShell({ children }) {
@@ -98,7 +60,7 @@ export function AppShell({ children }) {
   if (!session) return null;
   const role = session.role;
   const items = getNavItems(role, { isSuperAdmin: session.isSuperAdmin });
-  const hasBottomNav = BOTTOM_NAV_ROLES.has(role);
+  const drawerBadge = items.find((item) => item.badge)?.badge;
   const home = ROLE_HOME[/** @type {keyof typeof ROLE_HOME} */ (role)] ?? '/';
 
   return (
@@ -111,29 +73,30 @@ export function AppShell({ children }) {
       </a>
 
       <header className="sticky top-0 z-30 flex h-16 items-center gap-2 border-b border-border bg-card px-3 sm:px-4">
-        {!hasBottomNav && (
-          <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
-            <SheetTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="lg:hidden"
-                aria-label="Open navigation menu"
-              >
+        <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
+          <SheetTrigger asChild>
+            <Button variant="ghost" size="icon" className="lg:hidden">
+              {/* The label first, so the name reads "Open navigation menu, 1 order ...". */}
+              <span className="sr-only">Open navigation menu</span>
+              <span className="relative">
                 <Menu aria-hidden="true" />
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="left">
-              <SheetHeader>
-                <SheetTitle>AgriSence</SheetTitle>
-                <SheetDescription>Administration menu</SheetDescription>
-              </SheetHeader>
-              <nav aria-label="Drawer navigation">
-                <SideNavList items={items} onNavigate={() => setDrawerOpen(false)} />
-              </nav>
-            </SheetContent>
-          </Sheet>
-        )}
+                {drawerBadge && <NavBadge kind={drawerBadge} compact />}
+              </span>
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="left">
+            <SheetHeader>
+              <SheetTitle>AgriSence</SheetTitle>
+              <SheetDescription>
+                {DRAWER_DESCRIPTION[/** @type {keyof typeof DRAWER_DESCRIPTION} */ (role)] ??
+                  'Menu'}
+              </SheetDescription>
+            </SheetHeader>
+            <nav aria-label="Drawer navigation">
+              <SideNavList items={items} onNavigate={() => setDrawerOpen(false)} />
+            </nav>
+          </SheetContent>
+        </Sheet>
         <Link
           to={home}
           className="flex min-h-11 shrink-0 items-center gap-2 rounded-md px-1 text-lg font-bold text-primary"
@@ -155,16 +118,11 @@ export function AppShell({ children }) {
         <main
           id="main-content"
           tabIndex={-1}
-          className={cn(
-            'mx-auto w-full max-w-5xl min-w-0 flex-1 px-4 py-6 outline-none',
-            hasBottomNav ? 'pb-24 lg:pb-6' : '',
-          )}
+          className="mx-auto w-full max-w-5xl min-w-0 flex-1 px-4 py-6 outline-none"
         >
           {children}
         </main>
       </div>
-
-      {hasBottomNav && <BottomNav items={items} />}
     </div>
   );
 }
