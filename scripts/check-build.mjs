@@ -5,7 +5,8 @@
 // - the development role switcher is not in the build;
 // - no source maps or .env content are emitted;
 // - the initial JavaScript stays within the performance budget;
-// - no lazy chunk is over its own budget, and Recharts and the photo helper are only in lazy chunks.
+// - no lazy chunk is over its own budget, and Recharts, the photo helper, the buyer screens and
+//   the admin screens are only in lazy chunks; the admin screens never include Recharts.
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 import { gzipSync } from 'node:zlib';
@@ -26,6 +27,9 @@ const IMAGE_HELPER_MARKER = 'ImageError';
 // Text only the buyer payment screen contains (src/lib/buyerMessages.js). The buyer screens are
 // lazily loaded routes, so it must never be in the initial JavaScript (F3).
 const BUYER_SCREEN_MARKER = 'Check payment request';
+// Text only the admin screens contain (src/lib/adminMessages.js). The admin screens are lazily
+// loaded routes, so it must never be in the initial JavaScript (F4).
+const ADMIN_SCREEN_MARKER = 'Data pipeline health';
 
 const DIST = 'dist';
 const DEV_SWITCHER_MARKER = 'agrisence-dev-role-switcher';
@@ -215,6 +219,16 @@ for (const chunk of buyerChunks) {
 }
 if (buyerChunks.length === 0) fail('The buyer payment screen was not found in the build.');
 else console.log(`  Buyer screens: lazy chunk(s) ${buyerChunks.map((c) => c.file).join(', ')}`);
+
+const adminChunks = chunks.filter((chunk) => read(chunk.file).includes(ADMIN_SCREEN_MARKER));
+for (const chunk of adminChunks) {
+  if (initial.has(chunk.file))
+    fail(`The admin screens are in the initial JavaScript (${chunk.file}); load them lazily.`);
+  if (read(chunk.file).includes(RECHARTS_MARKER))
+    fail(`The admin screens include Recharts (${chunk.file}); F4 has no chart.`);
+}
+if (adminChunks.length === 0) fail('The admin screens were not found in the build.');
+else console.log(`  Admin screens: lazy chunk(s) ${adminChunks.map((c) => c.file).join(', ')}`);
 
 if (failures.length) {
   console.error('check:build FAILED');

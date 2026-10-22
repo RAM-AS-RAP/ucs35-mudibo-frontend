@@ -108,7 +108,8 @@ From `src/styles/tokens.test.js`, which reads `tokens.css` (print with
 - `components/ui/`: shadcn/ui (button, input, label, card, badge, skeleton, alert, dialog, tabs, select,
   table, sonner toaster, separator, sheet, dropdown menu). Written by hand in JavaScript from the shadcn "new-york" sources,
   re-pointed at the tokens; `components.json` is configured for JavaScript (`tsx: false`).
-- `components/layout/`: `AppShell`, `AccountMenu`, `navConfig`, `PublicLayout`, `RoleSection`.
+- `components/layout/`: `AppShell`, `AccountMenu`, `navConfig`, `NavBadge` (the buyer's waiting
+  orders and the administrator's "N orders need review"), `PublicLayout`.
 - `components/auth/` (F1): `AuthLayout` (mint canvas, white card, wordmark, prototype note), `FormField`,
   `PasswordField` (show or hide toggle with `aria-pressed`), `CodeInput`, `FormErrorSummary`
   (`role="alert"`, links to fields), `CountdownButton` and `SubmitButton`, `PasswordRequirements`
@@ -117,7 +118,7 @@ From `src/styles/tokens.test.js`, which reads `tokens.css` (print with
 - `components/feedback/`: `ErrorBoundary`, `ErrorState`, `EmptyState`, `LoadingState`, `OfflineBanner`,
   `ApiStatus`, `PwaUpdatePrompt`.
 - `components/display/`: `PageHeader`, `StatCard`, `DeltaTag` (optionally with a `direction` from
-  `directionOf` and a `suffix`), `StatusBadge`, `Money`, `ComingSoon`, and for F2a: `PriceCard`
+  `directionOf` and a `suffix`), `StatusBadge`, `Money`, and for F2a: `PriceCard`
   (and `PriceChange`), `MarketChips` (toggle buttons, `aria-pressed`, one always selected), `Segmented`
   (native radio group, 44 px options), `FreshnessNote`, `Recommendation` (tinted box with an icon and
   title), `ExplainabilityBars` (accessible list with `div` bars), `TrendChart` (wrapper with
@@ -126,6 +127,17 @@ From `src/styles/tokens.test.js`, which reads `tokens.css` (print with
   (Active, Sold out, Removed) and shows the F2b order words ("Paid (test payment)", "Waiting for
   payment", "Not paid, expired", ...), with the existing positive, negative, neutral and outline
   variants (no new colours).
+- `components/admin/` (F4): `ResponsiveTable` (a captioned table with row headers from 640 px, the
+  same rows as stacked cards below, columns declared once, the same actions in both; only one layout
+  is in the page), `FilterBar` and `useFilterParams` (filters in the URL, validated, "Clear
+  filters"), `SearchInput` (400 ms debounce, 2 to 50 characters), `ConfirmDialog` (consequences,
+  optional required note with a counter, spinner, inline error, double submit guard, focus back to
+  the trigger), `PayloadView` (text in a `pre`, 16 KB then "Show all", copy), `PaymentEventsDialog`,
+  `RoleBadge` (Farmer, Buyer, Admin, "Main admin") and `ListParts` (Refresh, "Showing X of Y", Load
+  more). `StatusBadge` gained `kind="adminOrder"` ("Needs review" in `negative` with a warning
+  icon), `adminPayment`, `invite` (Pending, Used, Expired, Revoked, Locked) and `user` (Active,
+  Disabled), all icon plus word with the existing variants (no new colours). Orders that need review
+  are also marked with a `negative` left border, a warning icon and the words "Needs review".
 - `components/listings/` (F2b): `ListingCard` (photo through `safeImageUrl` or a leaf placeholder),
   `ListingForm` (create and edit), `PhotoPicker` (two buttons, hidden file inputs, preview, live
   status), `PriceGuidance`, `ListingsSummary` (dashboard). `components/orders/`: `OrderCard`.

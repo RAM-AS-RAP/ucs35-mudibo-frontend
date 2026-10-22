@@ -16,14 +16,14 @@ for smallholder farmers in Kenya. It is a React single page application, install
 talks to the AgriSence backend API (a separate repository). Payments use the M-Pesa sandbox only.
 
 Current state: modules F0 (foundation), F1 (authentication), F2a (farmer decision support), F2b
-(farmer listings and orders) and F3 (buyer browse, checkout and M-Pesa payment) are done. The admin
-screens (F4) are a placeholder that a later module replaces. See [CLAUDE.md](CLAUDE.md) for the
+(farmer listings and orders), F3 (buyer browse, checkout and M-Pesa payment) and F4 (administrator
+console) are done. F5 (end to end tests and polish) is next. See [CLAUDE.md](CLAUDE.md) for the
 roadmap and status.
 
 ## Requirements
 
 - Node.js 24 LTS (see `.nvmrc`; `nvm use` picks it up) and npm 10 or newer.
-- The backend running locally or reachable over https, for anything beyond the placeholder screens.
+- The backend running locally or reachable over https, for anything beyond the login screens.
 
 ## Setup and run
 
@@ -99,21 +99,40 @@ redirect rules: [docs/auth.md](docs/auth.md).
 - No real money moves, delivery is not part of the prototype, and the buyer sees only the seller's
   name. Details: [docs/buyer-checkout.md](docs/buyer-checkout.md).
 
+## Administrator console (F4)
+
+- **Dashboard** (`/admin`): users by role, listings, orders and payments per status, the completed
+  test payment total (no real money), what needs attention (orders needing review, payments waiting
+  more than 10 minutes) and the data pipeline health per market and crop.
+- **Users** (`/admin/users`): every account with role and status filters and a search; Disable or
+  Enable after a confirmation. Administrators cannot set or view passwords.
+- **Invites** (`/admin/invites`, main administrator only): send an invitation (the code goes only to
+  the person's email), resend, revoke, and check email delivery.
+- **Listings** (`/admin/listings`): every listing with its farmer and orders; Remove after a
+  confirmation (orders waiting for payment are cancelled, paid orders are not affected).
+- **Orders** (`/admin/orders`) and **order detail**: every order, with the orders that need review
+  marked; the detail shows the payments and their events, and resolves an order under review with
+  "Confirm sale" or "Void order" and a note. Refunds are handled outside AgriSence.
+- **Payments** (`/admin/payments`) and **Forecast accuracy** (`/admin/forecast-accuracy`).
+- The navigation shows how many orders need review. Writes are never retried automatically, and
+  every change to a user, listing, invitation or order asks first. Details:
+  [docs/admin-console.md](docs/admin-console.md).
+
 ## Scripts
 
-| Script                   | What it does                                                                                                                                                                                                                                                          |
-| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `npm run dev`            | Vite dev server                                                                                                                                                                                                                                                       |
-| `npm run build`          | Production build into `dist/`                                                                                                                                                                                                                                         |
-| `npm run preview`        | Serve the production build                                                                                                                                                                                                                                            |
-| `npm run lint`           | ESLint                                                                                                                                                                                                                                                                |
-| `npm run format`         | Prettier                                                                                                                                                                                                                                                              |
-| `npm test`               | Unit, component, accessibility and contract tests (Vitest)                                                                                                                                                                                                            |
-| `npm run gen:types`      | Generate `src/api/schema.d.ts` from `docs/backend/openapi.json`                                                                                                                                                                                                       |
-| `npm run gen:icons`      | Generate the PWA icons from `public/favicon.svg`                                                                                                                                                                                                                      |
-| `npm run check:contract` | Fail if the generated types are stale or an endpoint path or method is not in the contract                                                                                                                                                                            |
-| `npm run check:build`    | After a build: check the manifest, the service worker (no API caching), no dev code, no source maps, the initial JavaScript budget, the lazy chunk budget, and that Recharts, the photo helper and the buyer screens are only in lazy chunks; prints every chunk size |
-| `npm run e2e`            | Placeholder: end to end tests arrive in F5                                                                                                                                                                                                                            |
+| Script                   | What it does                                                                                                                                                                                                                                                                                                                  |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run dev`            | Vite dev server                                                                                                                                                                                                                                                                                                               |
+| `npm run build`          | Production build into `dist/`                                                                                                                                                                                                                                                                                                 |
+| `npm run preview`        | Serve the production build                                                                                                                                                                                                                                                                                                    |
+| `npm run lint`           | ESLint                                                                                                                                                                                                                                                                                                                        |
+| `npm run format`         | Prettier                                                                                                                                                                                                                                                                                                                      |
+| `npm test`               | Unit, component, accessibility and contract tests (Vitest)                                                                                                                                                                                                                                                                    |
+| `npm run gen:types`      | Generate `src/api/schema.d.ts` from `docs/backend/openapi.json`                                                                                                                                                                                                                                                               |
+| `npm run gen:icons`      | Generate the PWA icons from `public/favicon.svg`                                                                                                                                                                                                                                                                              |
+| `npm run check:contract` | Fail if the generated types are stale or an endpoint path or method is not in the contract                                                                                                                                                                                                                                    |
+| `npm run check:build`    | After a build: check the manifest, the service worker (no API caching), no dev code, no source maps, the initial JavaScript budget, the lazy chunk budget, and that Recharts, the photo helper, the buyer screens and the admin screens are only in lazy chunks (the admin screens without Recharts); prints every chunk size |
+| `npm run e2e`            | Placeholder: end to end tests arrive in F5                                                                                                                                                                                                                                                                                    |
 
 ## Environment variables
 
@@ -140,12 +159,13 @@ and `npm test`. Details: [docs/backend/README.md](docs/backend/README.md).
 ```
 src/
   screens/      one file per screen: auth/, farmer/, buyer/, admin/, shared/
-  components/   ui/ (shadcn/ui), layout/, feedback/, display/, listings/, orders/, buyer/
+  components/   ui/ (shadcn/ui), layout/, feedback/, display/, listings/, orders/, buyer/, admin/
   api/          client.js, errors.js, endpoints/, queries/ (TanStack Query hooks), schema.d.ts (generated)
   auth/         session.js, guards.jsx, roles.js
   lib/          env.js, format.js, queryClient.js, utils.js, relativeTime.js, forecast.js, shapSchema.js, trends.js,
                 decimal.js, priceCheck.js, image.js, safeImageUrl.js, constants.js, orderTotals.js,
-                idempotency.js, orderView.js, polling.js, payErrors.js, filterParams.js, buyerMessages.js
+                idempotency.js, orderView.js, polling.js, payErrors.js, filterParams.js, buyerMessages.js,
+                adminMessages.js, reconciliation.js, userActions.js, accuracyFormat.js, dateRange.js
   styles/       tokens.css (all colours), index.css
   dev/          development only role preview
   test/         test setup, MSW handlers, fixtures, helpers
@@ -169,6 +189,7 @@ from the server; offline, the app only shows a message that a connection is need
 - [docs/forecast-display.md](docs/forecast-display.md): what the farmer price and forecast screens show, the explanation shape check, wording and relative time rules
 - [docs/listings-orders.md](docs/listings-orders.md): the listing and order screens, quantity and price rules, the photo pipeline, uncertain writes and limitations
 - [docs/buyer-checkout.md](docs/buyer-checkout.md): the buyer screens, order and payment states, polling, the countdown, the idempotency key, the payment sequence, error messages and limitations
+- [docs/admin-console.md](docs/admin-console.md): the administrator screens and endpoints, the role model, the reconciliation workflow, privacy, invitations and the email check, accessibility and limitations
 - [docs/security-headers.md](docs/security-headers.md): headers for the later deployment
 - [docs/backend/](docs/backend/): the backend contract and how to refresh it
 
@@ -182,6 +203,13 @@ from the server; offline, the app only shows a message that a connection is need
 - backend gap: the KES 10 minimum order total is not in `openapi.json` or `frontend_contract.md`.
   The listing screen mirrors it (`MIN_ORDER_TOTAL_KES`) to explain a disabled button; the server's
   422 `order_too_small` decides.
+- backend gap: `openapi.json` gives the forecast accuracy fields (`mape`, `pct_error`,
+  `directional_accuracy`, `beat_persistence_rate`) no type or unit. The admin screen reads the first
+  two as percentages and the rates as shares between 0 and 1 (`src/lib/accuracyFormat.js`).
+- backend gap: `openapi.json` does not say in which time zone `GET /admin/payments` reads
+  `created_from` and `created_to`; the screen labels them "Dates as interpreted by the server".
+- backend gap: `ResolveOrderRequest.note` has only `maxLength: 500` in `openapi.json`; the screen
+  also requires at least 10 characters, as the backend behaviour was described.
 
 ## Troubleshooting
 
