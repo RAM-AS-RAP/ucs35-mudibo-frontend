@@ -1,3 +1,4 @@
+import { useReviewCount } from '@/api/queries/reviewCount';
 import { useWaitingOrdersCount } from '@/api/queries/waitingCount';
 import { cn } from '@/lib/utils';
 
@@ -47,8 +48,34 @@ function WaitingOrdersBadge({ compact = false }) {
   );
 }
 
+/**
+ * "3 orders need review". Kept here, not in lib/adminMessages.js, so the always loaded shell
+ * does not pull the admin screens' text into the initial JavaScript.
+ * @param {number} count
+ */
+export const reviewOrdersLabel = (count) =>
+  `${count} ${count === 1 ? 'order needs' : 'orders need'} review`;
+
+/**
+ * The administrator's "Orders" badge: orders that need review (GET /admin/orders with
+ * status=needs_reconciliation, limit 1). A failed request shows no badge.
+ */
+function ReviewOrdersBadge({ compact = false }) {
+  const count = useReviewCount();
+  return (
+    <CountBadge
+      count={count.isSuccess ? count.data : undefined}
+      label={reviewOrdersLabel}
+      compact={compact}
+    />
+  );
+}
+
 /** Badges a navigation item can show, by the `badge` name in navConfig. */
-export const NAV_BADGES = Object.freeze({ waitingOrders: WaitingOrdersBadge });
+export const NAV_BADGES = Object.freeze({
+  waitingOrders: WaitingOrdersBadge,
+  reviewOrders: ReviewOrdersBadge,
+});
 
 /**
  * @param {{ kind: keyof typeof NAV_BADGES, compact?: boolean }} props

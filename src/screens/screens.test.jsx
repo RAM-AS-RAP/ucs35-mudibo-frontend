@@ -13,20 +13,16 @@ afterEach(() => {
   queryClient.clear();
 });
 
-describe('role home placeholders and shared screens', () => {
-  it.each([['admin', 'F4 (admin)']])(
-    '%s home renders ComingSoon inside the shell without axe violations',
-    async (role, module) => {
-      loginAs(role);
-      const { container } = renderApp(`/${role}`);
-      expect(
-        await screen.findByText(`This screen is built in module ${module}.`),
-      ).toBeInTheDocument();
-      // No profile loaded: a generic greeting.
-      expect(screen.getByText('Welcome')).toBeInTheDocument();
-      await expectNoAxeViolations(container, { page: true });
-    },
-  );
+describe('role homes and shared screens', () => {
+  it('the admin home is the dashboard inside the shell, without axe violations', async () => {
+    loginAs('admin');
+    const { container } = renderApp('/admin');
+    expect(await screen.findByRole('heading', { name: 'Dashboard', level: 1 })).toBeInTheDocument();
+    expect(await screen.findByText('Needs attention')).toBeInTheDocument();
+    // The F0 placeholder is gone.
+    expect(screen.queryByText(/This screen is built in module/)).toBeNull();
+    await expectNoAxeViolations(container, { page: true });
+  });
 
   it('Forbidden and NotFound have no axe violations', async () => {
     loginAs('farmer');

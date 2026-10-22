@@ -20,11 +20,12 @@ function renderShell(path) {
 
 const labelsOf = (role) => NAV_ITEMS[role].map((item) => item.label);
 
+/** The visible label of each main navigation link (without a count badge). */
 function mainNavLabels() {
   const nav = screen.getByRole('navigation', { name: 'Main navigation' });
   return within(nav)
     .getAllByRole('link')
-    .map((link) => link.textContent);
+    .map((link) => link.querySelector('svg + span')?.textContent);
 }
 
 describe('AppShell navigation', () => {
@@ -56,6 +57,24 @@ describe('AppShell navigation', () => {
     setSuperAdmin(true);
     renderShell('/admin');
     expect(mainNavLabels()).toContain('Invites');
+  });
+
+  it('labels the admin items Dashboard to Forecast accuracy, with the review count on Orders', async () => {
+    loginAs('admin', { isSuperAdmin: true });
+    renderShell('/admin');
+    expect(mainNavLabels()).toEqual([
+      'Dashboard',
+      'Users',
+      'Invites',
+      'Listings',
+      'Orders',
+      'Payments',
+      'Forecast accuracy',
+    ]);
+    const nav = screen.getByRole('navigation', { name: 'Main navigation' });
+    expect(
+      await within(nav).findByRole('link', { name: 'Orders, 1 order needs review' }),
+    ).toHaveAttribute('href', '/admin/orders');
   });
 
   it('marks the active item with aria-current', () => {

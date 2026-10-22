@@ -78,7 +78,7 @@ describe('guards and routes', () => {
   it('sends an authenticated user from /login to their role home', async () => {
     loginAs('admin');
     const { router } = renderApp('/login');
-    expect(await screen.findByRole('heading', { name: 'Overview', level: 1 })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Dashboard', level: 1 })).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/admin');
   });
 

@@ -20,10 +20,10 @@ import {
  * @property {import('react').ComponentType<any>} icon
  * @property {boolean} [end]  match the path exactly (role home)
  * @property {boolean} [superAdminOnly]
- * @property {'waitingOrders'} [badge]  a count next to the label (NAV_BADGES in NavBadge.jsx)
+ * @property {'waitingOrders' | 'reviewOrders'} [badge]  a count next to the label (NAV_BADGES in NavBadge.jsx)
  */
 
-/** Navigation per role. Admin screens arrive in F4. */
+/** Navigation per role. "Invites" is for the main administrator only (isSuperAdmin). */
 /** @type {Record<string, NavItem[]>} */
 export const NAV_ITEMS = {
   farmer: [
@@ -38,11 +38,11 @@ export const NAV_ITEMS = {
     { label: 'My orders', to: '/buyer/orders', icon: ShoppingBag, badge: 'waitingOrders' },
   ],
   admin: [
-    { label: 'Overview', to: '/admin', icon: Gauge, end: true },
+    { label: 'Dashboard', to: '/admin', icon: Gauge, end: true },
     { label: 'Users', to: '/admin/users', icon: Users },
     { label: 'Invites', to: '/admin/invites', icon: MailPlus, superAdminOnly: true },
     { label: 'Listings', to: '/admin/listings', icon: Package },
-    { label: 'Orders', to: '/admin/orders', icon: ClipboardList },
+    { label: 'Orders', to: '/admin/orders', icon: ClipboardList, badge: 'reviewOrders' },
     { label: 'Payments', to: '/admin/payments', icon: CreditCard },
     { label: 'Forecast accuracy', to: '/admin/forecast-accuracy', icon: BarChart3 },
   ],
