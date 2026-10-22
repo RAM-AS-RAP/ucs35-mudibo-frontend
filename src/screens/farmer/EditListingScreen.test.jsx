@@ -198,7 +198,7 @@ describe('EditListingScreen', () => {
     );
   });
 
-  it('reads the listing from the cached list without another request', async () => {
+  it('shows the cached listing at once and always confirms it with GET /listings/mine/{id}', async () => {
     const user = userEvent.setup();
     const { router } = renderFarmer('/farmer/listings');
     await screen.findByTestId('listings-count');
@@ -212,6 +212,18 @@ describe('EditListingScreen', () => {
     );
     expect(await screen.findByLabelText('Quantity (kg)')).toHaveValue('120.5');
     expect(recorder.requests.filter((r) => r.path === '/api/v1/listings/mine')).toHaveLength(0);
+    await waitFor(() =>
+      expect(
+        recorder.requests.filter((r) => r.path === `/api/v1/listings/mine/${active.id}`),
+      ).toHaveLength(1),
+    );
+  });
+
+  it('has no paged fallback: the listing is never searched page by page', async () => {
+    const recorder = recordRequests();
+    await openEdit(active.id);
+    expect(recorder.requests.filter((r) => r.path === '/api/v1/listings/mine')).toHaveLength(0);
+    expect(recorder.requests.map((r) => r.path)).toContain(`/api/v1/listings/mine/${active.id}`);
   });
 
   it('replaces the form with the read only notice on listing_removed', async () => {

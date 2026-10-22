@@ -17,8 +17,10 @@ Removing a listing asks first ("Remove this listing? Buyers will no longer see i
 already paid are not affected."). A 409 `listing_has_pending_orders` is shown inside the dialog with
 only a Close button; a 404 closes the dialog and refreshes the list.
 
-The edit screen (`useMyListing(id)`) shows a listing from a cached page of My listings at once and
-otherwise loads it with `GET /listings/mine/{id}` (any status; a removed listing is shown read only).
+The edit screen (`useMyListing(id)`) always loads the listing with `GET /listings/mine/{id}` (any
+status; a removed listing is shown read only). When the listing is in a cached page of My listings,
+that copy is shown at once as a seed and the endpoint's answer replaces it (the form starts again
+once from the server's values). There is no paged search through My listings any more.
 `GET /listings/{id}` is the buyer's route and answers 403 to a farmer. A 404 `listing_not_found`,
 on load or on save, means the listing does not exist or is not the farmer's: the screen refreshes
 the listing data, shows "This listing could not be found. The list has been refreshed." and goes

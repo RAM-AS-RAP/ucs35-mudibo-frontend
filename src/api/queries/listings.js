@@ -84,7 +84,9 @@ export async function fetchMyListing(id) {
 
 /**
  * One of the farmer's listings for the edit screen: data is the listing, or null when it was
- * not found. A listing already in a cached page shows at once.
+ * not found. A listing already in a cached page shows at once, but it is always confirmed with
+ * GET /listings/mine/{id}: the seed is marked as old (`initialDataUpdatedAt: 0`), so the query
+ * fetches on mount and the server's answer replaces it.
  * @param {string} id
  */
 export function useMyListing(id) {
@@ -93,6 +95,7 @@ export function useMyListing(id) {
     queryKey: queryKeys.myListing(id),
     queryFn: () => fetchMyListing(id),
     initialData: () => findCachedListing(client, id),
+    initialDataUpdatedAt: 0,
     ...accountQueryPolicy,
   });
 }
