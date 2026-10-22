@@ -1,4 +1,4 @@
-// One file per backend area. A later module adds admin.js.
+// One file per backend area.
 export * from './system';
 export * from './auth';
 export * from './prices';
@@ -15,3 +15,4 @@ export {
   getOrder,
 } from './orders';
 export * from './payments';
+export * from './admin';

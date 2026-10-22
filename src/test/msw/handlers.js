@@ -334,10 +334,177 @@ export const buyerHandlers = [
   ),
 ];
 
+/*
+ * Administrator (F4). The default handlers honour the filters and paging as the backend does.
+ */
+
+/**
+ * GET /admin/users over a set of users: role, is_disabled, q (name, email or phone), paged.
+ * @param {Array<Record<string, any>>} users
+ * @param {URL} url
+ */
+export function adminUsersResponse(users, url) {
+  const q = url.searchParams;
+  const role = q.get('role');
+  const disabled = q.get('is_disabled');
+  const search = (q.get('q') ?? '').toLowerCase();
+  const items = users.filter(
+    (u) =>
+      (!role || u.role === role) &&
+      (disabled === null || String(u.is_disabled) === disabled) &&
+      (!search ||
+        [u.name, u.email ?? '', u.phone_number].some((v) => v.toLowerCase().includes(search))),
+  );
+  return pageOf(items, url);
+}
+
+/**
+ * GET /admin/orders over a set of orders: one status; q is a reference prefix or a buyer name.
+ * @param {Array<Record<string, any>>} orders
+ * @param {URL} url
+ */
+export function adminOrdersResponse(orders, url) {
+  const q = url.searchParams;
+  const status = q.get('status');
+  const search = (q.get('q') ?? '').toLowerCase();
+  const items = orders.filter(
+    (o) =>
+      (!status || o.status === status) &&
+      (!search ||
+        o.reference.toLowerCase().startsWith(search) ||
+        o.buyer_name.toLowerCase().includes(search)),
+  );
+  return pageOf(items, url);
+}
+
+/**
+ * GET /admin/forecast-accuracy over the fixture: market, crop, horizon, is_backfill and
+ * include_pending (default true), paged, with the fixture's summary and note.
+ * @param {URL} url
+ */
+export function accuracyResponse(url) {
+  const q = url.searchParams;
+  const base = fixtures.forecastAccuracy;
+  const backfill = q.get('is_backfill');
+  const includePending = q.get('include_pending') !== 'false';
+  const items = base.items.filter(
+    (i) =>
+      (!q.get('market') || i.market === q.get('market')) &&
+      (!q.get('crop') || i.crop === q.get('crop')) &&
+      (!q.get('horizon') || i.horizon === q.get('horizon')) &&
+      (backfill === null || String(i.is_backfill) === backfill) &&
+      (includePending || !i.is_pending),
+  );
+  return { ...pageOf(items, url), summary: base.summary, note: base.note };
+}
+
+/**
+ * The detail of an order of the admin list: the review fixture for its id, else the list item
+ * with no payments, else null.
+ * @param {unknown} id
+ */
+export function adminOrderDetailFor(id) {
+  if (id === fixtures.adminOrderDetail.id) return structuredClone(fixtures.adminOrderDetail);
+  const order = fixtures.adminOrdersPage.items.find((o) => o.id === id);
+  return order ? { ...structuredClone(order), payments: [] } : null;
+}
+
+/** @param {Record<string, any>} user @param {boolean} disabled */
+export const toggledUser = (user, disabled) => ({
+  ...user,
+  is_disabled: disabled,
+  disabled_at: disabled ? '2026-10-21T10:00:00Z' : null,
+  disabled_by_name: disabled ? 'Amina Main' : null,
+});
+
+/** @param {unknown} id @param {boolean} disabled */
+function toggleUserResponse(id, disabled) {
+  const user = fixtures.adminUsersPage.items.find((u) => u.id === id);
+  if (!user) return errorResponse(404, 'user_not_found');
+  if (user.is_super_admin) return errorResponse(403, 'cannot_modify_super_admin');
+  return HttpResponse.json(toggledUser(user, disabled));
+}
+
+export const adminHandlers = [
+  http.get(apiUrl('/api/v1/admin/stats'), () => HttpResponse.json(fixtures.adminStats)),
+  http.get(apiUrl('/api/v1/admin/users'), ({ request }) =>
+    HttpResponse.json(adminUsersResponse(fixtures.adminUsersPage.items, new URL(request.url))),
+  ),
+  http.patch(apiUrl('/api/v1/admin/users/:userId/disable'), ({ params }) =>
+    toggleUserResponse(params.userId, true),
+  ),
+  http.patch(apiUrl('/api/v1/admin/users/:userId/enable'), ({ params }) =>
+    toggleUserResponse(params.userId, false),
+  ),
+  http.get(apiUrl('/api/v1/admin/invites'), ({ request }) => {
+    const url = new URL(request.url);
+    const status = url.searchParams.get('status');
+    const items = fixtures.adminInvitesPage.items.filter((i) => !status || i.status === status);
+    return HttpResponse.json(pageOf(items, url));
+  }),
+  http.post(apiUrl('/api/v1/admin/invites'), () =>
+    HttpResponse.json(fixtures.inviteSent, { status: 201 }),
+  ),
+  http.post(apiUrl('/api/v1/admin/invites/:inviteId/resend'), () =>
+    HttpResponse.json({ ...fixtures.inviteSent, email_masked: 'p***@example.com' }),
+  ),
+  http.delete(
+    apiUrl('/api/v1/admin/invites/:inviteId'),
+    () => new HttpResponse(null, { status: 204 }),
+  ),
+  http.post(apiUrl('/api/v1/admin/email/test'), () => HttpResponse.json(fixtures.emailCheck)),
+  http.get(apiUrl('/api/v1/admin/listings'), ({ request }) => {
+    const url = new URL(request.url);
+    const q = url.searchParams;
+    const search = (q.get('q') ?? '').toLowerCase();
+    const items = fixtures.adminListingsPage.items.filter(
+      (l) =>
+        (!q.get('status') || l.status === q.get('status')) &&
+        (!q.get('crop') || l.crop === q.get('crop')) &&
+        (!q.get('market') || l.market === q.get('market')) &&
+        (!search || l.farmer_name.toLowerCase().includes(search)),
+    );
+    return HttpResponse.json(pageOf(items, url));
+  }),
+  http.delete(
+    apiUrl('/api/v1/admin/listings/:listingId'),
+    () => new HttpResponse(null, { status: 204 }),
+  ),
+  http.get(apiUrl('/api/v1/admin/orders'), ({ request }) =>
+    HttpResponse.json(adminOrdersResponse(fixtures.adminOrdersPage.items, new URL(request.url))),
+  ),
+  http.get(apiUrl('/api/v1/admin/orders/:orderId'), ({ params }) => {
+    const order = adminOrderDetailFor(params.orderId);
+    return order ? HttpResponse.json(order) : errorResponse(404, 'order_not_found');
+  }),
+  http.post(apiUrl('/api/v1/admin/orders/:orderId/resolve'), () =>
+    HttpResponse.json(fixtures.adminOrderResolved),
+  ),
+  http.get(apiUrl('/api/v1/admin/payments'), ({ request }) => {
+    const url = new URL(request.url);
+    const q = url.searchParams;
+    const reference = q.get('order_reference');
+    const items = fixtures.adminPaymentsPage.items.filter(
+      (p) =>
+        (!q.get('status') || p.status === q.get('status')) &&
+        (!q.get('environment') || p.environment === q.get('environment')) &&
+        (!reference || p.order_reference.startsWith(reference)),
+    );
+    return HttpResponse.json(pageOf(items, url));
+  }),
+  http.get(apiUrl('/api/v1/admin/payments/:paymentId/events'), ({ params }) =>
+    HttpResponse.json({ ...fixtures.paymentEvents, payment_id: params.paymentId }),
+  ),
+  http.get(apiUrl('/api/v1/admin/forecast-accuracy'), ({ request }) =>
+    HttpResponse.json(accuracyResponse(new URL(request.url))),
+  ),
+];
+
 export const handlers = [
   ...priceHandlers,
   ...listingHandlers,
   ...buyerHandlers,
+  ...adminHandlers,
   http.get(apiUrl('/api/v1/health'), () => HttpResponse.json(fixtures.health)),
   http.get(apiUrl('/api/v1/health/db'), () => HttpResponse.json(fixtures.dbHealth)),
 

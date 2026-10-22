@@ -1,0 +1,72 @@
+{
+  "items": [
+    {
+      "name": "Pending Person",
+      "email_masked": "p***@example.com",
+      "status": "pending",
+      "created_by_name": "Amina Main",
+      "created_at": "2026-10-18T10:00:00Z",
+      "expires_at": "2026-10-25T10:00:00Z",
+      "send_count": 1,
+      "attempts": 0,
+      "used_at": null,
+      "revoked_at": null,
+      "id": "b0000000-0000-4000-8000-000000000001"
+    },
+    {
+      "name": "Used Person",
+      "email_masked": "u***@example.com",
+      "status": "used",
+      "created_by_name": "Amina Main",
+      "created_at": "2026-10-18T10:00:00Z",
+      "expires_at": "2026-10-25T10:00:00Z",
+      "send_count": 1,
+      "attempts": 0,
+      "used_at": "2026-10-19T08:00:00Z",
+      "revoked_at": null,
+      "id": "b0000000-0000-4000-8000-000000000002"
+    },
+    {
+      "name": "Expired Person",
+      "email_masked": "e***@example.com",
+      "status": "expired",
+      "created_by_name": "Amina Main",
+      "created_at": "2026-10-18T10:00:00Z",
+      "expires_at": "2026-10-25T10:00:00Z",
+      "send_count": 1,
+      "attempts": 0,
+      "used_at": null,
+      "revoked_at": null,
+      "id": "b0000000-0000-4000-8000-000000000003"
+    },
+    {
+      "name": "Revoked Person",
+      "email_masked": "r***@example.com",
+      "status": "revoked",
+      "created_by_name": "Amina Main",
+      "created_at": "2026-10-18T10:00:00Z",
+      "expires_at": "2026-10-25T10:00:00Z",
+      "send_count": 1,
+      "attempts": 0,
+      "used_at": null,
+      "revoked_at": "2026-10-19T09:00:00Z",
+      "id": "b0000000-0000-4000-8000-000000000004"
+    },
+    {
+      "name": "Locked Person",
+      "email_masked": "l***@example.com",
+      "status": "locked",
+      "created_by_name": "Amina Main",
+      "created_at": "2026-10-18T10:00:00Z",
+      "expires_at": "2026-10-25T10:00:00Z",
+      "send_count": 1,
+      "attempts": 5,
+      "used_at": null,
+      "revoked_at": null,
+      "id": "b0000000-0000-4000-8000-000000000005"
+    }
+  ],
+  "total": 5,
+  "limit": 20,
+  "offset": 0
+}

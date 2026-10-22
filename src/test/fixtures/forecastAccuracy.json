@@ -1,0 +1,84 @@
+{
+  "items": [
+    {
+      "market": "Nairobi",
+      "crop": "maize",
+      "horizon": "one_month",
+      "origin_month": "2026-06-01",
+      "target_month": "2026-07-01",
+      "origin_price": 40,
+      "predicted_price": 41.2,
+      "actual_price": 42,
+      "abs_error": 0.8,
+      "pct_error": 1.9,
+      "actual_log_change": 0.0488,
+      "direction_correct": true,
+      "persistence_abs_error": 2,
+      "beat_persistence": true,
+      "is_backfill": false,
+      "is_pending": false
+    },
+    {
+      "market": "Kisumu",
+      "crop": "beans",
+      "horizon": "two_month",
+      "origin_month": "2026-05-01",
+      "target_month": "2026-07-01",
+      "origin_price": 120,
+      "predicted_price": 118,
+      "actual_price": 125,
+      "abs_error": 7,
+      "pct_error": 5.6,
+      "actual_log_change": 0.0408,
+      "direction_correct": false,
+      "persistence_abs_error": 5,
+      "beat_persistence": false,
+      "is_backfill": true,
+      "is_pending": false
+    },
+    {
+      "market": "Nairobi",
+      "crop": "maize",
+      "horizon": "one_month",
+      "origin_month": "2026-08-01",
+      "target_month": "2026-09-01",
+      "origin_price": 42,
+      "predicted_price": 43,
+      "actual_price": null,
+      "abs_error": null,
+      "pct_error": null,
+      "actual_log_change": null,
+      "direction_correct": null,
+      "persistence_abs_error": null,
+      "beat_persistence": null,
+      "is_backfill": false,
+      "is_pending": true
+    }
+  ],
+  "total": 3,
+  "limit": 20,
+  "offset": 0,
+  "summary": [
+    {
+      "horizon": "one_month",
+      "is_backfill": false,
+      "n_realised": 1,
+      "n_pending": 1,
+      "mape": 1.9,
+      "mean_abs_error": 0.8,
+      "directional_accuracy": 1,
+      "beat_persistence_rate": 1
+    },
+    {
+      "horizon": "two_month",
+      "is_backfill": true,
+      "n_realised": 0,
+      "n_pending": 0,
+      "mape": null,
+      "mean_abs_error": null,
+      "directional_accuracy": null,
+      "beat_persistence_rate": null
+    }
+  ],
+  "note": "Accuracy is measured on few months so far; treat the figures as indicative."
+}

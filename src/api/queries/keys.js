@@ -3,6 +3,26 @@
  * (market, crop, horizon, months, a status filter, a listing id): never a token, a phone number
  * or an email.
  */
+
+/** @type {Map<string, string>} */
+const searchIds = new Map();
+
+/**
+ * An opaque id for a search text, for query keys (F4). An administrator may search users by
+ * phone number or email; the key holds `s1`, `s2`, ... instead of the text itself.
+ * @param {string | null | undefined} text
+ * @returns {string}
+ */
+export function searchKey(text) {
+  if (!text) return '';
+  let id = searchIds.get(text);
+  if (!id) {
+    id = `s${searchIds.size + 1}`;
+    searchIds.set(text, id);
+  }
+  return id;
+}
+
 export const queryKeys = Object.freeze({
   markets: () => /** @type {const} */ (['markets']),
   /** @param {string} crop */
@@ -67,4 +87,82 @@ export const queryKeys = Object.freeze({
     /** @type {const} */ (['buyer-orders', 'list', { status: status ?? 'all' }]),
   waitingOrdersCount: () =>
     /** @type {const} */ (['buyer-orders', 'count', { status: 'pending_payment' }]),
+
+  /* Administrator (F4). Search texts are replaced by searchKey() ids. */
+  adminRoot: () => /** @type {const} */ (['admin']),
+  adminStats: () => /** @type {const} */ (['admin', 'stats']),
+  adminUsersRoot: () => /** @type {const} */ (['admin', 'users']),
+  /** @param {{ role: string | null, isDisabled: boolean | null, q: string | null }} filters */
+  adminUsers: ({ role, isDisabled, q }) =>
+    /** @type {const} */ ([
+      'admin',
+      'users',
+      { role: role ?? 'all', disabled: isDisabled ?? 'all', search: searchKey(q) },
+    ]),
+  adminInvitesRoot: () => /** @type {const} */ (['admin', 'invites']),
+  /** @param {{ status: string | null }} filters */
+  adminInvites: ({ status }) =>
+    /** @type {const} */ (['admin', 'invites', { status: status ?? 'all' }]),
+  adminListingsRoot: () => /** @type {const} */ (['admin', 'listings']),
+  /** @param {{ status: string | null, crop: string | null, market: string | null, q: string | null }} filters */
+  adminListings: ({ status, crop, market, q }) =>
+    /** @type {const} */ ([
+      'admin',
+      'listings',
+      {
+        status: status ?? 'all',
+        crop: crop ?? 'all',
+        market: market ?? 'all',
+        search: searchKey(q),
+      },
+    ]),
+  /** Every admin order query: the lists, one order and the review count. */
+  adminOrdersRoot: () => /** @type {const} */ (['admin', 'orders']),
+  /** @param {{ status: string | null, q: string | null }} filters */
+  adminOrders: ({ status, q }) =>
+    /** @type {const} */ ([
+      'admin',
+      'orders',
+      'list',
+      { status: status ?? 'all', search: searchKey(q) },
+    ]),
+  /** @param {string} id */
+  adminOrder: (id) => /** @type {const} */ (['admin', 'orders', 'one', { id }]),
+  adminReviewCount: () =>
+    /** @type {const} */ (['admin', 'orders', 'count', { status: 'needs_reconciliation' }]),
+  adminPaymentsRoot: () => /** @type {const} */ (['admin', 'payments']),
+  /**
+   * @param {{ status: string | null, orderReference: string | null, environment: string | null, createdFrom: string | null, createdTo: string | null }} filters
+   */
+  adminPayments: ({ status, orderReference, environment, createdFrom, createdTo }) =>
+    /** @type {const} */ ([
+      'admin',
+      'payments',
+      'list',
+      {
+        status: status ?? 'all',
+        reference: searchKey(orderReference),
+        environment: environment ?? 'all',
+        from: createdFrom ?? '',
+        to: createdTo ?? '',
+      },
+    ]),
+  /** @param {string} paymentId */
+  paymentEvents: (paymentId) =>
+    /** @type {const} */ (['admin', 'payments', 'events', { paymentId }]),
+  /**
+   * @param {{ market: string | null, crop: string | null, horizon: string | null, isBackfill: boolean | null, includePending: boolean }} filters
+   */
+  forecastAccuracy: ({ market, crop, horizon, isBackfill, includePending }) =>
+    /** @type {const} */ ([
+      'admin',
+      'accuracy',
+      {
+        market: market ?? 'all',
+        crop: crop ?? 'all',
+        horizon: horizon ?? 'all',
+        source: isBackfill === null ? 'all' : isBackfill ? 'backfill' : 'live',
+        includePending,
+      },
+    ]),
 });
