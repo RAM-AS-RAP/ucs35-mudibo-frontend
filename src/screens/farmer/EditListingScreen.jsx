@@ -103,7 +103,9 @@ export default function EditListingScreen() {
           <StatusBadge kind="listing" status={listing.status} />
         </div>
         <ListingForm
-          key={listing.id}
+          // A listing seeded from the cached list is confirmed by GET /listings/mine/{id}; the
+          // form starts again once, from the server's values, when that answer arrives.
+          key={`${listing.id}:${query.isFetchedAfterMount ? 'confirmed' : 'seed'}`}
           mode="edit"
           listing={listing}
           initial={{

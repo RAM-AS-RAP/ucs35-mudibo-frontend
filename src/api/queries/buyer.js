@@ -41,15 +41,20 @@ export { useWaitingOrdersCount } from './waitingCount';
  * @property {ListingSort} sort
  */
 
+/** The buyer market list changes only when listings are added or sell out. */
+export const BUYER_MARKETS_STALE_TIME_MS = 2 * 60 * 1000;
+
 /**
- * GET /listings/markets: the markets with listings a buyer can buy, for the browse filter.
- * Under the browse root, so it is refreshed with the browse list after an order.
+ * GET /listings/markets: the markets with listings a buyer can buy, with their counts, for the
+ * browse filter. Stale after 2 minutes. Under the browse root, so it is refreshed with the
+ * browse list after an order.
  */
 export function useBuyerMarkets() {
   return useQuery({
     queryKey: queryKeys.buyerMarkets(),
     queryFn: getBuyerMarkets,
     ...accountQueryPolicy,
+    staleTime: BUYER_MARKETS_STALE_TIME_MS,
   });
 }
 

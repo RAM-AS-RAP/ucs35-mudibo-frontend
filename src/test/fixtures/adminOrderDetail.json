@@ -1,0 +1,51 @@
+{
+  "buyer_name": "Otieno Buyer",
+  "seller_name": "Wanjiku Kamau",
+  "listing_id": "c0000000-0000-4000-8000-000000000001",
+  "crop": "maize",
+  "market": "Nairobi",
+  "quantity": 25,
+  "unit_price": 45.5,
+  "total_amount": 1138,
+  "created_at": "2026-10-19T08:00:00Z",
+  "expires_at": "2026-10-19T08:05:00Z",
+  "latest_payment_status": "completed",
+  "latest_mpesa_receipt_number": "SJK4H7Q2LM",
+  "reconciliation": {
+    "reason": "late_success_after_expiry",
+    "order_status_before": "expired",
+    "flagged_at": "2026-10-19T08:09:00Z"
+  },
+  "resolution": null,
+  "id": "d0000000-0000-4000-8000-000000000001",
+  "reference": "AGR-R3V13W",
+  "status": "needs_reconciliation",
+  "payments": [
+    {
+      "amount": 1138,
+      "stk_target_masked": "2547*****678",
+      "mpesa_receipt_number": null,
+      "result_code": 1037,
+      "result_desc": "DS timeout user cannot be reached",
+      "environment": "sandbox",
+      "created_at": "2026-10-19T08:01:00Z",
+      "completed_at": "2026-10-19T08:03:00Z",
+      "callback_received_at": null,
+      "id": "e0000000-0000-4000-8000-000000000001",
+      "status": "timeout"
+    },
+    {
+      "amount": 1138,
+      "stk_target_masked": "2547*****678",
+      "mpesa_receipt_number": "SJK4H7Q2LM",
+      "result_code": 0,
+      "result_desc": "The service request is processed successfully.",
+      "environment": "sandbox",
+      "created_at": "2026-10-19T08:04:00Z",
+      "completed_at": "2026-10-19T08:09:00Z",
+      "callback_received_at": "2026-10-19T08:09:00Z",
+      "id": "e0000000-0000-4000-8000-000000000002",
+      "status": "completed"
+    }
+  ]
+}

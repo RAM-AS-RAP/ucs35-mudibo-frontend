@@ -1,0 +1,48 @@
+{
+  "users": {
+    "farmers": 12,
+    "buyers": 30,
+    "admins": 2,
+    "disabled": 1
+  },
+  "listings": {
+    "active": 9,
+    "sold_out": 3
+  },
+  "orders": {
+    "paid": 14,
+    "pending_payment": 2,
+    "needs_reconciliation": 1,
+    "expired": 5
+  },
+  "payments": {
+    "completed": 14,
+    "initiated": 1,
+    "failed": 2
+  },
+  "completed_sandbox_amount_kes": 48250,
+  "attention": {
+    "orders_needing_reconciliation": 1,
+    "payments_initiated_over_10_minutes": 1
+  },
+  "pipeline": {
+    "series": [
+      {
+        "market": "Nairobi",
+        "crop": "maize",
+        "latest_price_month": "2026-08-01",
+        "forecast_origin_month": "2026-08-01",
+        "forecast_current": true
+      },
+      {
+        "market": "Kisumu",
+        "crop": "beans",
+        "latest_price_month": "2026-08-01",
+        "forecast_origin_month": "2026-07-01",
+        "forecast_current": false
+      }
+    ],
+    "last_prices_fetch": "2026-10-20T03:00:00Z",
+    "last_forecast_generated": "2026-10-20T03:15:00Z"
+  }
+}

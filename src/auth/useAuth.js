@@ -28,6 +28,7 @@ export function useAuth() {
     isAuthenticated: Boolean(session),
     role: session?.role ?? null,
     name: session?.name ?? null,
+    userId: session?.userId ?? null,
     mustChangePassword: Boolean(session?.mustChangePassword),
     isSuperAdmin: Boolean(session?.isSuperAdmin),
     login,

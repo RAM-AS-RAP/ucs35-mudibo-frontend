@@ -3,7 +3,7 @@ import { createMemoryRouter, RouterProvider } from 'react-router';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from '@/lib/queryClient';
 import { routes } from '@/routes';
-import { clear, consumeFlash, restore, setFromLogin } from '@/auth/session';
+import { clear, consumeFlash, restore, setFromLogin, setProfile } from '@/auth/session';
 
 /**
  * Render the real route table at a path.
@@ -35,21 +35,41 @@ export function renderWithProviders(element, { path = '/' } = {}) {
 }
 
 /**
- * Start a real (not a development fake) session for a role.
+ * Start a real (not a development fake) session for a role. With `userId` the profile from
+ * GET /auth/me is merged too, as after a real sign in.
  * @param {string} role
- * @param {{ mustChangePassword?: boolean, token?: string }} [options]
+ * @param {{ mustChangePassword?: boolean, token?: string, isSuperAdmin?: boolean, userId?: string, name?: string }} [options]
  */
 export function loginAs(
   role,
-  { mustChangePassword = false, token = 'test-token-not-a-secret' } = {},
+  {
+    mustChangePassword = false,
+    token = 'test-token-not-a-secret',
+    isSuperAdmin = false,
+    userId,
+    name = 'Test User',
+  } = {},
 ) {
   setFromLogin({
     access_token: token,
     token_type: 'bearer',
     expires_in: 3600,
     role,
+    is_super_admin: isSuperAdmin,
     must_change_password: mustChangePassword,
   });
+  if (userId) {
+    setProfile({
+      id: userId,
+      name,
+      phone_number: '254700000000',
+      email: null,
+      role,
+      is_super_admin: isSuperAdmin,
+      must_change_password: mustChangePassword,
+      created_at: '2026-10-01T08:00:00Z',
+    });
+  }
 }
 
 /** End the session between tests, without leaving the sign out's silent flash behind. */

@@ -1,0 +1,27 @@
+{
+  "payment_id": "e0000000-0000-4000-8000-000000000002",
+  "limit": 100,
+  "items": [
+    {
+      "id": "f0000000-0000-4000-8000-000000000001",
+      "event_type": "stk_push_request",
+      "checkout_request_id": "ws_CO_191020260804",
+      "payload": {
+        "phone": "2547*****678",
+        "amount": 1138,
+        "note": "<script>alert(1)</script>"
+      },
+      "created_at": "2026-10-19T08:04:00Z"
+    },
+    {
+      "id": "f0000000-0000-4000-8000-000000000002",
+      "event_type": "callback",
+      "checkout_request_id": "ws_CO_191020260804",
+      "payload": {
+        "ResultCode": 0,
+        "ResultDesc": "The service request is processed successfully."
+      },
+      "created_at": "2026-10-19T08:09:00Z"
+    }
+  ]
+}

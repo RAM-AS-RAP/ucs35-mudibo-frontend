@@ -27,6 +27,18 @@ import paymentStarted from './paymentStarted.json';
 import orderCancelled from './orderCancelled.json';
 import buyerOrdersPage from './buyerOrdersPage.json';
 import buyerMarkets from './buyerMarkets.json';
+import adminStats from './adminStats.json';
+import adminUsersPage from './adminUsersPage.json';
+import adminInvitesPage from './adminInvitesPage.json';
+import inviteSent from './inviteSent.json';
+import emailCheck from './emailCheck.json';
+import adminListingsPage from './adminListingsPage.json';
+import adminOrdersPage from './adminOrdersPage.json';
+import adminOrderDetail from './adminOrderDetail.json';
+import adminOrderResolved from './adminOrderResolved.json';
+import adminPaymentsPage from './adminPaymentsPage.json';
+import paymentEvents from './paymentEvents.json';
+import forecastAccuracy from './forecastAccuracy.json';
 
 export const fixtures = {
   health,
@@ -56,6 +68,18 @@ export const fixtures = {
   orderCancelled,
   buyerOrdersPage,
   buyerMarkets,
+  adminStats,
+  adminUsersPage,
+  adminInvitesPage,
+  inviteSent,
+  emailCheck,
+  adminListingsPage,
+  adminOrdersPage,
+  adminOrderDetail,
+  adminOrderResolved,
+  adminPaymentsPage,
+  paymentEvents,
+  forecastAccuracy,
 };
 
 /** Fixture name to the OpenAPI response it must match. */
@@ -94,4 +118,27 @@ export const FIXTURE_CONTRACT = {
   orderCancelled: { path: '/api/v1/orders/{order_id}/cancel', method: 'post', status: '200' },
   buyerOrdersPage: { path: '/api/v1/orders/mine', method: 'get', status: '200' },
   buyerMarkets: { path: '/api/v1/listings/markets', method: 'get', status: '200' },
+  // Administrator (F4). AdminListingOut, AdminOrderOut, AdminOrderDetail and the accuracy
+  // schemas name most fields without types, so these checks cover the required fields; the
+  // screens read the types documented in src/api/endpoints/admin.js.
+  adminStats: { path: '/api/v1/admin/stats', method: 'get', status: '200' },
+  adminUsersPage: { path: '/api/v1/admin/users', method: 'get', status: '200' },
+  adminInvitesPage: { path: '/api/v1/admin/invites', method: 'get', status: '200' },
+  inviteSent: { path: '/api/v1/admin/invites', method: 'post', status: '201' },
+  emailCheck: { path: '/api/v1/admin/email/test', method: 'post', status: '200' },
+  adminListingsPage: { path: '/api/v1/admin/listings', method: 'get', status: '200' },
+  adminOrdersPage: { path: '/api/v1/admin/orders', method: 'get', status: '200' },
+  adminOrderDetail: { path: '/api/v1/admin/orders/{order_id}', method: 'get', status: '200' },
+  adminOrderResolved: {
+    path: '/api/v1/admin/orders/{order_id}/resolve',
+    method: 'post',
+    status: '200',
+  },
+  adminPaymentsPage: { path: '/api/v1/admin/payments', method: 'get', status: '200' },
+  paymentEvents: {
+    path: '/api/v1/admin/payments/{payment_id}/events',
+    method: 'get',
+    status: '200',
+  },
+  forecastAccuracy: { path: '/api/v1/admin/forecast-accuracy', method: 'get', status: '200' },
 };

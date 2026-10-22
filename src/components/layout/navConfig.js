@@ -20,10 +20,10 @@ import {
  * @property {import('react').ComponentType<any>} icon
  * @property {boolean} [end]  match the path exactly (role home)
  * @property {boolean} [superAdminOnly]
- * @property {'waitingOrders'} [badge]  a count next to the label (NAV_BADGES in NavBadge.jsx)
+ * @property {'waitingOrders' | 'reviewOrders'} [badge]  a count next to the label (NAV_BADGES in NavBadge.jsx)
  */
 
-/** Navigation per role. Admin screens arrive in F4. */
+/** Navigation per role. "Invites" is for the main administrator only (isSuperAdmin). */
 /** @type {Record<string, NavItem[]>} */
 export const NAV_ITEMS = {
   farmer: [
@@ -38,18 +38,22 @@ export const NAV_ITEMS = {
     { label: 'My orders', to: '/buyer/orders', icon: ShoppingBag, badge: 'waitingOrders' },
   ],
   admin: [
-    { label: 'Overview', to: '/admin', icon: Gauge, end: true },
+    { label: 'Dashboard', to: '/admin', icon: Gauge, end: true },
     { label: 'Users', to: '/admin/users', icon: Users },
     { label: 'Invites', to: '/admin/invites', icon: MailPlus, superAdminOnly: true },
     { label: 'Listings', to: '/admin/listings', icon: Package },
-    { label: 'Orders', to: '/admin/orders', icon: ClipboardList },
+    { label: 'Orders', to: '/admin/orders', icon: ClipboardList, badge: 'reviewOrders' },
     { label: 'Payments', to: '/admin/payments', icon: CreditCard },
     { label: 'Forecast accuracy', to: '/admin/forecast-accuracy', icon: BarChart3 },
   ],
 };
 
-/** Roles that get a bottom navigation bar on small screens (admin uses a drawer). */
-export const BOTTOM_NAV_ROLES = new Set(['farmer', 'buyer']);
+/** The drawer's description (read by screen readers when it opens), per role. */
+export const DRAWER_DESCRIPTION = Object.freeze({
+  farmer: 'Farmer menu',
+  buyer: 'Buyer menu',
+  admin: 'Administration menu',
+});
 
 /**
  * Navigation items visible to a session. Hiding an item is a convenience only;

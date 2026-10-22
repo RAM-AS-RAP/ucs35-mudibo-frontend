@@ -33,6 +33,14 @@ Screen (src/screens/...)
   mutations that are never retried. The navigation badge's count hook is in `waitingCount.js` so
   the shell does not load the other buyer hooks. Only `endpoints/payments.js` sets the
   `Idempotency-Key` header. Details: [buyer-checkout.md](buyer-checkout.md).
+- Admin hooks (F4) live in `src/api/queries/admin.js` over `src/api/endpoints/admin.js`: infinite
+  queries for every list (30 second stale time, refetch on window focus, never polling), the
+  order detail, the payment events (fetched only when their dialog opens), and eight mutations that
+  are never retried (`writePolicy`). A successful write refreshes the affected lists, the dashboard
+  stats and the review count. The navigation badge's review count hook is in `reviewCount.js` so the
+  shell does not load the other admin hooks. Search texts in admin query keys are replaced by
+  opaque ids (`searchKey`), because an administrator may search by phone number or email. Details:
+  [admin-console.md](admin-console.md).
 - Screen selections (crop, market, horizon, range) are kept in the URL query string and validated.
   `usePageTitle` moves focus to the heading when the pathname changes, not when only the query string does.
 
@@ -70,12 +78,12 @@ POST /auth/login -> session.setFromLogin(tokenResponse) -> sessionStorage["agris
      useSession() (useSyncExternalStore) -> RequireAuth / RequireRole / PublicOnly -> screens
 ```
 
-- `src/auth/session.js` holds `{accessToken, role, mustChangePassword, isSuperAdmin, expiresAt, name}`.
+- `src/auth/session.js` holds `{accessToken, role, mustChangePassword, isSuperAdmin, expiresAt, name, userId}`.
   It persists in `sessionStorage` (this tab only), never `localStorage`, a URL, a log line or a query key.
   An expired stored session is discarded on load. `clear()` also clears the TanStack Query cache.
 - `isSuperAdmin` comes from `is_super_admin` in the login response (`setFromLogin()`) and in
-  `GET /auth/me` (`setProfile()`). `setProfile()` also refreshes the name, the role and
-  `mustChangePassword`.
+  `GET /auth/me` (`setProfile()`). `setProfile()` also refreshes the name, the role,
+  `mustChangePassword` and the user id (`userId`). isSuperAdmin only controls UI visibility.
 - **Flash messages:** `clear(reason)` leaves a one time, in memory message for the login screen
   (`expired`, `password_changed`, `unauthorized`; a sign out leaves a silent one); `setFlash()` sets one
   without a session. The login screen consumes it.
@@ -88,6 +96,8 @@ POST /auth/login -> session.setFromLogin(tokenResponse) -> sessionStorage["agris
   - `RequireAuth`: anonymous users go to `/login` with the intended path in router state (never in the URL).
     A session with `mustChangePassword` can only reach `/change-password` (which offers logout).
   - `RequireRole`: the wrong role sees the `Forbidden` screen in place, so there is no redirect loop.
+  - `RequireSuperAdmin` (`/admin/invites`): an admin session with `isSuperAdmin`; anyone else sees
+    `Forbidden` in place.
   - `PublicOnly` (`/login`, `/register`, `/forgot-password`): a signed in user goes to their role home,
     except while a screen is signing someone in (`useSignInHold`). `/reset-password` and `/accept-invite`
     open with or without a session and show `SignedInNotice` when signed in.

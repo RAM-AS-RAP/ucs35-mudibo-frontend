@@ -22,7 +22,9 @@ export function Segmented({ legend, options, value, onChange, name, className })
       <legend className="mb-1.5 text-sm font-medium text-text-secondary">{legend}</legend>
       <div className="flex w-full flex-wrap gap-1 rounded-lg border border-border bg-neutral-bg p-1 sm:w-fit">
         {options.map((option) => (
-          <label key={option.value} className="flex min-w-0 flex-1 sm:flex-none">
+          // flex-auto: each option keeps its natural width and grows to fill its row, so a long
+          // list wraps onto new rows instead of squeezing labels below the 44 px target.
+          <label key={option.value} className="flex flex-auto sm:flex-none">
             <input
               type="radio"
               name={groupName}
@@ -33,7 +35,7 @@ export function Segmented({ legend, options, value, onChange, name, className })
             />
             <span
               className={cn(
-                'flex min-h-11 w-full cursor-pointer items-center justify-center rounded-md px-4 text-base font-medium text-text transition-colors',
+                'flex min-h-11 w-full min-w-11 cursor-pointer items-center justify-center rounded-md px-3 text-center text-base font-medium text-text transition-colors',
                 'peer-checked:bg-primary peer-checked:text-on-primary',
                 'peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-focus-ring',
               )}

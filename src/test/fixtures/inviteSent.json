@@ -1,0 +1,10 @@
+{
+  "id": "b0000000-0000-4000-8000-000000000009",
+  "name": "New Admin",
+  "email_masked": "n***@example.com",
+  "phone_masked": "2547*****678",
+  "expires_at": "2026-10-29T10:00:00Z",
+  "code_expires_at": "2026-10-23T10:00:00Z",
+  "email_sent": true,
+  "message": "Invitation sent."
+}

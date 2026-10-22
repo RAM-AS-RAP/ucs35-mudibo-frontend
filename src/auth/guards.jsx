@@ -65,6 +65,20 @@ export function RequireRole({ roles, children }) {
 }
 
 /**
+ * The main administrator only: an admin session with `isSuperAdmin` (from is_super_admin in the
+ * login response and GET /auth/me). Everyone else sees the Forbidden screen in place. This only
+ * hides screens; the server checks every super admin request.
+ * @param {{ children?: import('react').ReactNode }} props
+ */
+export function RequireSuperAdmin({ children }) {
+  const session = useSession();
+  if (!session || session.role !== 'admin' || session.isSuperAdmin !== true) {
+    return <ForbiddenScreen />;
+  }
+  return children ?? <Outlet />;
+}
+
+/**
  * Public pages (login, register, forgot password). A signed in user is sent to their role
  * home, or to /change-password when that is required.
  * @param {{ children?: import('react').ReactNode }} props

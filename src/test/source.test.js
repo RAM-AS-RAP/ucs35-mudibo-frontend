@@ -147,6 +147,17 @@ describe('source checks', () => {
       for (const path of RELATIVE_ONLY) expect(files).toContain(path);
     });
 
+    it('is the F2a and F2b list, unchanged by the admin module (F4)', () => {
+      expect(RELATIVE_ONLY).toHaveLength(21);
+      expect(RELATIVE_ONLY.filter((path) => path.includes('/admin/'))).toEqual([]);
+      expect(RELATIVE_ONLY.filter((path) => path.startsWith('src/screens/'))).toEqual([
+        'src/screens/farmer/DashboardScreen.jsx',
+        'src/screens/farmer/PricesScreen.jsx',
+        'src/screens/farmer/ForecastScreen.jsx',
+        'src/screens/farmer/params.js',
+      ]);
+    });
+
     it.each([
       ['formatMonth or formatDateTime', /\bformat(Month|DateTime)\b/],
       ['new Date(', /new Date\(/],
@@ -161,7 +172,7 @@ describe('source checks', () => {
       expect(offenders(pattern, relativeOnly)).toEqual([]);
     });
 
-    it('uses formatDateTime only in the order and listing files', () => {
+    it('uses formatDateTime only in the order, listing, buyer and admin files', () => {
       const users = sources
         .filter(({ text }) => /\bformatDateTime\(/.test(text))
         .map(({ path }) => path)
@@ -169,7 +180,7 @@ describe('source checks', () => {
       expect(users.length).toBeGreaterThan(0);
       for (const path of users) {
         expect(path).toMatch(
-          /^src\/(components\/(orders|listings|buyer)\/|screens\/farmer\/(Orders|MyListings|CreateListing|EditListing)Screen\.jsx$|screens\/buyer\/)/,
+          /^src\/(components\/(orders|listings|buyer|admin)\/|screens\/farmer\/(Orders|MyListings|CreateListing|EditListing)Screen\.jsx$|screens\/(buyer|admin)\/)/,
         );
       }
     });
@@ -286,6 +297,103 @@ describe('source checks', () => {
       );
       expect(withImg.length).toBeGreaterThan(0);
       for (const { path, text } of withImg) expect(text, path).toMatch(/safeImageUrl\(/);
+    });
+  });
+
+  describe('administrator screens (F4)', () => {
+    const isAdminFile = (/** @type {string} */ path) =>
+      path.startsWith('src/screens/admin/') ||
+      path.startsWith('src/components/admin/') ||
+      path === 'src/api/queries/admin.js' ||
+      path === 'src/api/queries/reviewCount.js' ||
+      path === 'src/api/endpoints/admin.js' ||
+      path === 'src/lib/adminMessages.js';
+
+    it('covers the admin files', () => {
+      expect(files.filter(isAdminFile).length).toBeGreaterThanOrEqual(18);
+    });
+
+    it('never asks for a password, a code or a token on an admin screen', () => {
+      const secretInput =
+        /type=["']password["']|PasswordField|CodeInput|one-time-code|name=["'](code|password|token)["']|accessToken|getToken\(/;
+      expect(
+        offenders(
+          secretInput,
+          (path) =>
+            path.startsWith('src/screens/admin/') || path.startsWith('src/components/admin/'),
+        ),
+      ).toEqual([]);
+    });
+
+    it('never retries an admin write automatically', () => {
+      const text = sources.find(({ path }) => path === 'src/api/queries/admin.js')?.text ?? '';
+      const mutations = text.split('useMutation({').slice(1);
+      expect(mutations).toHaveLength(8);
+      for (const block of mutations) expect(block).toContain('...writePolicy');
+    });
+
+    it('shows payloads only as text inside <pre> (PayloadView), never as HTML', () => {
+      const view =
+        sources.find(({ path }) => path === 'src/components/admin/PayloadView.jsx')?.text ?? '';
+      expect(view).toMatch(/<pre\b/);
+      expect(view).toContain('JSON.stringify(payload, null, 2)');
+      expect(offenders(/innerHTML|outerHTML|insertAdjacentHTML|DOMParser/, isAdminFile)).toEqual(
+        [],
+      );
+      const users = sources.filter(({ text }) => /\bpayload\b/.test(text) && /<pre\b/.test(text));
+      expect(users.map(({ path }) => path)).toEqual(['src/components/admin/PayloadView.jsx']);
+    });
+
+    it('copies to the clipboard only in the payload view, the invites screen and the buyer order card', () => {
+      const copiers = sources
+        .filter(
+          ({ path, text }) => path !== 'src/lib/clipboard.js' && /copyText\(|clipboard/.test(text),
+        )
+        .map(({ path }) => path)
+        .sort();
+      expect(copiers).toEqual([
+        'src/components/admin/PayloadView.jsx',
+        // F3: the buyer copies the order reference.
+        'src/components/buyer/OrderSummaryCard.jsx',
+        'src/screens/admin/InvitesScreen.jsx',
+      ]);
+      const invites =
+        sources.find(({ path }) => path === 'src/screens/admin/InvitesScreen.jsx')?.text ?? '';
+      // The only copied text is the accept invitation page address.
+      expect(invites.match(/copyText\(([^)]*)\)/g)).toEqual(['copyText(address)']);
+      expect(invites).toContain('return `${window.location.origin}/accept-invite`;');
+    });
+
+    it('calls the admin routes only from src/api/endpoints/admin.js', () => {
+      expect(
+        offenders(/\/api\/v1\/admin/, (path) => path !== 'src/api/endpoints/admin.js'),
+      ).toEqual([]);
+    });
+
+    it('never imports Recharts in admin code', () => {
+      expect(offenders(/recharts|TrendChart/, isAdminFile)).toEqual([]);
+    });
+
+    it('loads the admin screens lazily from the route table', () => {
+      const routes = sources.find(({ path }) => path === 'src/routes.jsx')?.text ?? '';
+      expect(offenders(/^\s*import .*screens\/admin\//)).toEqual([]);
+      for (const screen of [
+        'AdminDashboardScreen',
+        'UsersScreen',
+        'InvitesScreen',
+        'AdminListingsScreen',
+        'AdminOrdersScreen',
+        'AdminOrderDetailScreen',
+        'PaymentsScreen',
+        'ForecastAccuracyScreen',
+      ]) {
+        expect(routes).toContain(`lazy(() => import('@/screens/admin/${screen}'))`);
+      }
+    });
+
+    it('guards the invites route with RequireSuperAdmin', () => {
+      const routes = sources.find(({ path }) => path === 'src/routes.jsx')?.text ?? '';
+      expect(routes).toMatch(/<RequireSuperAdmin>\s*<InvitesScreen \/>\s*<\/RequireSuperAdmin>/);
     });
   });
 

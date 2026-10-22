@@ -48,19 +48,22 @@ function filterProblemText(error) {
  * Browse produce (/buyer/browse): active listings with stock, 20 at a time. Filters live in the
  * URL (`crop`, `market`, `min`, `max`, `sort`), validated on load. The price fields wait 400 ms
  * after typing; an invalid price or a minimum above the maximum shows a message and sends no
- * request. The market filter offers the markets from GET /listings/markets (buyers cannot call
- * GET /markets). A market in the URL waits for that list and is dropped when it is not on it;
- * if the list cannot be loaded, the URL's market is sent and the server validates it.
+ * request. The market filter offers "All markets" and the markets from GET /listings/markets
+ * with their counts ("Nairobi (6)"); buyers cannot call GET /markets. A market in the URL is kept
+ * until that list has loaded, then dropped when it is not on it. If the list cannot be loaded,
+ * only "All markets" is offered (with a message and a way to load it again) and browsing goes on
+ * without a market filter.
  */
 export default function BrowseScreen() {
   const headingRef = usePageTitle(BROWSE_TEXT.title);
   const ids = useId();
   const [params, setParams] = useSearchParams();
   const markets = useBuyerMarkets();
-  const marketNames = useMemo(
-    () => (markets.data ? markets.data.map((m) => m.name) : null),
-    [markets.data],
-  );
+  // null while the list loads (a URL market is kept); [] when it failed (only "All markets").
+  const marketNames = useMemo(() => {
+    if (markets.data) return markets.data.map((m) => m.name);
+    return markets.isError ? [] : null;
+  }, [markets.data, markets.isError]);
   const filters = readBrowseParams(params, marketNames);
   // A market from the URL is checked against the list before the first request.
   const waitingForMarkets = Boolean(filters.market) && markets.isPending;
@@ -127,9 +130,17 @@ export default function BrowseScreen() {
   else if (!max.ok) priceMessage = { id: `${ids}-max`, text: max.error };
   else if (reversed) priceMessage = { id: `${ids}-min`, text: BROWSE_TEXT.minAboveMax };
   const priceMessageId = `${ids}-price-message`;
-  // Until the list loads (or when it failed), still show the market chosen in the URL.
-  const marketOptions =
-    marketNames ?? (filters.market ? [filters.market] : /** @type {string[]} */ ([]));
+  // Until the list loads, still show the market chosen in the URL (without a count).
+  /** @type {Array<{ name: string, label: string }>} */
+  let marketOptions = [];
+  if (markets.data) {
+    marketOptions = markets.data.map((m) => ({
+      name: m.name,
+      label: BROWSE_TEXT.marketOption(m.name, m.listing_count),
+    }));
+  } else if (marketNames === null && filters.market) {
+    marketOptions = [{ name: filters.market, label: filters.market }];
+  }
 
   let body;
   if (priceProblem && !query.data) {
@@ -231,9 +242,9 @@ export default function BrowseScreen() {
               onChange={(event) => update({ market: event.target.value || null })}
             >
               <option value="">{BROWSE_TEXT.allMarkets}</option>
-              {marketOptions.map((name) => (
-                <option key={name} value={name}>
-                  {name}
+              {marketOptions.map((option) => (
+                <option key={option.name} value={option.name}>
+                  {option.label}
                 </option>
               ))}
             </select>

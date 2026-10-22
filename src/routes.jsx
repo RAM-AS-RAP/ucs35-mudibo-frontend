@@ -5,7 +5,7 @@
 import { lazy, Suspense, useEffect } from 'react';
 import { Navigate, Outlet, useNavigate } from 'react-router';
 import { setNavigator } from '@/api/client';
-import { PublicOnly, RequireAuth, RequireRole } from '@/auth/guards';
+import { PublicOnly, RequireAuth, RequireRole, RequireSuperAdmin } from '@/auth/guards';
 import { PUBLIC_HOME, ROLES } from '@/auth/roles';
 import { AppShell } from '@/components/layout/AppShell';
 import { RouteErrorBoundary, RouteErrorElement } from '@/components/feedback/ErrorBoundary';
@@ -32,7 +32,15 @@ const BrowseScreen = lazy(() => import('@/screens/buyer/BrowseScreen'));
 const ListingDetailScreen = lazy(() => import('@/screens/buyer/ListingDetailScreen'));
 const OrderScreen = lazy(() => import('@/screens/buyer/OrderScreen'));
 const MyOrdersScreen = lazy(() => import('@/screens/buyer/MyOrdersScreen'));
-const AdminHomeScreen = lazy(() => import('@/screens/admin/AdminHomeScreen'));
+// Admin screens (F4): each lazily loaded, so farmers and buyers never download them.
+const AdminDashboardScreen = lazy(() => import('@/screens/admin/AdminDashboardScreen'));
+const UsersScreen = lazy(() => import('@/screens/admin/UsersScreen'));
+const InvitesScreen = lazy(() => import('@/screens/admin/InvitesScreen'));
+const AdminListingsScreen = lazy(() => import('@/screens/admin/AdminListingsScreen'));
+const AdminOrdersScreen = lazy(() => import('@/screens/admin/AdminOrdersScreen'));
+const AdminOrderDetailScreen = lazy(() => import('@/screens/admin/AdminOrderDetailScreen'));
+const PaymentsScreen = lazy(() => import('@/screens/admin/PaymentsScreen'));
+const ForecastAccuracyScreen = lazy(() => import('@/screens/admin/ForecastAccuracyScreen'));
 
 // Development only. In production builds this is null and the module is not bundled.
 const DevRoleSwitcher = import.meta.env.DEV ? lazy(() => import('@/dev/DevRoleSwitcher')) : null;
@@ -70,14 +78,6 @@ function RoleLayout({ role }) {
       </RequireRole>
     </RequireAuth>
   );
-}
-
-/** @param {import('react').ReactElement} element */
-function roleChildren(element) {
-  return [
-    { index: true, element },
-    { path: '*', element },
-  ];
 }
 
 /** @type {import('react-router').RouteObject[]} */
@@ -136,7 +136,25 @@ export const routes = [
       {
         path: '/admin',
         element: <RoleLayout role={ROLES.ADMIN} />,
-        children: roleChildren(<AdminHomeScreen />),
+        children: [
+          { index: true, element: <AdminDashboardScreen /> },
+          { path: 'users', element: <UsersScreen /> },
+          // The main administrator only; the server checks every invite request too.
+          {
+            path: 'invites',
+            element: (
+              <RequireSuperAdmin>
+                <InvitesScreen />
+              </RequireSuperAdmin>
+            ),
+          },
+          { path: 'listings', element: <AdminListingsScreen /> },
+          { path: 'orders', element: <AdminOrdersScreen /> },
+          { path: 'orders/:orderId', element: <AdminOrderDetailScreen /> },
+          { path: 'payments', element: <PaymentsScreen /> },
+          { path: 'forecast-accuracy', element: <ForecastAccuracyScreen /> },
+          { path: '*', element: <NotFoundScreen embedded /> },
+        ],
       },
       { path: '*', element: <NotFoundScreen /> },
     ],

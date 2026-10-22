@@ -45,11 +45,16 @@ here; the frontend checks the same rules early so people get feedback before sub
   created. Please sign in.", "Password updated. Please sign in."). A sign out leaves an empty, silent flash
   so the login screen does not show its "Please sign in to continue." hint right after it. The login screen
   reads the flash once and consumes it.
-- **isSuperAdmin:** read from `is_super_admin` in the login response (`TokenResponse`, by
-  `setFromLogin()`) and in `GET /auth/me` (`UserOut`, by `setProfile()`, which also runs on the startup
-  revalidation of a restored session). Only `true` counts; anything else is `false`. It is never
-  inferred from another endpoint (no `GET /admin/users` lookup, no probing the rate limited invite
-  routes). It only shows or hides the super admin screens (Invites); the server checks every request.
+- **The profile** in the session holds `name`, `role`, `mustChangePassword`, `isSuperAdmin` and the
+  user `id` (`userId`). `setFromLogin()` takes the role, `is_super_admin` and `must_change_password`
+  from the login response; `setProfile()` takes all of them and the `id` from `GET /auth/me` (it also
+  runs on the startup revalidation of a restored session). `userId` is null until the profile has
+  loaded; the admin users screen uses it to leave out actions on the administrator's own account.
+- **isSuperAdmin comes from the backend user object and only controls UI visibility.** Only `true`
+  counts; anything else (or a missing field) is `false`. It is never inferred from another endpoint
+  (no `GET /admin/users` lookup, no probing the rate limited invite routes). It shows the Invites
+  item and screen (`RequireSuperAdmin`) and the users screen's actions on other administrators; the
+  server checks every request.
 - While a screen signs someone in, `PublicOnly` does not redirect (`useSignInHold`), so the screen decides
   the destination after the profile has loaded. The hold ends when the screen unmounts.
 

@@ -116,6 +116,31 @@ describe('session store', () => {
     expect(session.getSession()?.isSuperAdmin).toBe(false);
   });
 
+  it('treats an absent is_super_admin as false, in the login response and the profile', () => {
+    const { is_super_admin: _login, ...login } = fixtures.tokenResponse;
+    session.setFromLogin(/** @type {any} */ ({ ...login, role: 'admin' }));
+    expect(session.getSession()?.isSuperAdmin).toBe(false);
+    session.setSuperAdmin(true);
+    const { is_super_admin: _me, ...me } = fixtures.userMe;
+    session.setProfile(/** @type {any} */ (me));
+    expect(session.getSession()?.isSuperAdmin).toBe(false);
+  });
+
+  it('stores the user id from GET /auth/me (null after login alone) and persists it', async () => {
+    session.setFromLogin({ ...fixtures.tokenResponse, role: 'admin' });
+    expect(session.getSession()?.userId).toBeNull();
+    session.setProfile({ ...fixtures.userMe, role: 'admin' });
+    expect(session.getSession()?.userId).toBe(fixtures.userMe.id);
+    const stored = JSON.parse(window.sessionStorage.getItem(STORAGE_KEY) ?? '{}');
+    expect(stored.userId).toBe(fixtures.userMe.id);
+    // A profile without an id keeps the known one.
+    session.setProfile(/** @type {any} */ ({ ...fixtures.userMe, id: undefined }));
+    expect(session.getSession()?.userId).toBe(fixtures.userMe.id);
+    vi.resetModules();
+    const fresh = await import('./session');
+    expect(fresh.getSession()?.userId).toBe(fixtures.userMe.id);
+  });
+
   it('marks a required password change', () => {
     session.setFromLogin(fixtures.tokenResponse);
     session.markPasswordChangeRequired();

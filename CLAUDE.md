@@ -10,15 +10,16 @@ The backend is a separate, finished repository; its contract is copied into `doc
 Roles: `farmer` (prices, forecasts, listings, orders on their listings), `buyer` (browse, order, pay),
 `admin` (moderation, users, orders, payments, forecast accuracy; the super admin also manages invites).
 
-| Module | Scope                                                                                                    | Status      |
-| ------ | -------------------------------------------------------------------------------------------------------- | ----------- |
-| F0     | Foundation: scaffold, tooling, API layer, session, guards, shells, design system, PWA shell, tests, docs | Done        |
-| F1     | Authentication: login, register, password change and reset, accept invite, session handling              | Done        |
-| F2a    | Farmer decision support: dashboard, prices, price trends, forecast with SHAP bars (relative time only)   | Done        |
-| F2b    | Farmer: listings (image upload, create, edit, delete), orders on my listings                             | Done        |
-| F3     | Buyer: browse, listing detail, checkout, M-Pesa payment polling, my orders                               | Done        |
-| F4     | Admin: dashboard, users, invites, moderation, orders, payments, reconciliation, accuracy                 | Not started |
-| F5     | Polish: end to end tests (Playwright), performance, accessibility review                                 | Not started |
+| Module | Scope                                                                                                     | Status      |
+| ------ | --------------------------------------------------------------------------------------------------------- | ----------- |
+| F0     | Foundation: scaffold, tooling, API layer, session, guards, shells, design system, PWA shell, tests, docs  | Done        |
+| F1     | Authentication: login, register, password change and reset, accept invite, session handling               | Done        |
+| F2a    | Farmer decision support: dashboard, prices, price trends, forecast with SHAP bars (relative time only)    | Done        |
+| F2b    | Farmer: listings (image upload, create, edit, delete), orders on my listings                              | Done        |
+| F3     | Buyer: browse, listing detail, checkout, M-Pesa payment polling, my orders                                | Done        |
+| F4-A   | Follow-up: `is_super_admin` and user id in the session, edit via `GET /listings/mine/{id}`, buyer markets | Done        |
+| F4     | Admin: dashboard, users, invites, moderation, orders, payments, reconciliation, accuracy                  | Done        |
+| F5     | Polish: end to end tests (Playwright), performance, accessibility review                                  | Not started |
 
 Update this table at the end of every module.
 
@@ -79,6 +80,10 @@ Version and dependency decisions:
   `crypto.getRandomValues` fallback); the estimate uses BigInt. Initial JavaScript after F3:
   224.5 kB gzip (6 files; the +2.3 kB is the navigation badge's count hook); the buyer screens are
   lazy chunks of 1.5 to 4.5 kB gzip each.
+- **F4 added no dependency.** Tables and cards, dialogs, the payload view and the clipboard use
+  React, `radix-ui` and the browser. Initial JavaScript after F4: 226.4 kB gzip (7 files; the
+  +1.8 kB is the review count badge and its endpoint function); the admin screens are lazy chunks
+  of 1.5 to 3.6 kB gzip each, plus a shared 7.6 kB chunk (`ResponsiveTable` with the admin text).
 
 ```bash
 npm ci                    # install exactly from package-lock.json
@@ -91,7 +96,7 @@ npm test                  # Vitest, run mode
 npm run gen:types         # docs/backend/openapi.json -> src/api/schema.d.ts
 npm run gen:icons         # public/favicon.svg -> PWA icons in public/
 npm run check:contract    # schema.d.ts current, endpoint paths and methods exist in openapi.json
-npm run check:build       # after build: manifest, no runtime caching, no dev code, JS budgets, lazy Recharts, photo helper, buyer screens
+npm run check:build       # after build: manifest, no runtime caching, no dev code, JS budgets, lazy Recharts, photo helper, buyer and admin screens
 ```
 
 ## 3. Structure and conventions
@@ -99,14 +104,18 @@ npm run check:build       # after build: manifest, no runtime caching, no dev co
 ```
 src/
   screens/      auth/, farmer/, buyer/, admin/, shared/   one screen per file, default export, *Screen.jsx
-  components/   ui/ (shadcn), layout/, feedback/, display/, listings/, orders/, buyer/   named exports
+  components/   ui/ (shadcn), layout/, feedback/, display/, listings/, orders/, buyer/, admin/   named exports
   api/          client.js, errors.js, endpoints/<area>.js, schema.d.ts (generated, do not edit)
   auth/         session.js, guards.jsx, roles.js, paths.js, auth.js (signIn, signOut, sign in hold),
                 useAuth.js, redirects.js, revalidate.js
   api/queries/  TanStack Query hooks (useMarkets, useCurrentPrices, usePriceTrends, useForecast; listings.js:
                 useMyListings, useMyListing, useMyOrders, counts, useCreate/Update/RemoveListing; buyer.js:
                 useBrowseListings, useBuyerMarkets, useListing, useOrder, useMyBuyerOrders, useCreate/Pay/CancelOrder;
-                waitingCount.js: useWaitingOrdersCount), keys.js, policy.js
+                waitingCount.js: useWaitingOrdersCount; admin.js: useAdminStats, useAdminUsers, useAdminInvites,
+                useAdminListings, useAdminOrders, useAdminOrder, useAdminPayments, usePaymentEvents,
+                useForecastAccuracy and one mutation per write; reviewCount.js: useReviewCount), keys.js, policy.js
+  components/admin/  ResponsiveTable, FilterBar (useFilterParams), SearchInput, ConfirmDialog, PayloadView,
+                PaymentEventsDialog, RoleBadge, ListParts (RefreshButton, ShowingCount, LoadMore, pagesOf)
   components/auth/  AuthLayout, FormField, PasswordField, CodeInput, FormErrorSummary, CountdownButton,
                 PasswordRequirements, SignedInNotice, ResendCode, FormNotices, useServerProblem
   lib/          env.js, format.js, queryClient.js, utils.js, validation.js, messages.js, formErrors.js,
@@ -114,14 +123,16 @@ src/
                 relativeTime.js, forecast.js, shapSchema.js, trends.js (F2a),
                 decimal.js, priceCheck.js, image.js, safeImageUrl.js (F2b),
                 constants.js, orderTotals.js, idempotency.js, orderView.js, polling.js, payErrors.js,
-                filterParams.js, buyerMessages.js (F3)
+                filterParams.js, buyerMessages.js (F3),
+                adminMessages.js, reconciliation.js, userActions.js, accuracyFormat.js, dateRange.js,
+                clipboard.js, useMediaQuery.js (F4)
   styles/       tokens.css (all colours), index.css
   dev/          DevRoleSwitcher.jsx (development only)
-  test/         setup.js, msw/, fixtures/, helpers (render, axe, openapi, contrast)
+  test/         setup.js, msw/, fixtures/, helpers (render, axe, openapi, contrast, buyer, admin)
   App.jsx, main.jsx, routes.jsx (the single route table)
 scripts/        check-contract.mjs, check-build.mjs, tokens.mjs
 docs/           backend/, architecture.md, auth.md, design-system.md, forecast-display.md,
-                listings-orders.md, buyer-checkout.md, security-headers.md
+                listings-orders.md, buyer-checkout.md, admin-console.md, security-headers.md
 ```
 
 - Import with the `@/` alias (`@/api/endpoints`). Tests sit next to the code as `*.test.js(x)`.
@@ -142,9 +153,10 @@ docs/           backend/, architecture.md, auth.md, design-system.md, forecast-d
   New backend codes go into `ERROR_MESSAGES` in `src/api/errors.js`.
 - Contract workflow: copy `openapi.json` and `frontend_contract.md` into `docs/backend/` (see
   `docs/backend/README.md`), run `npm run gen:types`, then `npm run check:contract` and `npm test`.
-- **isSuperAdmin:** read it only from `is_super_admin` in the login response (`TokenResponse`) and in
-  `/auth/me` (`UserOut`); only `true` counts. Never infer it from any other endpoint, and never probe the
-  (rate limited) invite routes. It only hides screens; the server checks every request.
+- **isSuperAdmin comes from the backend user object and only controls UI visibility:** read it only
+  from `is_super_admin` in the login response (`TokenResponse`) and in `/auth/me` (`UserOut`); only
+  `true` counts. Never infer it from any other endpoint, and never probe the (rate limited) invite
+  routes. The session also keeps the user `id` from `/auth/me` (`userId`).
 - The backend is the single authority for roles, prices, totals, stock and order state. Show `can_pay` /
   `can_cancel` and server totals as returned; never recompute them.
 
@@ -228,11 +240,39 @@ docs/           backend/, architecture.md, auth.md, design-system.md, forecast-d
   `formatDateTime` (the source check allows `components/buyer/` and `screens/buyer/`).
 - Buyers get 403 from prices, forecasts and `GET /markets`: never call them from buyer code (a
   source check and every buyer screen test enforce it). The browse market filter offers exactly the
-  names from `GET /listings/markets` (`useBuyerMarkets`); a URL market not on that list is removed.
+  names from `GET /listings/markets` with their counts (`useBuyerMarkets`, stale after 2 minutes);
+  a URL market is kept until the list loads, then removed when it is not on it; when the list fails
+  only "All markets" is offered.
 - Buyer screen text lives in `lib/buyerMessages.js`; order and payment status words in
   `lib/messages.js` (`ORDER_STATUS_WORDS`, `PAYMENT_STATUS_WORDS`) through `StatusBadge`.
 - Never ask for, show or store an M-Pesa PIN; `SandboxNote` shows the PIN warning. Show only the
   masked prompt target (`stk_target_masked`).
+
+## 4d. Administrator conventions (F4, details in `docs/admin-console.md`)
+
+- Endpoints in `endpoints/admin.js`, hooks in `queries/admin.js` (the shell's review count in
+  `queries/reviewCount.js`). Reads refetch on window focus and never poll; lists are infinite
+  queries of 20 with "Showing X of Y" and "Load more"; every screen has a Refresh button.
+- **Writes are never retried automatically:** each write is a `useMutation` with `writePolicy`, a
+  guard against double clicks, and after a timeout or network failure the message that the result is
+  unknown, with a way to refresh (`WRITE_UNKNOWN`, `isUnknownWriteResult` in `lib/adminMessages.js`).
+- **Destructive actions use `ConfirmDialog`** (`components/admin/`): disable or enable a user,
+  revoke an invitation, remove a listing, resolve an order (with a required 10 to 500 character
+  note). The resolve body is exactly `{action, note}`.
+- **Payloads are displayed as text only**, through `PayloadView` (React escaped, inside `pre`).
+- **The UI hides actions but the server decides:** `canToggleUser` and `RequireSuperAdmin` only shape
+  what is shown; map the server's 403 and 409 answers with `adminErrorMessage()` and refresh.
+- **Administrator screens may show real dates** (`formatDateTime`, `formatMonth`); they are not in
+  `RELATIVE_ONLY`, which stays as it is.
+- Lists use `ResponsiveTable` (table from 1280 px, cards below and two per row from 768 px;
+  a table wider than its space shows the cards; columns declared once) and keep their filters in
+  the URL with `useFilterParams`. Search texts go into query keys only as `searchKey()` ids.
+- Show amounts, counts and accuracy figures as the server returns them; missing accuracy values read
+  "Not enough data" (`lib/accuracyFormat.js`). Never show or ask for a password, code or token on an
+  admin screen; the invite screen copies only `<origin>/accept-invite`.
+- Admin text lives in `lib/adminMessages.js`; status words in `lib/messages.js`
+  (`ADMIN_ORDER_STATUS_WORDS`, `ADMIN_PAYMENT_STATUS_WORDS`, `INVITE_STATUS_WORDS`,
+  `USER_STATUS_WORDS`) through `StatusBadge`.
 
 ## 5. Security rules
 

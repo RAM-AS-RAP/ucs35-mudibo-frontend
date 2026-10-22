@@ -246,3 +246,17 @@ export function changePasswordSchema({ role, name }) {
       }
     });
 }
+
+/**
+ * The administrator invitation form (F4): name, phone and email, validated like registration;
+ * the email is required because the code is sent there. The phone is normalised before sending.
+ */
+export const inviteSchema = z.object({
+  name: z.string().trim().min(1, M.nameRequired).min(2, M.nameShort).max(100, M.nameLong),
+  phone: z
+    .string()
+    .trim()
+    .min(1, M.phoneRequired)
+    .refine((v) => normalizePhone(v) !== null, M.phoneInvalid),
+  email: requiredEmail,
+});
