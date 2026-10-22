@@ -323,6 +323,47 @@ export const PAYMENT_STATUS_WORDS = Object.freeze({
   timeout: 'Timed out',
 });
 
+/*
+ * Administrator status words (F4), shown with an icon by StatusBadge. Administrators see the
+ * order and payment states in neutral words ("Needs review", "Initiated") rather than the
+ * buyer's wording.
+ */
+
+/** Order statuses as administrators see them (OrderStatus in openapi.json). */
+export const ADMIN_ORDER_STATUS_WORDS = Object.freeze({
+  pending_payment: 'Waiting for payment',
+  paid: 'Paid (test payment)',
+  payment_failed: 'Payment failed',
+  expired: 'Expired',
+  cancelled: 'Cancelled',
+  needs_reconciliation: 'Needs review',
+});
+
+/** Payment statuses as administrators see them (PaymentStatus in openapi.json). */
+export const ADMIN_PAYMENT_STATUS_WORDS = Object.freeze({
+  initiating: 'Initiating',
+  initiated: 'Initiated, waiting for the phone',
+  completed: 'Completed',
+  failed: 'Failed',
+  cancelled: 'Cancelled',
+  timeout: 'Timed out',
+});
+
+/** Invitation statuses (InviteStatus in openapi.json). */
+export const INVITE_STATUS_WORDS = Object.freeze({
+  pending: 'Pending',
+  used: 'Used',
+  expired: 'Expired',
+  revoked: 'Revoked',
+  locked: 'Locked',
+});
+
+/** Account states on the users screen (from `is_disabled`). */
+export const USER_STATUS_WORDS = Object.freeze({
+  active: 'Active',
+  disabled: 'Disabled',
+});
+
 /** Messages for the photo preparation errors (ImageError codes in lib/image.js). */
 export const IMAGE_ERROR_MESSAGES = Object.freeze({
   unsupported_type: 'Choose a JPEG or PNG photo. Other file types cannot be used.',

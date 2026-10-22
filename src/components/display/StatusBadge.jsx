@@ -1,16 +1,29 @@
 import {
   AlertCircle,
+  AlertTriangle,
   Ban,
   CheckCircle2,
   Clock,
   Loader2,
+  Lock,
+  MailCheck,
   PackageX,
   Search,
   Smartphone,
+  UserCheck,
+  UserX,
   XCircle,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { LISTING_STATUS_WORDS, ORDER_STATUS_WORDS, PAYMENT_STATUS_WORDS } from '@/lib/messages';
+import {
+  ADMIN_ORDER_STATUS_WORDS,
+  ADMIN_PAYMENT_STATUS_WORDS,
+  INVITE_STATUS_WORDS,
+  LISTING_STATUS_WORDS,
+  ORDER_STATUS_WORDS,
+  PAYMENT_STATUS_WORDS,
+  USER_STATUS_WORDS,
+} from '@/lib/messages';
 
 /**
  * @typedef {{ label: string, variant: 'positive' | 'negative' | 'neutral' | 'outline', Icon: import('react').ComponentType<any> }} StatusStyle
@@ -55,18 +68,75 @@ export const PAYMENT_STATUS = {
   timeout: { label: PAYMENT_STATUS_WORDS.timeout, variant: 'negative', Icon: Clock },
 };
 
+/*
+ * Administrator tables (F4): the same icons, with the administrator's words.
+ */
+
+/** @type {Record<string, StatusStyle>} */
+export const ADMIN_ORDER_STATUS = {
+  pending_payment: {
+    ...ORDER_STATUS.pending_payment,
+    label: ADMIN_ORDER_STATUS_WORDS.pending_payment,
+  },
+  paid: { ...ORDER_STATUS.paid, label: ADMIN_ORDER_STATUS_WORDS.paid },
+  payment_failed: {
+    ...ORDER_STATUS.payment_failed,
+    label: ADMIN_ORDER_STATUS_WORDS.payment_failed,
+  },
+  expired: { ...ORDER_STATUS.expired, label: ADMIN_ORDER_STATUS_WORDS.expired },
+  cancelled: { ...ORDER_STATUS.cancelled, label: ADMIN_ORDER_STATUS_WORDS.cancelled },
+  needs_reconciliation: {
+    label: ADMIN_ORDER_STATUS_WORDS.needs_reconciliation,
+    variant: 'negative',
+    Icon: AlertTriangle,
+  },
+};
+
+/** @type {Record<string, StatusStyle>} */
+export const ADMIN_PAYMENT_STATUS = {
+  initiating: { ...PAYMENT_STATUS.initiating, label: ADMIN_PAYMENT_STATUS_WORDS.initiating },
+  initiated: { ...PAYMENT_STATUS.initiated, label: ADMIN_PAYMENT_STATUS_WORDS.initiated },
+  completed: { ...PAYMENT_STATUS.completed, label: ADMIN_PAYMENT_STATUS_WORDS.completed },
+  failed: { ...PAYMENT_STATUS.failed, label: ADMIN_PAYMENT_STATUS_WORDS.failed },
+  cancelled: { ...PAYMENT_STATUS.cancelled, label: ADMIN_PAYMENT_STATUS_WORDS.cancelled },
+  timeout: { ...PAYMENT_STATUS.timeout, label: ADMIN_PAYMENT_STATUS_WORDS.timeout },
+};
+
+/** Invitation statuses (InviteStatus). @type {Record<string, StatusStyle>} */
+export const INVITE_STATUS = {
+  pending: { label: INVITE_STATUS_WORDS.pending, variant: 'outline', Icon: Clock },
+  used: { label: INVITE_STATUS_WORDS.used, variant: 'positive', Icon: MailCheck },
+  expired: { label: INVITE_STATUS_WORDS.expired, variant: 'neutral', Icon: Clock },
+  revoked: { label: INVITE_STATUS_WORDS.revoked, variant: 'neutral', Icon: Ban },
+  locked: { label: INVITE_STATUS_WORDS.locked, variant: 'negative', Icon: Lock },
+};
+
+/** Account states (`is_disabled`). @type {Record<string, StatusStyle>} */
+export const USER_STATUS = {
+  active: { label: USER_STATUS_WORDS.active, variant: 'positive', Icon: UserCheck },
+  disabled: { label: USER_STATUS_WORDS.disabled, variant: 'negative', Icon: UserX },
+};
+
 /** @param {string} status */
 function humanize(status) {
   const words = status.replace(/_/g, ' ');
   return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
-const TABLES = { order: ORDER_STATUS, payment: PAYMENT_STATUS, listing: LISTING_STATUS };
+const TABLES = {
+  order: ORDER_STATUS,
+  payment: PAYMENT_STATUS,
+  listing: LISTING_STATUS,
+  adminOrder: ADMIN_ORDER_STATUS,
+  adminPayment: ADMIN_PAYMENT_STATUS,
+  invite: INVITE_STATUS,
+  user: USER_STATUS,
+};
 
 /**
- * Order, payment or listing status as a badge with an icon and a text label (never colour
- * alone). Unknown statuses still render readable text.
- * @param {{ status: string, kind?: 'order' | 'payment' | 'listing', className?: string }} props
+ * A status as a badge with an icon and a text label (never colour alone), for orders, payments,
+ * listings, invitations and accounts. Unknown statuses still render readable text.
+ * @param {{ status: string, kind?: keyof typeof TABLES, className?: string }} props
  */
 export function StatusBadge({ status, kind = 'order', className }) {
   const table = TABLES[kind] ?? ORDER_STATUS;
