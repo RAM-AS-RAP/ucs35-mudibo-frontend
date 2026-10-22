@@ -214,7 +214,7 @@ function Dashboard({ stats }) {
         <h2 id="activity-title" className="sr-only">
           {`${DASHBOARD_TEXT.listingsTitle}, ${DASHBOARD_TEXT.ordersTitle}, ${DASHBOARD_TEXT.paymentsTitle}`}
         </h2>
-        <div className="grid gap-3 md:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           <CountsCard
             title={DASHBOARD_TEXT.listingsTitle}
             kind="listing"

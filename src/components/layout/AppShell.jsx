@@ -136,7 +136,7 @@ export function AppShell({ children }) {
         )}
         <Link
           to={home}
-          className="flex min-h-11 items-center gap-2 rounded-md px-1 text-lg font-bold text-primary"
+          className="flex min-h-11 shrink-0 items-center gap-2 rounded-md px-1 text-lg font-bold text-primary"
         >
           <Sprout aria-hidden="true" className="size-6" />
           <span>AgriSence</span>

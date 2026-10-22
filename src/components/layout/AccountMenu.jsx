@@ -26,7 +26,7 @@ export function AccountMenu() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="max-w-[14rem] gap-1.5 px-2 sm:max-w-xs">
+        <Button variant="ghost" className="max-w-[14rem] min-w-0 shrink gap-1.5 px-2 sm:max-w-xs">
           <UserCircle aria-hidden="true" />
           <span className="sr-only">{MESSAGES.account.menu}: </span>
           <span className="truncate">{displayName}</span>
