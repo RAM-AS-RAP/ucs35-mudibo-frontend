@@ -142,9 +142,10 @@ docs/           backend/, architecture.md, auth.md, design-system.md, forecast-d
   New backend codes go into `ERROR_MESSAGES` in `src/api/errors.js`.
 - Contract workflow: copy `openapi.json` and `frontend_contract.md` into `docs/backend/` (see
   `docs/backend/README.md`), run `npm run gen:types`, then `npm run check:contract` and `npm test`.
-- **isSuperAdmin:** read it only from `is_super_admin` in the login response (`TokenResponse`) and in
-  `/auth/me` (`UserOut`); only `true` counts. Never infer it from any other endpoint, and never probe the
-  (rate limited) invite routes. It only hides screens; the server checks every request.
+- **isSuperAdmin comes from the backend user object and only controls UI visibility:** read it only
+  from `is_super_admin` in the login response (`TokenResponse`) and in `/auth/me` (`UserOut`); only
+  `true` counts. Never infer it from any other endpoint, and never probe the (rate limited) invite
+  routes. The session also keeps the user `id` from `/auth/me` (`userId`).
 - The backend is the single authority for roles, prices, totals, stock and order state. Show `can_pay` /
   `can_cancel` and server totals as returned; never recompute them.
 

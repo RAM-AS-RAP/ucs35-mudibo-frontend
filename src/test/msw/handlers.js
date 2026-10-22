@@ -36,12 +36,18 @@ export function validationErrorResponse(details) {
 
 /**
  * A token response for a role (the login fixture with another role).
- * @param {{ role?: string, mustChangePassword?: boolean, token?: string }} [options]
+ * @param {{ role?: string, mustChangePassword?: boolean, token?: string, isSuperAdmin?: boolean }} [options]
  */
-export function tokenFor({ role = 'farmer', mustChangePassword = false, token } = {}) {
+export function tokenFor({
+  role = 'farmer',
+  mustChangePassword = false,
+  token,
+  isSuperAdmin = false,
+} = {}) {
   return {
     ...fixtures.tokenResponse,
     role,
+    is_super_admin: isSuperAdmin,
     must_change_password: mustChangePassword,
     ...(token ? { access_token: token } : {}),
   };

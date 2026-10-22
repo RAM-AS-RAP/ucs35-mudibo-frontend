@@ -21,6 +21,7 @@ const STORAGE_KEY = 'agrisence.session';
  * @property {boolean} isSuperAdmin
  * @property {number} expiresAt  epoch milliseconds
  * @property {string | null} name
+ * @property {string | null} userId  the user id from GET /auth/me (null until it loaded)
  * @property {boolean} [isDevFake]  development only role preview; never persisted, never sent
  */
 
@@ -101,6 +102,7 @@ function load() {
       isSuperAdmin: Boolean(parsed.isSuperAdmin),
       expiresAt: parsed.expiresAt,
       name: typeof parsed.name === 'string' ? parsed.name : null,
+      userId: typeof parsed.userId === 'string' ? parsed.userId : null,
     };
   } catch {
     return null;
@@ -142,13 +144,15 @@ export function setFromLogin(tokenResponse) {
     isSuperAdmin: tokenResponse.is_super_admin === true,
     expiresAt: Date.now() + tokenResponse.expires_in * 1000,
     name: null,
+    userId: null,
   });
 }
 
 /**
- * Merge the profile from GET /auth/me: name, role, is_super_admin and must_change_password.
+ * Merge the profile from GET /auth/me: id, name, role, is_super_admin and must_change_password.
  * The super admin flag comes only from the login response and this profile, never from any
- * other endpoint; anything but `true` counts as false.
+ * other endpoint; anything but `true` counts as false. It only controls what the UI shows.
+ * The id lets the admin screens leave out actions on the administrator's own account.
  * @param {import('@/api/schema').components['schemas']['UserOut']} me
  */
 export function setProfile(me) {
@@ -156,6 +160,7 @@ export function setProfile(me) {
   setState({
     ...state,
     name: typeof me.name === 'string' && me.name.trim() ? me.name.trim() : state.name,
+    userId: typeof me.id === 'string' && me.id ? me.id : state.userId,
     role: isKnownRole(me.role) ? me.role : state.role,
     mustChangePassword: Boolean(me.must_change_password),
     isSuperAdmin: me.is_super_admin === true,
@@ -265,6 +270,7 @@ export function startDevFakeSession({ role, isSuperAdmin = false, mustChangePass
     isSuperAdmin,
     expiresAt: Date.now() + 8 * 60 * 60 * 1000,
     name: `Preview ${role}`,
+    userId: null,
     isDevFake: true,
   });
 }

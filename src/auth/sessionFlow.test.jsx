@@ -201,6 +201,32 @@ describe('isSuperAdmin', () => {
     expect(within(await screen.findByRole('menu')).getByText('Super admin')).toBeInTheDocument();
   });
 
+  it('a sign in stores isSuperAdmin and the user id from the login response and /auth/me', async () => {
+    const { signIn } = await import('./auth');
+    const { http, HttpResponse } = await import('msw');
+    const { server } = await import('@/test/msw/server');
+    const { apiUrl, tokenFor } = await import('@/test/msw/handlers');
+    const { validateResponse } = await import('@/test/openapi');
+    const token = tokenFor({ role: 'admin', isSuperAdmin: true });
+    const me = { ...fixtures.adminMe, is_super_admin: true };
+    expect(
+      validateResponse({ path: '/api/v1/auth/login', method: 'post', status: '200' }, token).valid,
+    ).toBe(true);
+    expect(
+      validateResponse({ path: '/api/v1/auth/me', method: 'get', status: '200' }, me).valid,
+    ).toBe(true);
+    server.use(
+      http.post(apiUrl('/api/v1/auth/login'), () => HttpResponse.json(token)),
+      http.get(apiUrl('/api/v1/auth/me'), () => HttpResponse.json(me)),
+    );
+    const session = await signIn('amina@example.com', 'not-a-real-password');
+    expect(session).toMatchObject({
+      role: 'admin',
+      isSuperAdmin: true,
+      userId: fixtures.adminMe.id,
+    });
+  });
+
   it('is exposed by useAuth', async () => {
     setFromLogin({ ...fixtures.tokenResponse, role: 'admin' });
     setProfile({ ...fixtures.adminMe, is_super_admin: true });
