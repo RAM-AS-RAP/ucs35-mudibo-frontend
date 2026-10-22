@@ -65,7 +65,7 @@ describe('ResponsiveTable', () => {
     await expectNoAxeViolations(container);
   });
 
-  it('renders the same data and actions as stacked cards below 640 px', async () => {
+  it('renders the same data and actions as stacked cards below 1280 px', async () => {
     setWideScreen(false);
     const { container } = render(<Table />);
     expect(screen.queryByRole('table')).toBeNull();

@@ -22,7 +22,7 @@ export function renderAdmin(path, { superAdmin = true } = {}) {
 }
 
 /**
- * Render the wide layout (tables, 640 px and up) instead of the stacked cards. Undo with
+ * Render the wide layout (tables, 1280 px and up) instead of the stacked cards. Undo with
  * vi.restoreAllMocks().
  * @param {boolean} wide
  */

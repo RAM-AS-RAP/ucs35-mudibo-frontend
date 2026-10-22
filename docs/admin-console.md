@@ -143,8 +143,10 @@ were never shown live, and that the samples are small so the figures are indicat
   icon plus a word (never colour alone); orders needing review add the words "Needs review".
 - Chips are native radio groups (Tab to the group, arrow keys to choose); the "Include pending"
   control is a checkbox with `role="switch"`.
-- `ResponsiveTable` renders a real table with a caption and row headers from 640 px and the same
-  rows and actions as a list of cards below, so nothing scrolls sideways at 360 px. Only one
+- `ResponsiveTable` renders a real table with a caption and row headers from 1280 px (next to the
+  sidebar the content area is at most about 990 px wide; cell text wraps so the table fits) and
+  the same rows and actions as a list of cards below, two per row from 768 px, so nothing scrolls
+  sideways on a phone or tablet. Only one
   layout is in the page, so each action exists once.
 - Action buttons name their target for screen readers ("Disable Wanjiku Kamau", "Revoke Pending
   Person", "View events for order AGR-…").

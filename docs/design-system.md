@@ -128,10 +128,11 @@ From `src/styles/tokens.test.js`, which reads `tokens.css` (print with
   (Active, Sold out, Removed) and shows the F2b order words ("Paid (test payment)", "Waiting for
   payment", "Not paid, expired", ...), with the existing positive, negative, neutral and outline
   variants (no new colours).
-- `components/admin/` (F4): `ResponsiveTable` (a captioned table with row headers from 640 px, the
-  same rows as stacked cards below, columns declared once, the same actions in both; only one layout
-  is in the page), `FilterBar` and `useFilterParams` (filters in the URL, validated, "Clear
-  filters"), `SearchInput` (400 ms debounce, 2 to 50 characters), `ConfirmDialog` (consequences,
+- `components/admin/` (F4): `ResponsiveTable` (a captioned table with row headers from 1280 px, the
+  same rows as stacked cards below, two per row from 768 px, columns declared once, the same actions
+  in both; only one layout is in the page; a table wider than its space shows the cards instead),
+  `FilterBar` and `useFilterParams` (filters in the URL, validated, "Clear filters"),
+  `SearchInput` (400 ms debounce, 2 to 50 characters), `ConfirmDialog` (consequences,
   optional required note with a counter, spinner, inline error, double submit guard, focus back to
   the trigger), `PayloadView` (text in a `pre`, 16 KB then "Show all", copy), `PaymentEventsDialog`,
   `RoleBadge` (Farmer, Buyer, Admin, "Main admin") and `ListParts` (Refresh, "Showing X of Y", Load

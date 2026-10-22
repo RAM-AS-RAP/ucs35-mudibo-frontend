@@ -84,7 +84,7 @@ export function AppShell({ children }) {
               </span>
             </Button>
           </SheetTrigger>
-          <SheetContent side="left">
+          <SheetContent side="left" className="w-64 max-w-[80vw] overflow-y-auto">
             <SheetHeader>
               <SheetTitle>AgriSence</SheetTitle>
               <SheetDescription>

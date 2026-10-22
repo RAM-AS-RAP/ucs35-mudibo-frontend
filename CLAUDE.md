@@ -264,8 +264,9 @@ docs/           backend/, architecture.md, auth.md, design-system.md, forecast-d
   what is shown; map the server's 403 and 409 answers with `adminErrorMessage()` and refresh.
 - **Administrator screens may show real dates** (`formatDateTime`, `formatMonth`); they are not in
   `RELATIVE_ONLY`, which stays as it is.
-- Lists use `ResponsiveTable` (table from 640 px, cards below, columns declared once) and keep their
-  filters in the URL with `useFilterParams`. Search texts go into query keys only as `searchKey()` ids.
+- Lists use `ResponsiveTable` (table from 1280 px, cards below and two per row from 768 px;
+  a table wider than its space shows the cards; columns declared once) and keep their filters in
+  the URL with `useFilterParams`. Search texts go into query keys only as `searchKey()` ids.
 - Show amounts, counts and accuracy figures as the server returns them; missing accuracy values read
   "Not enough data" (`lib/accuracyFormat.js`). Never show or ask for a password, code or token on an
   admin screen; the invite screen copies only `<origin>/accept-invite`.

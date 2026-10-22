@@ -22,12 +22,20 @@ import { cn } from '@/lib/utils';
 export function DataTable({ caption, columns, rows, className }) {
   const [first, ...rest] = columns;
   return (
-    <Table className={cn('caption-top text-base', className)}>
+    // Smaller text and padding on phones so three columns of numbers fit without sideways scrolling.
+    <Table className={cn('caption-top text-sm sm:text-base', className)}>
       <TableCaption className="mt-0 mb-2 text-left">{caption}</TableCaption>
       <TableHeader>
         <TableRow>
           {columns.map((column) => (
-            <TableHead key={column.key} scope="col" className={cn(column.numeric && 'text-right')}>
+            <TableHead
+              key={column.key}
+              scope="col"
+              className={cn(
+                'h-auto px-2 py-2 align-bottom whitespace-normal sm:px-3',
+                column.numeric && 'text-right',
+              )}
+            >
               {column.header}
             </TableHead>
           ))}
@@ -36,13 +44,19 @@ export function DataTable({ caption, columns, rows, className }) {
       <TableBody>
         {rows.map((row) => (
           <TableRow key={row.id}>
-            <TableHead scope="row" className="font-medium text-text">
+            <TableHead
+              scope="row"
+              className="h-auto px-2 py-2 font-medium whitespace-normal text-text sm:px-3"
+            >
               {row[first.key]}
             </TableHead>
             {rest.map((column) => (
               <TableCell
                 key={column.key}
-                className={cn('text-text', column.numeric && 'text-right tabular-nums')}
+                className={cn(
+                  'px-2 text-text sm:px-3',
+                  column.numeric && 'text-right tabular-nums',
+                )}
               >
                 {row[column.key]}
               </TableCell>

@@ -24,5 +24,9 @@ export function useMediaQuery(query) {
   return useSyncExternalStore(subscribe, read, () => false);
 }
 
-/** Tailwind's `sm` breakpoint: tables from 640 px, stacked cards below. */
-export const WIDE_QUERY = '(min-width: 640px)';
+/**
+ * Tailwind's `xl` breakpoint: admin tables from 1280 px, stacked cards below. With the 256 px
+ * sidebar (from 1024 px) and the 1024 px content limit, the content area is at most about 990 px
+ * wide, so a many column table only fits from here.
+ */
+export const WIDE_QUERY = '(min-width: 1280px)';
