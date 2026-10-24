@@ -12,7 +12,6 @@ import { ExplainabilityBars } from './ExplainabilityBars';
 import { FreshnessNote } from './FreshnessNote';
 import { MarketChips } from './MarketChips';
 import { PriceCard } from './PriceCard';
-import { Recommendation } from './Recommendation';
 import { Segmented } from './Segmented';
 
 describe('DeltaTag with a direction', () => {
@@ -117,23 +116,7 @@ describe('MarketChips', () => {
   });
 });
 
-describe('Recommendation and FreshnessNote', () => {
-  it.each([
-    ['rise', 'bg-positive-soft', 'lucide-arrow-up'],
-    ['fall', 'bg-negative-soft', 'lucide-arrow-down'],
-    ['flat', 'bg-neutral-bg', 'lucide-minus'],
-  ])('%s has its tint, an icon and the title text', async (tone, tint, icon) => {
-    const { container } = render(
-      <Recommendation tone={/** @type {any} */ (tone)} title="Title" body="Body" note="Note" />,
-    );
-    const box = container.firstElementChild;
-    expect(box).toHaveClass(tint);
-    expect(box?.querySelector('svg')).toHaveClass(icon);
-    expect(screen.getByRole('heading', { name: 'Title' })).toBeInTheDocument();
-    expect(screen.getByText('Note')).toBeInTheDocument();
-    await expectNoAxeViolations(container);
-  });
-
+describe('FreshnessNote', () => {
   it('FreshnessNote shows its text with an icon', () => {
     const { container } = render(
       <FreshnessNote text="Prices are monthly figures from FEWS NET." />,

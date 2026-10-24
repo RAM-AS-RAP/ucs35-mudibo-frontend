@@ -11,7 +11,6 @@ import {
   MIN_AXIS_SHARE,
   stepAmountText,
   NEUTRAL_THRESHOLD_PCT,
-  recommendationFor,
   summaryText,
 } from './forecast';
 import { FORECAST_TEXT, groupDescription } from './messages';
@@ -163,42 +162,6 @@ describe('stepAmountText', () => {
   it('signs by direction', () => {
     expect(stepAmountText({ up: true, kes: 1.45 })).toBe('+KES 1.45');
     expect(stepAmountText({ up: false, kes: -0.5 })).toBe('-KES 0.50');
-  });
-});
-
-describe('recommendationFor', () => {
-  it('rise', () => {
-    expect(recommendationFor(6.18, 'one_month')).toEqual({
-      tone: 'rise',
-      title: 'The model expects the price to rise',
-      body: 'The forecast is for the price to rise by about 6.2% in 1 month. Waiting may give a better price, but only if you can keep your produce safely and do not need the money sooner. The decision is yours.',
-    });
-  });
-
-  it('fall', () => {
-    expect(recommendationFor(-3.5, 'two_month')).toEqual({
-      tone: 'fall',
-      title: 'The model expects the price to fall',
-      body: 'The forecast is for the price to fall by about 3.5% in 2 months. Selling sooner may protect your income, if you have a buyer. The decision is yours.',
-    });
-  });
-
-  it('flat', () => {
-    expect(recommendationFor(0.4, 'one_month')).toEqual({
-      tone: 'flat',
-      title: 'The model expects little change',
-      body: 'Choose when to sell based on your own needs and the offers you receive.',
-    });
-  });
-
-  it('never says "will" and keeps the uncertainty line separate', () => {
-    for (const pct of [6.18, -3.5, 0]) {
-      const { title, body } = recommendationFor(pct, 'one_month');
-      expect(`${title} ${body}`).not.toMatch(/\bwill\b/i);
-    }
-    expect(FORECAST_TEXT.uncertainty).toBe(
-      'Forecasts are estimates and can be wrong. Weather, supply, policy and local conditions can change prices in ways the model cannot see.',
-    );
   });
 });
 

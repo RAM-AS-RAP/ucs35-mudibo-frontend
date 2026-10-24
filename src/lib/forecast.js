@@ -7,7 +7,7 @@
  */
 import { FORECAST_TEXT, groupDescription } from './messages';
 import { formatKES, formatKESWhole, formatPctUnsigned } from './format';
-import { horizonMonths, inLabel, monthFromIndex, monthIndex } from './relativeTime';
+import { horizonMonths, monthFromIndex, monthIndex } from './relativeTime';
 
 /** Changes smaller than this (in percent, either way) count as "little change". */
 export const NEUTRAL_THRESHOLD_PCT = 1;
@@ -248,38 +248,6 @@ export function axisPercent(axis, value) {
  */
 export function stepAmountText(step) {
   return `${step.up ? '+' : '-'}${formatKES(Math.abs(step.kes))}`;
-}
-
-/**
- * The recommendation box: a tone, a title and a body. The decision always stays with the farmer.
- * The uncertainty line (FORECAST_TEXT.uncertainty) is shown separately, always.
- * @param {number} expectedChangePct
- * @param {string} horizon  one_month or two_month
- * @returns {{ tone: Direction, title: string, body: string }}
- */
-export function recommendationFor(expectedChangePct, horizon) {
-  const tone = directionOf(expectedChangePct);
-  const when = inLabel(horizonMonths(horizon));
-  const size = formatPctUnsigned(Math.abs(expectedChangePct));
-  if (tone === 'rise') {
-    return {
-      tone,
-      title: 'The model expects the price to rise',
-      body: `The forecast is for the price to rise by about ${size} ${when}. Waiting may give a better price, but only if you can keep your produce safely and do not need the money sooner. The decision is yours.`,
-    };
-  }
-  if (tone === 'fall') {
-    return {
-      tone,
-      title: 'The model expects the price to fall',
-      body: `The forecast is for the price to fall by about ${size} ${when}. Selling sooner may protect your income, if you have a buyer. The decision is yours.`,
-    };
-  }
-  return {
-    tone,
-    title: 'The model expects little change',
-    body: 'Choose when to sell based on your own needs and the offers you receive.',
-  };
 }
 
 /** @param {string} text */

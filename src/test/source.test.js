@@ -129,7 +129,6 @@ describe('source checks', () => {
       'src/components/display/FreshnessNote.jsx',
       'src/components/display/MarketChips.jsx',
       'src/components/display/PriceCard.jsx',
-      'src/components/display/Recommendation.jsx',
       'src/components/display/Segmented.jsx',
       'src/components/display/TrendChart.jsx',
       'src/components/display/TrendChartCanvas.jsx',
@@ -148,7 +147,7 @@ describe('source checks', () => {
     });
 
     it('is the F2a and F2b list, unchanged by the admin module (F4)', () => {
-      expect(RELATIVE_ONLY).toHaveLength(21);
+      expect(RELATIVE_ONLY).toHaveLength(20);
       expect(RELATIVE_ONLY.filter((path) => path.includes('/admin/'))).toEqual([]);
       expect(RELATIVE_ONLY.filter((path) => path.startsWith('src/screens/'))).toEqual([
         'src/screens/farmer/DashboardScreen.jsx',

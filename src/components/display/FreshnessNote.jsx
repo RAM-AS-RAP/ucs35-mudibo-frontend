@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils';
 
 /**
  * A neutral note on where the figures come from, without any date ("Prices are monthly figures
- * from FEWS NET."). Pass FRESHNESS_PRICES or FRESHNESS_FORECAST from lib/messages.
+ * from FEWS NET."). Pass FRESHNESS_PRICES from lib/messages.
  * @param {{ text: string, className?: string }} props
  */
 export function FreshnessNote({ text, className }) {

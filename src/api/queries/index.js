@@ -60,9 +60,10 @@ export function usePriceTrends({ markets, crop, months, enabled = true }) {
 
 /**
  * GET /forecasts. The data is `{ status: 'ok', data }` or `{ status: 'unavailable', reason }`.
- * @param {{ market: string | null | undefined, crop: 'maize' | 'beans', horizon: 'one_month' | 'two_month' }} params
+ * `enabled: false` holds the request back (the forecast screen asks only after a click).
+ * @param {{ market: string | null | undefined, crop: 'maize' | 'beans', horizon: 'one_month' | 'two_month', enabled?: boolean }} params
  */
-export function useForecast({ market, crop, horizon }) {
+export function useForecast({ market, crop, horizon, enabled = true }) {
   return useQuery({
     queryKey: queryKeys.forecast({ market: market ?? '', crop, horizon }),
     queryFn: () =>
@@ -71,7 +72,7 @@ export function useForecast({ market, crop, horizon }) {
         crop,
         horizon,
       }),
-    enabled: Boolean(market),
+    enabled: enabled && Boolean(market),
     ...queryPolicy,
   });
 }

@@ -92,6 +92,9 @@ describe('CreateListingScreen: preselection', () => {
   it('the forecast screen\'s "Plan a listing" link lands here with its parameters applied', async () => {
     const user = userEvent.setup();
     const { router } = renderFarmer('/farmer/forecast?market=Kisumu&crop=beans');
+    await user.click(
+      await screen.findByRole('button', { name: 'Request 1 month forecast' }, { timeout: 8000 }),
+    );
     const link = await screen.findByRole('link', { name: /Plan a listing/ }, { timeout: 8000 });
     await user.click(link);
     await waitFor(() => expect(router.state.location.pathname).toBe('/farmer/listings/new'));

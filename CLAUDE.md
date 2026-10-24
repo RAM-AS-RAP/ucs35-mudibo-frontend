@@ -190,6 +190,10 @@ docs/           backend/, architecture.md, auth.md, design-system.md, forecast-d
   differ by line style and end labels.
 - **Lazy chart rule:** only `TrendChartCanvas.jsx` imports Recharts, and only through `React.lazy`.
   `npm run check:build` fails if Recharts reaches the initial JavaScript or a lazy chunk exceeds 250 kB gzip.
+- **Forecast on request:** the forecast screen calls `GET /forecasts` only after the "Request 1
+  month forecast" click (`useForecast({ ..., enabled })`), shows the explanation only after the "Why
+  the model expects this" click, and clears both when the market or crop changes. The request is
+  component state, never in the URL. There is no recommendation or uncertainty box.
 - Screen selections live in the URL query string (validated, invalid values removed); `usePageTitle`
   moves focus to the heading on a pathname change only, not on a query string change.
 

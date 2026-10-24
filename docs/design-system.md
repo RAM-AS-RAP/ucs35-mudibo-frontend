@@ -24,7 +24,7 @@ palette, so only token colours exist. shadcn's semantic variables (`background`,
 | `border`                      | `#D1D5DB`                 | Subtle borders                                                    |
 | `neutral-bg` / `neutral-text` | `#F3F4F6` / `#374151`     | Neutral tags (for example a 0.0% delta)                           |
 | `positive`                    | `#16A149` (was `#16A34A`) | Positive icons and chart outlines                                 |
-| `positive-soft`               | `#86EFAC`                 | Positive chart bar fill, recommendation box tint                  |
+| `positive-soft`               | `#86EFAC`                 | Positive chart bar fill                                           |
 | `positive-text`               | `#157F3D` (was `#15803D`) | Positive text such as "+4.5%"                                     |
 | `negative`                    | `#DC2626`                 | Negative icons and chart outlines                                 |
 | `negative-soft`               | `#FCA5A5`                 | Negative chart bar fill                                           |
@@ -123,8 +123,7 @@ From `src/styles/tokens.test.js`, which reads `tokens.css` (print with
 - `components/display/`: `PageHeader`, `StatCard`, `DeltaTag` (optionally with a `direction` from
   `directionOf` and a `suffix`), `StatusBadge`, `Money`, and for F2a: `PriceCard`
   (and `PriceChange`), `MarketChips` (toggle buttons, `aria-pressed`, one always selected), `Segmented`
-  (native radio group, 44 px options), `FreshnessNote`, `Recommendation` (tinted box with an icon and
-  title), `ExplainabilityBars` (accessible list with `div` bars), `TrendChart` (wrapper with
+  (native radio group, 44 px options), `FreshnessNote`, `ExplainabilityBars` (accessible list with `div` bars), `TrendChart` (wrapper with
   `role="img"` and a summary; lazily loads `TrendChartCanvas`, the only file that imports Recharts)
   and `DataTable` (caption, column and row headers). `StatusBadge` also takes `kind="listing"`
   (Active, Sold out, Removed) and shows the F2b order words ("Paid (test payment)", "Waiting for
