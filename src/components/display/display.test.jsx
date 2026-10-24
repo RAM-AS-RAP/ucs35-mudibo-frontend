@@ -9,7 +9,6 @@ import { parseShap } from '@/lib/shapSchema';
 import { DataTable } from './DataTable';
 import { DeltaTag } from './DeltaTag';
 import { ExplainabilityBars } from './ExplainabilityBars';
-import { FreshnessNote } from './FreshnessNote';
 import { MarketChips } from './MarketChips';
 import { PriceCard } from './PriceCard';
 import { Segmented } from './Segmented';
@@ -113,16 +112,6 @@ describe('MarketChips', () => {
     expect(nairobi).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByText('At least one market stays selected.')).toBeInTheDocument();
     await expectNoAxeViolations(container);
-  });
-});
-
-describe('FreshnessNote', () => {
-  it('FreshnessNote shows its text with an icon', () => {
-    const { container } = render(
-      <FreshnessNote text="Prices are monthly figures from FEWS NET." />,
-    );
-    expect(container).toHaveTextContent('Prices are monthly figures from FEWS NET.');
-    expect(container.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
   });
 });
 

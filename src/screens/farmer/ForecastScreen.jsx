@@ -271,8 +271,6 @@ function ForecastBody({ market, markets, crop, update }) {
         </Button>
       </div>
 
-      {!requested && <p className="text-text-secondary">{FORECAST_TEXT.requestHint}</p>}
-
       {state && (
         <Card>
           <CardHeader>
@@ -402,7 +400,6 @@ export default function ForecastScreen() {
         headingRef={headingRef}
       />
       {body}
-      <p className="text-sm text-text-secondary">{FORECAST_TEXT.limitations}</p>
     </div>
   );
 }

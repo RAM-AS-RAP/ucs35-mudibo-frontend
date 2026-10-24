@@ -3,7 +3,6 @@ import { useSearchParams } from 'react-router';
 import { useCurrentPrices, useMarkets, usePriceTrends } from '@/api/queries';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DataTable } from '@/components/display/DataTable';
-import { FreshnessNote } from '@/components/display/FreshnessNote';
 import { MarketChips } from '@/components/display/MarketChips';
 import { PageHeader } from '@/components/display/PageHeader';
 import { PriceCard } from '@/components/display/PriceCard';
@@ -13,7 +12,7 @@ import { EmptyState } from '@/components/feedback/EmptyState';
 import { ErrorState } from '@/components/feedback/ErrorState';
 import { LoadingState } from '@/components/feedback/LoadingState';
 import { formatKES } from '@/lib/format';
-import { cropLabel, FRESHNESS_PRICES, PRICE_TEXT } from '@/lib/messages';
+import { cropLabel, PRICE_TEXT } from '@/lib/messages';
 import { agoLabel } from '@/lib/relativeTime';
 import { buildTrendRows, monthsOlderByMarket, plottedMonthCount } from '@/lib/trends';
 import { usePageTitle } from '@/lib/usePageTitle';
@@ -225,7 +224,6 @@ export default function PricesScreen() {
         description="Monthly wholesale prices per kg."
         headingRef={headingRef}
       />
-      <FreshnessNote text={FRESHNESS_PRICES} />
       <Segmented
         legend="Crop"
         name="crop"

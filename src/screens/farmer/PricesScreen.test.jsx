@@ -63,9 +63,9 @@ describe('PricesScreen: latest prices', () => {
     expect(nairobi).not.toHaveTextContent('older');
   });
 
-  it('shows the freshness note but not the backend as_of_note', async () => {
+  it('shows neither a FEWS NET note nor the backend as_of_note', async () => {
     await openPrices();
-    expect(screen.getByText('Prices are monthly figures from FEWS NET.')).toBeInTheDocument();
+    expect(screen.queryByText('Prices are monthly figures from FEWS NET.')).not.toBeInTheDocument();
     expect(screen.queryByText(fixtures.currentPricesMaize.as_of_note)).not.toBeInTheDocument();
   });
 

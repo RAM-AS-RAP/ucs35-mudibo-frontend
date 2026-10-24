@@ -6,7 +6,6 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DeltaTag } from '@/components/display/DeltaTag';
-import { FreshnessNote } from '@/components/display/FreshnessNote';
 import { PageHeader } from '@/components/display/PageHeader';
 import { PriceChange } from '@/components/display/PriceCard';
 import { EmptyState } from '@/components/feedback/EmptyState';
@@ -15,7 +14,7 @@ import { LoadingState } from '@/components/feedback/LoadingState';
 import { ListingsSummary } from '@/components/listings/ListingsSummary';
 import { directionOf } from '@/lib/forecast';
 import { formatKES } from '@/lib/format';
-import { cropLabel, FORECAST_TEXT, FRESHNESS_PRICES, MESSAGES, PRICE_TEXT } from '@/lib/messages';
+import { cropLabel, FORECAST_TEXT, MESSAGES, PRICE_TEXT } from '@/lib/messages';
 import { inLabelCap, olderLabel } from '@/lib/relativeTime';
 import { isForecastUsable } from '@/lib/shapSchema';
 import { monthsOlderByMarket } from '@/lib/trends';
@@ -198,7 +197,6 @@ export default function DashboardScreen() {
     <div className="flex flex-col gap-6">
       <p className="text-lg font-medium text-text">{welcome}</p>
       <PageHeader title="Dashboard" headingRef={headingRef} />
-      <FreshnessNote text={FRESHNESS_PRICES} />
 
       <section aria-labelledby="dashboard-prices" className="flex flex-col gap-3">
         <h2 id="dashboard-prices" className="text-xl font-semibold text-text">

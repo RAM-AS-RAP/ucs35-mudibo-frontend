@@ -5,13 +5,11 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DeltaTag } from '@/components/display/DeltaTag';
-import { FreshnessNote } from '@/components/display/FreshnessNote';
 import { directionOf } from '@/lib/forecast';
 import { formatKES } from '@/lib/format';
 import {
   cropLabel,
   FORECAST_TEXT,
-  FRESHNESS_PRICES,
   GUIDANCE_TEXT,
   LABEL_LATEST_PRICE,
   PRICE_TEXT,
@@ -101,7 +99,6 @@ export function PriceGuidance({ crop, market, className }) {
       )}
       {priceBlock}
       {market && <ForecastLine crop={crop} market={market} />}
-      <FreshnessNote text={FRESHNESS_PRICES} />
       <p className="text-text">{FORECAST_TEXT.planListingHint}</p>
       <Button asChild variant="link" className="w-fit px-0">
         <Link to={forecastLink}>

@@ -121,9 +121,6 @@ describe('ForecastScreen: request flow', () => {
     const recorder = recordRequests();
     const { container } = await openScreen();
     expect(requestButton()).toBeEnabled();
-    expect(
-      screen.getByText('Choose a market and crop, then request the forecast.'),
-    ).toBeInTheDocument();
     expect(screen.queryByTestId('forecast-headline')).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Plan a listing' })).not.toBeInTheDocument();
     expect(recorder.requests.filter((r) => r.path === '/api/v1/forecasts')).toEqual([]);
@@ -132,9 +129,6 @@ describe('ForecastScreen: request flow', () => {
     await userEvent.setup().click(requestButton());
     await screen.findByText(/Expected in/);
     expect(recorder.requests.filter((r) => r.path === '/api/v1/forecasts')).toHaveLength(1);
-    expect(
-      screen.queryByText('Choose a market and crop, then request the forecast.'),
-    ).not.toBeInTheDocument();
   });
 
   it('keeps the explanation closed until "Why the model expects this" is clicked', async () => {
@@ -376,11 +370,7 @@ describe('ForecastScreen: URL, next step and session', () => {
       '/farmer/listings/new?crop=beans&market=Kisumu',
     );
     expect(screen.getByText('You choose the price you ask for.')).toBeInTheDocument();
-    expect(
-      screen.getByText(
-        'These forecasts use monthly prices published by FEWS NET. A model trained on past prices can be wrong, especially after sudden events.',
-      ),
-    ).toBeInTheDocument();
+    expect(screen.queryByText(/These forecasts use monthly prices/)).not.toBeInTheDocument();
   });
 
   it('a 401 clears the session and goes to the login screen', async () => {

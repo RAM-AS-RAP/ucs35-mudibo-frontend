@@ -123,7 +123,7 @@ From `src/styles/tokens.test.js`, which reads `tokens.css` (print with
 - `components/display/`: `PageHeader`, `StatCard`, `DeltaTag` (optionally with a `direction` from
   `directionOf` and a `suffix`), `StatusBadge`, `Money`, and for F2a: `PriceCard`
   (and `PriceChange`), `MarketChips` (toggle buttons, `aria-pressed`, one always selected), `Segmented`
-  (native radio group, 44 px options), `FreshnessNote`, `ExplainabilityBars` (accessible list with `div` bars), `TrendChart` (wrapper with
+  (native radio group, 44 px options), `ExplainabilityBars` (accessible list with `div` bars), `TrendChart` (wrapper with
   `role="img"` and a summary; lazily loads `TrendChartCanvas`, the only file that imports Recharts)
   and `DataTable` (caption, column and row headers). `StatusBadge` also takes `kind="listing"`
   (Active, Sold out, Removed) and shows the F2b order words ("Paid (test payment)", "Waiting for

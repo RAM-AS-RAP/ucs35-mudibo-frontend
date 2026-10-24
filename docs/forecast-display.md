@@ -14,7 +14,7 @@ contribution.
 | --------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Dashboard | `/farmer`          | Greeting; latest maize and beans prices per market with the change against the month before; the one month forecast for maize and beans in the first market; a summary of active listings and paid orders (F2b, see [listings-orders.md](listings-orders.md)) | `GET /markets`, `GET /prices/current?crop=maize`, `GET /prices/current?crop=beans` and the two counts `GET /listings/mine?status=active&limit=1`, `GET /listings/mine/orders?status=paid&limit=1` (in parallel), then `GET /forecasts?market=<first>&crop=maize\|beans&horizon=one_month` (in parallel) |
 | Prices    | `/farmer/prices`   | Crop control; a price card per market; the price trend for the selected markets and range, with a data table                                                                                                                                                  | `GET /prices/current?crop=`, `GET /markets`, `GET /prices/trends?market=&crop=&months=` (one per selected market, in parallel)                                                                                                                                                                          |
-| Forecast  | `/farmer/forecast` | Market and crop controls with the "Request 1 month forecast" button; after the click, the 1 month ahead headline and the "Why the model expects this" button; unavailable state; "Plan a listing"; limitations                                                | `GET /markets` on load; only after the click `GET /forecasts?market=&crop=&horizon=one_month`, and `GET /prices/current?crop=` when that forecast is unavailable                                                                                                                                        |
+| Forecast  | `/farmer/forecast` | Market and crop controls with the "Request 1 month forecast" button; after the click, the 1 month ahead headline and the "Why the model expects this" button; unavailable state; "Plan a listing"                                                             | `GET /markets` on load; only after the click `GET /forecasts?market=&crop=&horizon=one_month`, and `GET /prices/current?crop=` when that forecast is unavailable                                                                                                                                        |
 
 Selections live in the URL query string (`crop`, `markets`, `range`, `market`, `horizon`), so a
 screen can be bookmarked or shared. Only these non sensitive values are stored. Each is checked
@@ -91,8 +91,7 @@ There is no horizon choice: only the 1 month ahead forecast is requested and sho
 The screen fetches nothing about the forecast until the farmer asks for it:
 
 1. On load it shows only the Market and Crop controls, the **Request 1 month forecast**
-   button and the hint "Choose a market and crop, then request the forecast." Only `GET /markets`
-   is sent.
+   button. Only `GET /markets` is sent.
 2. The click enables the forecast query (`useForecast({ ..., enabled })`) for that market and crop.
    The card shows the loading, error, unavailable or headline state. A forecast already cached by
    the dashboard or the listing form appears at once, but never before the click.
@@ -103,9 +102,8 @@ The screen fetches nothing about the forecast until the farmer asks for it:
    reload, or a link from the dashboard or the listing form (which fills in the market and crop),
    needs the click again.
 
-There is no recommendation box and no separate uncertainty box: the headline's direction word and
-icon say which way the model expects the price to move, and the limitations line under the screen
-says the forecasts can be wrong.
+There is no recommendation box, no uncertainty box, no hint text and no limitations line: the
+headline's direction word and icon say which way the model expects the price to move.
 
 ### Why the model expects this
 
@@ -195,12 +193,10 @@ Under the message the screen shows the latest price for that market and crop, if
 a link to the Prices screen. An older forecast is never
 shown.
 
-### Next step and limitations
+### Next step
 
 "Plan a listing" links to `/farmer/listings/new?crop=<crop>&market=<market>` with "You choose the
-price you ask for." The listing form preselects that crop and market and shows the same guidance (`PriceGuidance`, also relative time only). At the bottom: "These forecasts use monthly
-prices published by FEWS NET. A model trained on past prices can be wrong, especially after sudden
-events."
+price you ask for." The listing form preselects that crop and market and shows the same guidance (`PriceGuidance`, also relative time only).
 
 ## Wording rules
 
@@ -213,7 +209,7 @@ events."
   down steps are hatched. No Boost, Drag or "No effect" words.
 - No absolute dates (see "Relative time only").
 
-The texts live in `src/lib/messages.js` (`FORECAST_TEXT`, `PRICE_TEXT`, the freshness constants and
+The texts live in `src/lib/messages.js` (`FORECAST_TEXT`, `PRICE_TEXT` and
 the group descriptions) and `src/lib/forecast.js` (the summary sentence).
 
 ## Explanation chart without Recharts (deviation from the project report)

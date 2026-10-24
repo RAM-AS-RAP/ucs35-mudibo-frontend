@@ -200,7 +200,6 @@ export const MESSAGES = Object.freeze({
 
 /** Heading of a price card (one place to change). */
 export const LABEL_LATEST_PRICE = 'Latest price';
-export const FRESHNESS_PRICES = 'Prices are monthly figures from FEWS NET.';
 export const AXIS_TITLE = 'Months before the latest price';
 
 /** @type {Readonly<Record<string, string>>} */
@@ -241,7 +240,6 @@ export const FORECAST_TEXT = Object.freeze({
   forecastUnusable: 'This forecast cannot be shown right now. Please check again soon.',
   whyTitle: 'Why the model expects this',
   request: 'Request 1 month forecast',
-  requestHint: 'Choose a market and crop, then request the forecast.',
   typicalDescription:
     'The change the model starts from for this market and crop, before looking at the recent prices.',
   chartIntro: 'How the model got from the latest price to the forecast, in KES per kg.',
@@ -265,8 +263,6 @@ export const FORECAST_TEXT = Object.freeze({
   notAvailableShort: 'Not available yet',
   planListing: 'Plan a listing',
   planListingHint: 'You choose the price you ask for.',
-  limitations:
-    'These forecasts use monthly prices published by FEWS NET. A model trained on past prices can be wrong, especially after sudden events.',
   /** @param {string} amount  "KES 40.00" @param {string} when  "in 1 month" */
   caption: (amount, when) =>
     `Expected ${when}, starting from the latest price of ${amount} per kg.`,
