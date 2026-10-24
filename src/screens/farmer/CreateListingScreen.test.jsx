@@ -272,7 +272,9 @@ describe('CreateListingScreen: server errors', () => {
     expect(summary).toHaveTextContent(
       'You already have 50 active listings. Remove or sell one before adding another.',
     );
-    expect(summary).toHaveTextContent('req-limit');
+    // A 4xx is the farmer's to fix, so no support reference is shown (useServerProblem).
+    expect(summary).not.toHaveTextContent('req-limit');
+    expect(summary).not.toHaveTextContent('Reference');
   });
 
   it.each([
