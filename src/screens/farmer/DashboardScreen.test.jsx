@@ -39,11 +39,11 @@ async function openDashboard() {
 }
 
 describe('DashboardScreen', () => {
-  it('greets the farmer and shows the freshness note once', async () => {
+  it('greets the farmer and shows no FEWS NET note', async () => {
     renderFarmer('/farmer');
     setProfile(fixtures.userMe);
     expect(await screen.findByText(`Welcome, ${fixtures.userMe.name}`)).toBeInTheDocument();
-    expect(screen.getAllByText('Prices are monthly figures from FEWS NET.')).toHaveLength(1);
+    expect(screen.queryByText('Prices are monthly figures from FEWS NET.')).not.toBeInTheDocument();
   });
 
   it('issues its requests in parallel: markets, both crops and both counts, then both forecasts', async () => {

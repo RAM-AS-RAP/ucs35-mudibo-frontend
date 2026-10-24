@@ -92,7 +92,24 @@ describe.each(SCREENS)('$name screen', ({ name, path }) => {
   });
 });
 
+/** Click the forecast screen's request button once the selection has loaded. */
+async function requestForecast() {
+  const button = await screen.findByRole('button', { name: 'Request 1 month forecast' });
+  await userEvent.setup().click(button);
+}
+
 describe('forecast states', () => {
+  it('the requested forecast with its explanation open', async () => {
+    await checkState('/farmer/forecast', 'forecast and explanation', async () => {
+      await requestForecast();
+      await userEvent
+        .setup()
+        .click(await screen.findByRole('button', { name: 'Why the model expects this' }));
+      await screen.findByRole('figure');
+      await settled();
+    });
+  });
+
   it('unavailable (no_forecast and stale) on the forecast screen and the dashboard', async () => {
     server.use(
       http.get(apiUrl('/api/v1/forecasts'), ({ request }) =>
@@ -104,6 +121,7 @@ describe('forecast states', () => {
       ),
     );
     const forecast = await checkState('/farmer/forecast', 'unavailable', async () => {
+      await requestForecast();
       await screen.findByText(/A forecast is not available yet/);
       await settled();
     });
@@ -123,6 +141,10 @@ describe('forecast states', () => {
       }),
     );
     await checkState('/farmer/forecast', 'inconsistent explanation', async () => {
+      await requestForecast();
+      await userEvent
+        .setup()
+        .click(await screen.findByRole('button', { name: 'Why the model expects this' }));
       await screen.findByText('The explanation for this forecast is not available right now.');
       await settled();
     });
@@ -138,15 +160,17 @@ describe('forecast states', () => {
 describe('keyboard operation', () => {
   it('moves through a segmented control with the arrow keys', async () => {
     renderFarmer('/farmer/forecast');
+    await requestForecast();
     await screen.findByText(/Expected in 1 month/);
     const user = userEvent.setup();
-    const oneMonth = screen.getByRole('radio', { name: '1 month' });
-    oneMonth.focus();
+    const maize = screen.getByRole('radio', { name: 'Maize' });
+    maize.focus();
     await user.keyboard('{ArrowRight}');
-    const twoMonths = screen.getByRole('radio', { name: '2 months' });
-    expect(twoMonths).toBeChecked();
-    expect(twoMonths).toHaveFocus();
-    expect(await screen.findByText(/Expected in 2 months/)).toBeInTheDocument();
+    const beans = screen.getByRole('radio', { name: 'Beans' });
+    expect(beans).toBeChecked();
+    expect(beans).toHaveFocus();
+    // A new selection clears the forecast until it is requested again.
+    expect(screen.queryByTestId('forecast-headline')).not.toBeInTheDocument();
   });
 
   it('toggles market chips with Space and Enter', async () => {
@@ -161,15 +185,14 @@ describe('keyboard operation', () => {
     expect(kisumu).toHaveAttribute('aria-pressed', 'true');
   });
 
-  it('reaches the horizon cards and the details summaries with Tab', async () => {
+  it('reaches the details summaries with Tab', async () => {
     renderFarmer('/farmer/forecast');
-    await screen.findByText(/Expected in 1 month/);
+    await requestForecast();
     const user = userEvent.setup();
-    const twoCard = screen.getByRole('button', { name: /^In 2 months/ });
-    for (let i = 0; i < 40 && document.activeElement !== twoCard; i += 1) await user.tab();
-    expect(twoCard).toHaveFocus();
-    await user.keyboard('{Enter}');
-    expect(twoCard).toHaveAttribute('aria-current', 'true');
+    await user.click(await screen.findByRole('button', { name: 'Why the model expects this' }));
+    const summary = screen.getByText('How to read this');
+    for (let i = 0; i < 40 && document.activeElement !== summary; i += 1) await user.tab();
+    expect(summary).toHaveFocus();
     // Every "details" element starts with its summary, the native keyboard control.
     for (const details of document.querySelectorAll('details')) {
       expect(details.firstElementChild?.tagName).toBe('SUMMARY');

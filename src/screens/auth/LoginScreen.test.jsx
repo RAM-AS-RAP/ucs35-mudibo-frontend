@@ -115,7 +115,7 @@ describe('LoginScreen', () => {
     await signIn(user, { identifier: 'wanjiku@example.com' });
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent('Incorrect phone number, email or password.');
-    expect(alert).toHaveTextContent('Reference: req-401');
+    expect(alert).not.toHaveTextContent('Reference');
     expect(alert).toHaveFocus();
     expect(screen.getByLabelText('Phone number or email')).toHaveValue('wanjiku@example.com');
     expect(screen.getByLabelText('Password')).toHaveValue('');

@@ -61,6 +61,21 @@ export function formatKESWhole(value) {
   return `KES ${wholeFormat.format(n)}`;
 }
 
+const axisFormat = new Intl.NumberFormat(LOCALE, {
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 2,
+});
+
+/**
+ * A tick label on a KES scale, without the currency: `40`, `40.5`, `1,250`.
+ * @param {number | string | null | undefined} value
+ */
+export function formatAxisNumber(value) {
+  const n = toNumber(value);
+  if (n === null) return PLACEHOLDER;
+  return axisFormat.format(n);
+}
+
 /**
  * Format a KES amount with an explicit sign before the currency: `+KES 1.42`, `-KES 0.48`,
  * `KES 0.00`. Used for approximate effects, never for a charged amount.

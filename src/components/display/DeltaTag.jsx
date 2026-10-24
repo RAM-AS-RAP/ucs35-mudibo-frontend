@@ -54,7 +54,7 @@ const DIRECTION_STYLES = {
  *   direction?: 'rise' | 'fall' | 'flat',
  *   className?: string,
  * }} props
- *   `label` replaces the default word (for example "Boost" or "Drag" on explanation bars).
+ *   `label` replaces the default word.
  *   `suffix` follows the number ("+4.5% vs 1 month ago").
  *   `direction` (from directionOf) picks the style, icon and word instead of the sign of the value.
  */

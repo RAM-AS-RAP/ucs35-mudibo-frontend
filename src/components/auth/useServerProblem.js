@@ -7,6 +7,16 @@ import { useCountdown } from '@/lib/useCountdown';
 export const DEFAULT_RETRY_SECONDS = 60;
 
 /**
+ * The request id only helps support with failures on the server's side. A 4xx (wrong password,
+ * expired code, validation) is the user's to fix, so it gets the message alone.
+ * @param {unknown} error
+ * @returns {string | null}
+ */
+function supportReference(error) {
+  return error instanceof ApiError && error.status >= 500 ? error.requestId : null;
+}
+
+/**
  * @typedef {object} ServerProblem
  * @property {import('./FormErrorSummary').FormProblem[]} problems
  * @property {string | null} reference
@@ -46,7 +56,7 @@ export function useServerProblem({ setError, fieldMap = {}, passwordField, idPre
   const showError = useCallback(
     (error, { messages = {}, text, fieldId } = {}) => {
       const code = error instanceof ApiError ? error.code : 'unknown';
-      const reference = error instanceof ApiError ? error.requestId : null;
+      const reference = supportReference(error);
       /** @type {import('./FormErrorSummary').FormProblem[]} */
       const problems = [];
 

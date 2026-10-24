@@ -22,7 +22,7 @@ afterEach(() => {
 });
 
 /**
- * Answer the forecast route per horizon.
+ * Answer the forecast route per horizon (the screen asks only for one_month).
  * @param {Partial<Record<'one_month' | 'two_month', () => Response>>} byHorizon
  */
 function forecastRoute(byHorizon) {
@@ -43,18 +43,37 @@ function forecastRoute(byHorizon) {
   );
 }
 
-/** Open the forecast screen and wait for its headline price. */
-async function openForecast(path = '/farmer/forecast', text = 'Expected in') {
+/** Open the forecast screen without asking for a forecast. */
+async function openScreen(path = '/farmer/forecast') {
   const utils = renderFarmer(path);
   await screen.findByRole('heading', { name: 'Forecast', level: 1 });
+  await screen.findByRole('combobox', { name: 'Market' });
+  return utils;
+}
+
+/** The request button. */
+const requestButton = () => screen.getByRole('button', { name: 'Request 1 month forecast' });
+/** The button that opens the explanation. */
+const whyButton = () => screen.getByRole('button', { name: 'Why the model expects this' });
+
+/** Open the forecast screen, request the forecast and wait for `text`. */
+async function openForecast(path = '/farmer/forecast', text = 'Expected in') {
+  const utils = await openScreen(path);
+  await userEvent.setup().click(requestButton());
   await screen.findByText(new RegExp(text));
   return utils;
 }
 
-const headline = () => screen.getByTestId('forecast-headline');
-const horizonCard = (name) => screen.getByRole('button', { name: new RegExp(`^${name}`) });
+/** Open the forecast screen, request the forecast and open the explanation. */
+async function openExplanation(path = '/farmer/forecast') {
+  const utils = await openForecast(path);
+  await userEvent.setup().click(whyButton());
+  return utils;
+}
 
-describe('ForecastScreen: headline and horizons', () => {
+const headline = () => screen.getByTestId('forecast-headline');
+
+describe('ForecastScreen: headline and horizon', () => {
   it('shows the formatted headline without float artefacts or an updated time', async () => {
     const { container } = await openForecast();
     const card = headline();
@@ -69,139 +88,172 @@ describe('ForecastScreen: headline and horizons', () => {
     expectNoAbsoluteTime(container, 'success');
   });
 
-  it('requests both horizons in parallel', async () => {
+  it('requests only the 1 month forecast', async () => {
     const recorder = recordRequests();
     await openForecast();
     const horizons = recorder.requests
       .filter((r) => r.path === '/api/v1/forecasts')
-      .map((r) => r.query.horizon)
-      .sort();
-    expect(horizons).toEqual(['one_month', 'two_month']);
+      .map((r) => r.query.horizon);
+    expect(horizons).toEqual(['one_month']);
   });
 
-  it('labels the horizon cards and marks the selected one', async () => {
+  it('offers no 2 month forecast', async () => {
     await openForecast();
-    const one = horizonCard('In 1 month');
-    const two = horizonCard('In 2 months');
-    expect(one).toHaveAttribute('aria-current', 'true');
-    expect(two).not.toHaveAttribute('aria-current');
-    expect(one).toHaveTextContent('KES 42.49');
-    expect(two).toHaveTextContent('KES 38.60');
-    expect(screen.getByRole('radio', { name: '1 month' })).toBeChecked();
-    expect(screen.getByRole('radio', { name: '2 months' })).not.toBeChecked();
+    expect(screen.queryByRole('radio', { name: '2 months' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: 'Forecast for' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Compare the forecasts')).not.toBeInTheDocument();
+    expect(screen.queryByText(/2 months/)).not.toBeInTheDocument();
   });
 
-  it('switching the horizon changes the explanation without refetching', async () => {
+  it('removes a 2 month horizon from the URL and shows the 1 month forecast', async () => {
     const recorder = recordRequests();
-    const { router } = await openForecast();
-    const user = userEvent.setup();
-    await user.click(horizonCard('In 2 months'));
-    await waitFor(() =>
-      expect(headline()).toHaveTextContent(
-        'Expected in 2 months, starting from the latest price of KES 40.00 per kg.',
-      ),
-    );
-    expect(horizonCard('In 2 months')).toHaveAttribute('aria-current', 'true');
-    expect(new URLSearchParams(router.state.location.search).get('horizon')).toBe('two_month');
-    const rows = screen.getAllByRole('listitem').filter((li) => li.dataset.row === 'group');
-    expect(rows.map((li) => li.dataset.effect)).toEqual(['Drag', 'Drag', 'Drag']);
+    const { router } = await openForecast('/farmer/forecast?horizon=two_month');
+    expect(headline()).toHaveTextContent('Expected in 1 month');
+    await waitFor(() => expect(router.state.location.search).toBe(''));
     expect(
       recorder.requests.filter((r) => r.path === '/api/v1/forecasts').map((r) => r.query.horizon),
-    ).toHaveLength(2);
+    ).not.toContain('two_month');
   });
 });
 
-describe('ForecastScreen: recommendation', () => {
-  it('rise', async () => {
+describe('ForecastScreen: request flow', () => {
+  it('asks for no forecast until the farmer clicks the request button', async () => {
+    const recorder = recordRequests();
+    const { container } = await openScreen();
+    expect(requestButton()).toBeEnabled();
+    expect(screen.queryByTestId('forecast-headline')).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Plan a listing' })).not.toBeInTheDocument();
+    expect(recorder.requests.filter((r) => r.path === '/api/v1/forecasts')).toEqual([]);
+    expectNoAbsoluteTime(container, 'before the request');
+
+    await userEvent.setup().click(requestButton());
+    await screen.findByText(/Expected in/);
+    expect(recorder.requests.filter((r) => r.path === '/api/v1/forecasts')).toHaveLength(1);
+  });
+
+  it('keeps the explanation closed until "Why the model expects this" is clicked', async () => {
     await openForecast();
-    const box = screen.getByRole('heading', { name: 'The model expects the price to rise' });
-    const section = box.closest('section');
-    expect(section).toHaveAttribute('data-tone', 'rise');
-    expect(section).toHaveClass('bg-positive-soft');
-    expect(section).toHaveTextContent(
-      'The forecast is for the price to rise by about 6.2% in 1 month.',
+    const why = whyButton();
+    expect(why).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('figure')).not.toBeInTheDocument();
+    const user = userEvent.setup();
+    await user.click(why);
+    expect(why).toHaveAttribute('aria-expanded', 'true');
+    const panel = document.getElementById(
+      /** @type {string} */ (why.getAttribute('aria-controls')),
     );
-    expect(section).toHaveTextContent('Forecasts are estimates and can be wrong.');
+    expect(panel).toContainElement(screen.getByRole('figure'));
+    expect(screen.getByRole('heading', { name: 'Why the model expects this' })).toBeVisible();
+    await user.click(why);
+    expect(why).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('figure')).not.toBeInTheDocument();
+  });
+
+  it('shows no recommendation and no uncertainty box', async () => {
+    const { container } = await openExplanation();
     expect(
-      screen.getByText('Forecasts look ahead from the latest published prices.'),
-    ).toBeInTheDocument();
+      screen.queryByText(/The model expects (the price|little change)/),
+    ).not.toBeInTheDocument();
+    expect(container).not.toHaveTextContent('Forecasts are estimates and can be wrong.');
+    expect(container).not.toHaveTextContent('The decision is yours.');
   });
 
-  it('fall', async () => {
-    await openForecast('/farmer/forecast?horizon=two_month');
-    const section = screen
-      .getByRole('heading', { name: 'The model expects the price to fall' })
-      .closest('section');
-    expect(section).toHaveClass('bg-negative-soft');
-    expect(section).toHaveTextContent(
-      'The forecast is for the price to fall by about 3.5% in 2 months.',
-    );
+  it('clears the forecast and the explanation when the market or crop changes', async () => {
+    const recorder = recordRequests();
+    await openExplanation();
+    const user = userEvent.setup();
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Market' }), 'Kisumu');
+    expect(screen.queryByTestId('forecast-headline')).not.toBeInTheDocument();
+    expect(screen.queryByRole('figure')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Why the model expects this' })).toBeNull();
+    const forecastCalls = () =>
+      recorder.requests.filter((r) => r.path === '/api/v1/forecasts').map((r) => r.query.market);
+    expect(forecastCalls()).toEqual(['Nairobi']);
+
+    await user.click(requestButton());
+    expect(
+      await screen.findByRole('heading', { name: 'Maize in Kisumu, in 1 month' }),
+    ).toBeVisible();
+    await screen.findByText(/Expected in/);
+    expect(whyButton()).toHaveAttribute('aria-expanded', 'false');
+    expect(forecastCalls()).toEqual(['Nairobi', 'Kisumu']);
+
+    await user.click(screen.getByRole('radio', { name: 'Beans' }));
+    expect(screen.queryByTestId('forecast-headline')).not.toBeInTheDocument();
+    expect(forecastCalls()).toEqual(['Nairobi', 'Kisumu']);
   });
 
-  it('flat', async () => {
+  it('shows the direction on the headline for a fall', async () => {
+    forecastRoute({
+      one_month: () =>
+        HttpResponse.json({ ...forecastFor(), predicted_price: 38.6, expected_change_pct: -3.5 }),
+    });
+    await openForecast();
+    expect(headline()).toHaveTextContent('-3.5%Falling');
+  });
+
+  it('shows little change on the headline', async () => {
     forecastRoute({
       one_month: () =>
         HttpResponse.json({ ...forecastFor(), predicted_price: 40.2, expected_change_pct: 0.5 }),
     });
     await openForecast();
-    const section = screen
-      .getByRole('heading', { name: 'The model expects little change' })
-      .closest('section');
-    expect(section).toHaveClass('bg-neutral-bg');
-    expect(section).toHaveTextContent(
-      'Choose when to sell based on your own needs and the offers you receive.',
-    );
     expect(headline()).toHaveTextContent('+0.5%Little change');
   });
 });
 
 describe('ForecastScreen: explanation', () => {
-  it('shows the typical change, Boost and Drag rows with their colours, the total and the note', async () => {
-    await openForecast();
-    const items = screen.getAllByRole('listitem');
-    const typical = items.find((li) => li.dataset.row === 'typical');
-    expect(typical).toHaveTextContent('Typical change for this market and crop: +0.7%');
-    const groups = items.filter((li) => li.dataset.row === 'group');
-    expect(groups.map((li) => li.dataset.effect)).toEqual(['Boost', 'Boost', 'Drag']);
-    expect(groups[0]).toHaveTextContent('Time of year');
-    expect(groups[0]).toHaveTextContent('Boost+3.6%(about +KES 1.42 per kg)');
-    expect(groups[2]).toHaveTextContent('Drag-1.2%(about -KES 0.48 per kg)');
-    expect(groups[0].querySelector('[data-bar]')).toHaveClass(
-      'bg-positive-soft',
-      'border-positive',
-    );
-    expect(groups[2].querySelector('[data-bar]')).toHaveClass(
-      'bg-negative-soft',
-      'border-negative',
-    );
-    expect(groups[0].querySelector('[data-bar]')?.parentElement?.parentElement).toHaveAttribute(
-      'aria-hidden',
-      'true',
-    );
-    const total = items.find((li) => li.dataset.row === 'total');
-    expect(total).toHaveTextContent('Expected change+6.2%, to KES 42.49 per kg');
-    expect(
-      screen.getByText(
-        'The bars show how the model reached this forecast. They are approximate shares and do not add up exactly. They do not prove why prices move.',
-      ),
-    ).toBeInTheDocument();
+  it('walks from the latest price, through signed steps, to the forecast price', async () => {
+    await openExplanation();
+    const figure = screen.getByRole('figure');
+    const items = within(figure).getAllByRole('listitem');
+    expect(items.map((li) => li.dataset.row)).toEqual([
+      'start',
+      'step',
+      'step',
+      'step',
+      'step',
+      'end',
+    ]);
+    expect(items[0]).toHaveTextContent('Latest priceKES 40.00');
+    expect(items[1]).toHaveTextContent('Typical change for this market and crop+KES 0.29');
+    expect(items[2]).toHaveTextContent('Time of year+KES 1.45');
+    expect(items[3]).toHaveTextContent('Recent price momentum+KES 1.25');
+    expect(items[4]).toHaveTextContent('Price compared with its recent average-KES 0.50');
+    expect(items.map((li) => li.dataset.direction)).toEqual([
+      undefined,
+      'up',
+      'up',
+      'up',
+      'down',
+      undefined,
+    ]);
+    expect(items[5]).toHaveTextContent('Forecast in 1 monthKES 42.49');
+    expect(items[2].querySelector('[data-bar]')).toHaveClass('bg-positive-soft', 'border-positive');
+    expect(items[4].querySelector('[data-bar]')).toHaveClass('bar-hatch-down', 'border-negative');
+    expect(items[2].querySelector('[data-bar]')?.closest('[aria-hidden="true"]')).not.toBeNull();
+    expect(figure).not.toHaveTextContent(/Boost|Drag|No effect/);
+    expect(screen.queryByText(/do not add up exactly/)).not.toBeInTheDocument();
   });
 
-  it('has a text alternative and the numbers table', async () => {
-    await openForecast();
+  it('has a text alternative, the reading guide and the numbers table', async () => {
+    await openExplanation();
     const figure = screen.getByRole('figure');
     expect(figure).toHaveAccessibleName(
-      'Forecast for 1 month ahead: KES 42.49 per kg, up 6.2% from the latest price of KES 40.00. Time of year adds about KES 1.42, recent price momentum adds about KES 1.22, and price compared with its recent average takes away about KES 0.48.',
+      'Forecast for 1 month ahead: KES 42.49 per kg, up 6.2% from the latest price of KES 40.00. Time of year adds about KES 1.45, recent price momentum adds about KES 1.25, and price compared with its recent average takes away about KES 0.50.',
     );
     const table = screen.getByRole('table', { name: 'How the model reached the forecast' });
-    const cell = within(table).getByRole('rowheader', { name: 'Time of year (Boost)' });
+    const cell = within(table).getByRole('rowheader', { name: 'Time of year' });
     // Closed until the "See the numbers" details element is opened.
     expect(cell).not.toBeVisible();
-    const summary = within(screen.getByRole('figure').parentElement).getByText('See the numbers');
+    const summary = within(figure.parentElement).getByText('See the numbers');
     await userEvent.setup().click(summary);
     expect(summary.closest('details')).toHaveAttribute('open');
     expect(cell).toBeVisible();
+    const row = cell.closest('tr');
+    expect(row).toHaveTextContent('Time of year+3.6%+KES 1.45KES 41.74');
     expect(screen.getByText('How to read this')).toBeInTheDocument();
+    expect(screen.getByText('What each part means')).toBeInTheDocument();
   });
 
   it('draws the bars when the headline log change is rounded to 2 decimals', async () => {
@@ -213,7 +265,7 @@ describe('ForecastScreen: explanation', () => {
         return HttpResponse.json(forecast);
       },
     });
-    await openForecast();
+    await openExplanation();
     expect(headline()).toHaveTextContent('KES 42.49');
     expect(screen.getByRole('figure')).toBeInTheDocument();
     expect(
@@ -229,19 +281,19 @@ describe('ForecastScreen: explanation', () => {
         return HttpResponse.json(forecast);
       },
     });
-    const { container } = await openForecast();
+    const { container } = await openExplanation();
     expect(headline()).toHaveTextContent('KES 42.49');
     expect(
       screen.getByText('The explanation for this forecast is not available right now.'),
     ).toBeInTheDocument();
     expect(screen.queryByRole('figure')).not.toBeInTheDocument();
-    expect(screen.queryByText('Boost')).not.toBeInTheDocument();
+    expect(screen.queryByText('Latest price')).not.toBeInTheDocument();
     expectNoAbsoluteTime(container, 'malformed explanation');
   });
 });
 
 describe('ForecastScreen: unavailable', () => {
-  it('no_forecast: the message, the current price and the other horizon', async () => {
+  it('no_forecast: the message and the current price', async () => {
     forecastRoute({ one_month: () => forecastUnavailableResponse('no_forecast') });
     const { container } = await openForecast('/farmer/forecast', 'A forecast is not available');
     expect(
@@ -254,21 +306,19 @@ describe('ForecastScreen: unavailable', () => {
       'href',
       '/farmer/prices?crop=maize',
     );
-    expect(horizonCard('In 1 month')).toHaveTextContent('Not available yet');
-    expect(horizonCard('In 2 months')).toHaveTextContent('KES 38.60');
     expect(screen.queryByText(/The model expects/)).not.toBeInTheDocument();
     expectNoAbsoluteTime(container, 'unavailable');
   });
 
   it('stale: the out of date message', async () => {
-    forecastRoute({ two_month: () => forecastUnavailableResponse('stale') });
-    await openForecast('/farmer/forecast?horizon=two_month', 'out of date');
+    forecastRoute({ one_month: () => forecastUnavailableResponse('stale') });
+    await openForecast('/farmer/forecast', 'out of date');
     expect(
       screen.getByText(
         'The latest forecast for Nairobi maize is out of date because new prices have not been published yet. Please check again soon.',
       ),
     ).toBeInTheDocument();
-    expect(horizonCard('In 1 month')).toHaveTextContent('KES 42.49');
+    expect(screen.queryByTestId('forecast-headline')).not.toBeInTheDocument();
   });
 
   it('a market without data shows the error with its reference', async () => {
@@ -283,25 +333,21 @@ describe('ForecastScreen: unavailable', () => {
 
 describe('ForecastScreen: URL, next step and session', () => {
   it('initialises the controls from the URL', async () => {
-    await openForecast('/farmer/forecast?market=Kisumu&crop=beans&horizon=two_month');
+    await openForecast('/farmer/forecast?market=Kisumu&crop=beans');
     expect(screen.getByRole('combobox', { name: 'Market' })).toHaveValue('Kisumu');
     expect(screen.getByRole('radio', { name: 'Beans' })).toBeChecked();
-    expect(screen.getByRole('radio', { name: '2 months' })).toBeChecked();
-    expect(screen.getByRole('heading', { name: 'Beans in Kisumu, in 2 months' })).toBeVisible();
+    expect(screen.getByRole('heading', { name: 'Beans in Kisumu, in 1 month' })).toBeVisible();
   });
 
   it('falls back to the defaults for invalid parameters', async () => {
-    const { router } = await openForecast(
-      '/farmer/forecast?market=Atlantis&crop=rice&horizon=soon',
-    );
+    const { router } = await openScreen('/farmer/forecast?market=Atlantis&crop=rice&horizon=soon');
     expect(screen.getByRole('combobox', { name: 'Market' })).toHaveValue('Nairobi');
     expect(screen.getByRole('radio', { name: 'Maize' })).toBeChecked();
-    expect(screen.getByRole('radio', { name: '1 month' })).toBeChecked();
     await waitFor(() => expect(router.state.location.search).toBe(''));
   });
 
   it('updates the URL from the controls', async () => {
-    const { router } = await openForecast();
+    const { router } = await openScreen();
     const user = userEvent.setup();
     await user.selectOptions(screen.getByRole('combobox', { name: 'Market' }), 'Kisumu');
     await user.click(screen.getByRole('radio', { name: 'Beans' }));
@@ -311,6 +357,7 @@ describe('ForecastScreen: URL, next step and session', () => {
         crop: 'beans',
       }),
     );
+    await user.click(requestButton());
     expect(
       await screen.findByRole('heading', { name: 'Beans in Kisumu, in 1 month' }),
     ).toBeVisible();
@@ -323,18 +370,15 @@ describe('ForecastScreen: URL, next step and session', () => {
       '/farmer/listings/new?crop=beans&market=Kisumu',
     );
     expect(screen.getByText('You choose the price you ask for.')).toBeInTheDocument();
-    expect(
-      screen.getByText(
-        'These forecasts use monthly prices published by FEWS NET. A model trained on past prices can be wrong, especially after sudden events.',
-      ),
-    ).toBeInTheDocument();
+    expect(screen.queryByText(/These forecasts use monthly prices/)).not.toBeInTheDocument();
   });
 
   it('a 401 clears the session and goes to the login screen', async () => {
     server.use(
       http.get(apiUrl('/api/v1/forecasts'), () => errorResponse(401, 'invalid_credentials')),
     );
-    const { router } = renderFarmer('/farmer/forecast');
+    const { router } = await openScreen();
+    await userEvent.setup().click(requestButton());
     await waitFor(() => expect(router.state.location.pathname).toBe('/login'));
     expect(getSession()).toBeNull();
   });

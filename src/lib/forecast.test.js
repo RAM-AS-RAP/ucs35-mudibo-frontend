@@ -5,10 +5,12 @@ import {
   bagPriceText,
   buildMonthAxis,
   directionOf,
-  explainabilityRows,
+  axisPercent,
+  explainabilityChart,
   kgToBagPrice,
+  MIN_AXIS_SHARE,
+  stepAmountText,
   NEUTRAL_THRESHOLD_PCT,
-  recommendationFor,
   summaryText,
 } from './forecast';
 import { FORECAST_TEXT, groupDescription } from './messages';
@@ -63,109 +65,121 @@ describe('kgToBagPrice', () => {
   });
 });
 
-describe('explainabilityRows', () => {
-  const { rows, typical } = explainabilityRows(shap);
+describe('explainabilityChart', () => {
+  const chart = explainabilityChart(shap);
 
-  it('sorts by absolute log contribution, largest first', () => {
-    expect(rows.map((r) => r.label)).toEqual([
+  it('starts at the latest price and ends at the forecast price', () => {
+    expect(chart.start).toBe(40);
+    expect(chart.end).toBe(42.49);
+    expect(chart.shared).toBe(true);
+  });
+
+  it('puts the typical change first, then the groups by absolute log contribution', () => {
+    expect(chart.steps.map((s) => s.label)).toEqual([
+      'Typical change for this market and crop',
       'Time of year',
       'Recent price momentum',
       'Price compared with its recent average',
     ]);
+    expect(chart.steps.map((s) => s.kind)).toEqual(['typical', 'group', 'group', 'group']);
+    expect(chart.steps[0].description).toBe(FORECAST_TEXT.typicalDescription);
+    expect(chart.steps[1].description).toBe(groupDescription('Time of year'));
+    expect(chart.steps.map((s) => s.pct)).toEqual([0.7, 3.56, 3.05, -1.19]);
   });
 
-  it('gives each row its word, description, pct and KES impact', () => {
-    expect(rows.map((r) => r.word)).toEqual(['Boost', 'Boost', 'Drag']);
-    expect(rows.map((r) => r.kesImpact)).toEqual([1.42, 1.22, -0.48]);
-    expect(rows.map((r) => r.pct)).toEqual([3.56, 3.05, -1.19]);
-    expect(rows[0].description).toBe(groupDescription('Time of year'));
+  it('shares out the KES change by log contribution so the steps land on the forecast', () => {
+    expect(chart.steps.map((s) => s.kes)).toEqual([0.29, 1.45, 1.25, -0.5]);
+    expect(chart.steps.map((s) => s.up)).toEqual([true, true, true, false]);
+    expect(chart.steps.map((s) => [s.from, s.to])).toEqual([
+      [40, 40.29],
+      [40.29, 41.74],
+      [41.74, 42.99],
+      [42.99, 42.49],
+    ]);
+    expect(chart.steps[chart.steps.length - 1].to).toBe(chart.end);
   });
 
-  it('keeps every bar fraction between 0 and 1 with the largest at 1', () => {
-    const fractions = [...rows.map((r) => r.barFraction), typical.barFraction];
-    for (const f of fractions) {
-      expect(f).toBeGreaterThanOrEqual(0);
-      expect(f).toBeLessThanOrEqual(1);
-    }
-    expect(Math.max(...fractions)).toBe(1);
-    expect(rows[0].barFraction).toBe(1);
-    expect(typical.barFraction).toBeCloseTo(0.7 / 3.56, 10);
+  it('lands exactly on a falling forecast too', () => {
+    const two = /** @type {import('./shapSchema').ShapValues} */ (
+      parseShap(fixtures.forecastTwoMonth.shap_values)
+    );
+    const fall = explainabilityChart(two);
+    expect(fall.steps.map((s) => s.kes)).toEqual([0.16, -0.98, -0.4, -0.18]);
+    expect(fall.steps.at(-1)?.to).toBe(38.6);
   });
 
-  it('returns the typical change separately', () => {
-    expect(typical).toEqual({
-      label: 'Typical change for this market and crop',
-      description: FORECAST_TEXT.typicalDescription,
-      pct: 0.7,
-      barFraction: expect.any(Number),
-    });
-  });
-
-  it('uses "No effect" for a neutral group and the typical change when it is largest', () => {
+  it('never has a neutral step: a zero contribution takes the sign of its percentage or direction', () => {
     const custom = {
       ...shap,
-      typical_change: { ...shap.typical_change, pct_value: -5 },
-      groups: [{ label: 'Other', log_contribution: 0, pct_contribution: 0, direction: 'neutral' }],
+      groups: [
+        ...shap.groups,
+        { label: 'Other', log_contribution: 0, pct_contribution: 0, direction: 'neutral' },
+        { label: 'Down', log_contribution: 0, pct_contribution: -0.001, direction: 'neutral' },
+      ],
     };
-    const result = explainabilityRows(/** @type {any} */ (custom));
-    expect(result.rows[0].word).toBe('No effect');
-    expect(result.rows[0].barFraction).toBe(0);
-    expect(result.typical.barFraction).toBe(1);
-    expect(result.rows[0].description).toBe('Another pattern the model found in past prices.');
+    const steps = explainabilityChart(/** @type {any} */ (custom)).steps;
+    const other = steps.find((s) => s.label === 'Other');
+    const down = steps.find((s) => s.label === 'Down');
+    expect(other?.up).toBe(true);
+    expect(down?.up).toBe(false);
+    expect(stepAmountText(/** @type {any} */ (other))).toBe('+KES 0.00');
+    expect(stepAmountText(/** @type {any} */ (down))).toBe('-KES 0.00');
+  });
+
+  it('keeps each part its own amount when the explanation disagrees with the headline', () => {
+    const custom = { ...shap, predicted_price: 60 };
+    const result = explainabilityChart(/** @type {any} */ (custom));
+    expect(result.shared).toBe(false);
+    expect(result.steps.map((s) => s.kes)).toEqual([0.28, 1.42, 1.22, -0.48]);
+  });
+
+  it('zooms the scale to the steps, with ticks inside it', () => {
+    const { axis } = chart;
+    expect(axis.min).toBeLessThan(40);
+    expect(axis.min).toBeGreaterThan(39.5);
+    expect(axis.max).toBeGreaterThan(42.99);
+    expect(axis.max).toBeLessThan(43.5);
+    expect(axis.ticks).toEqual([40, 41, 42, 43]);
+    expect(axisPercent(axis, axis.min)).toBe(0);
+    expect(axisPercent(axis, axis.max)).toBe(100);
+  });
+
+  it('keeps a tiny change from filling the scale', () => {
+    const tiny = {
+      ...shap,
+      predicted_price: 40.02,
+      typical_change: { ...shap.typical_change, log_value: 0.0005, pct_value: 0.05 },
+      groups: [
+        { label: 'Time of year', log_contribution: 0, pct_contribution: 0, direction: 'neutral' },
+      ],
+    };
+    const { axis } = explainabilityChart(/** @type {any} */ (tiny));
+    expect(axis.max - axis.min).toBeGreaterThanOrEqual(40 * MIN_AXIS_SHARE);
   });
 });
 
-describe('recommendationFor', () => {
-  it('rise', () => {
-    expect(recommendationFor(6.18, 'one_month')).toEqual({
-      tone: 'rise',
-      title: 'The model expects the price to rise',
-      body: 'The forecast is for the price to rise by about 6.2% in 1 month. Waiting may give a better price, but only if you can keep your produce safely and do not need the money sooner. The decision is yours.',
-    });
-  });
-
-  it('fall', () => {
-    expect(recommendationFor(-3.5, 'two_month')).toEqual({
-      tone: 'fall',
-      title: 'The model expects the price to fall',
-      body: 'The forecast is for the price to fall by about 3.5% in 2 months. Selling sooner may protect your income, if you have a buyer. The decision is yours.',
-    });
-  });
-
-  it('flat', () => {
-    expect(recommendationFor(0.4, 'one_month')).toEqual({
-      tone: 'flat',
-      title: 'The model expects little change',
-      body: 'Choose when to sell based on your own needs and the offers you receive.',
-    });
-  });
-
-  it('never says "will" and keeps the uncertainty line separate', () => {
-    for (const pct of [6.18, -3.5, 0]) {
-      const { title, body } = recommendationFor(pct, 'one_month');
-      expect(`${title} ${body}`).not.toMatch(/\bwill\b/i);
-    }
-    expect(FORECAST_TEXT.uncertainty).toBe(
-      'Forecasts are estimates and can be wrong. Weather, supply, policy and local conditions can change prices in ways the model cannot see.',
-    );
+describe('stepAmountText', () => {
+  it('signs by direction', () => {
+    expect(stepAmountText({ up: true, kes: 1.45 })).toBe('+KES 1.45');
+    expect(stepAmountText({ up: false, kes: -0.5 })).toBe('-KES 0.50');
   });
 });
 
 describe('summaryText', () => {
   it('matches the sample exactly', () => {
-    const { rows } = explainabilityRows(shap);
-    expect(summaryText(sample, rows)).toBe(
-      'Forecast for 1 month ahead: KES 42.49 per kg, up 6.2% from the latest price of KES 40.00. Time of year adds about KES 1.42, recent price momentum adds about KES 1.22, and price compared with its recent average takes away about KES 0.48.',
+    const { steps } = explainabilityChart(shap);
+    expect(summaryText(sample, steps)).toBe(
+      'Forecast for 1 month ahead: KES 42.49 per kg, up 6.2% from the latest price of KES 40.00. Time of year adds about KES 1.45, recent price momentum adds about KES 1.25, and price compared with its recent average takes away about KES 0.50.',
     );
   });
 
   it('describes a fall over two months', () => {
     const two = fixtures.forecastTwoMonth;
-    const { rows } = explainabilityRows(
+    const { steps } = explainabilityChart(
       /** @type {import('./shapSchema').ShapValues} */ (parseShap(two.shap_values)),
     );
-    expect(summaryText(two, rows)).toBe(
-      'Forecast for 2 months ahead: KES 38.60 per kg, down 3.5% from the latest price of KES 40.00. Time of year takes away about KES 0.99, recent price momentum takes away about KES 0.40, and price compared with its recent average takes away about KES 0.18.',
+    expect(summaryText(two, steps)).toBe(
+      'Forecast for 2 months ahead: KES 38.60 per kg, down 3.5% from the latest price of KES 40.00. Time of year takes away about KES 0.98, recent price momentum takes away about KES 0.40, and price compared with its recent average takes away about KES 0.18.',
     );
   });
 });

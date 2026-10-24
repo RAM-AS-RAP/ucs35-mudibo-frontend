@@ -56,9 +56,9 @@ redirect rules: [docs/auth.md](docs/auth.md).
 - **Prices** (`/farmer/prices`): a price card per market (price per kg, about the price of a 90 kg bag,
   change, and a "1 month older" tag when a market's latest price lags), and a price trend chart for
   the selected markets over 12, 24 or up to 60 months, with a data table as its text alternative.
-- **Forecast** (`/farmer/forecast`): the predicted price in 1 and 2 months for a market and crop, a
-  recommendation that leaves the decision to the farmer, and "Why the model expects this": the
-  model's SHAP explanation as Boost and Drag bars, shown whenever the backend's explanation has the expected shape.
+- **Forecast** (`/farmer/forecast`): the farmer picks a market and crop and clicks "Request 1 month
+  forecast" (nothing is fetched before that) to see the predicted price 1 month ahead; the "Why the
+  model expects this" button then opens the model's SHAP explanation as a price staircase from the latest price to the forecast (green steps up, hatched red steps down), shown whenever the backend's explanation has the expected shape.
   A "Plan a listing" button leads to the listing form with the crop and market filled in.
 - These screens never show calendar dates: time is counted in months before the latest published
   price ("3 months ago", "In 1 month"). Selections are kept in the URL so a view can be bookmarked.

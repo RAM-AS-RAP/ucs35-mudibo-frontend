@@ -1,139 +1,210 @@
 import { useId } from 'react';
-import { ArrowDown, ArrowUp, Minus } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { formatKES, formatPct, formatSignedKES } from '@/lib/format';
+import { Triangle } from 'lucide-react';
+import { axisPercent, stepAmountText } from '@/lib/forecast';
+import { formatAxisNumber, formatKES } from '@/lib/format';
 import { FORECAST_TEXT } from '@/lib/messages';
 import { cn } from '@/lib/utils';
 
-/**
- * Bar styles by effect. The word (Boost, Drag, No effect) and the sign are always shown next to
- * the colour.
+/** @typedef {import('@/lib/forecast').ExplainabilityChart} ExplainabilityChart */
+/** @typedef {import('@/lib/forecast').ExplainabilityStep} ExplainabilityStep */
+
+/*
+ * Every row shares one grid so the tracks line up: on phones the name and amount share a line and
+ * the track sits underneath at full width; from `sm` the name, track and amount are side by side.
  */
-const EFFECT = {
-  increases: {
-    Icon: ArrowUp,
-    bar: 'border-positive bg-positive-soft',
-    text: 'text-positive-text',
-  },
-  decreases: {
-    Icon: ArrowDown,
-    bar: 'border-negative bg-negative-soft',
-    text: 'text-negative-text',
-  },
-  neutral: {
-    Icon: Minus,
-    bar: 'border-neutral-text bg-neutral-bg',
-    text: 'text-neutral-text',
-  },
+const ROW =
+  'grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 py-1.5 sm:grid-cols-[10rem_minmax(0,1fr)_7rem] md:grid-cols-[13rem_minmax(0,1fr)_7.5rem]';
+const NAME = 'order-1 min-w-0';
+const AMOUNT = 'order-2 whitespace-nowrap text-right tabular-nums sm:order-3';
+const TRACK =
+  'relative order-3 col-span-2 h-6 sm:order-2 sm:col-span-1 sm:-my-1.5 sm:h-auto sm:min-h-9 sm:self-stretch';
+
+/** Up steps: solid green. Down steps: hatched red. The triangle and the sign always go with them. */
+const DIRECTION = {
+  up: { bar: 'border-positive bg-positive-soft', text: 'text-positive-text', icon: '' },
+  down: { bar: 'border-negative bar-hatch-down', text: 'text-negative-text', icon: 'rotate-180' },
 };
 
+/** @param {number} percent */
+const at = (percent) => ({ left: `${percent}%` });
+
 /**
- * A diverging bar: negative values grow left from the centre line, positive ones right.
- * Decorative only (`aria-hidden`); the numbers are in the row's text.
- * @param {{ fraction: number, side: 'left' | 'right', className: string }} props
+ * Faint vertical lines at the tick marks, behind the bars.
+ * @param {{ ticks: number[], axis: ExplainabilityChart['axis'] }} props
  */
-function Bar({ fraction, side, className }) {
-  // A tiny visible stub for values that round to almost nothing.
-  const width = `${Math.max(2, Math.round(fraction * 100))}%`;
-  const bar = (
-    <div data-bar="" className={cn('h-4 rounded-sm border', className)} style={{ width }} />
-  );
+function GridLines({ ticks, axis }) {
+  return ticks.map((tick) => (
+    <span
+      key={tick}
+      className="absolute inset-y-0 border-l border-border"
+      style={at(axisPercent(axis, tick))}
+    />
+  ));
+}
+
+/**
+ * A dotted line joining one step to the next: from the top of the row to the bar, or from the bar
+ * to the bottom of the row.
+ * @param {{ percent: number, half: 'top' | 'bottom' }} props
+ */
+function Connector({ percent, half }) {
   return (
-    <div aria-hidden="true" className="grid grid-cols-2">
-      <div className="flex justify-end border-r-2 border-text-secondary pr-px">
-        {side === 'left' && bar}
+    <span
+      data-connector={half}
+      className={cn(
+        'absolute border-l-2 border-dotted border-text-secondary',
+        half === 'top' ? 'top-0 bottom-1/2' : 'top-1/2 bottom-0',
+      )}
+      style={at(percent)}
+    />
+  );
+}
+
+/** @param {{ percent: number }} props */
+function Dot({ percent }) {
+  return (
+    <span
+      data-dot=""
+      className="absolute top-1/2 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-text"
+      style={at(percent)}
+    />
+  );
+}
+
+/**
+ * Centres a tick label on its mark, except near the edges, where it stays inside the track.
+ * @param {number} percent
+ */
+function tickShift(percent) {
+  if (percent < 6) return 'translate-x-0';
+  if (percent > 94) return '-translate-x-full';
+  return '-translate-x-1/2';
+}
+
+/**
+ * The tick labels above the tracks, in KES (decorative; the amounts are in the rows' text).
+ * @param {{ axis: ExplainabilityChart['axis'] }} props
+ */
+function Scale({ axis }) {
+  return (
+    <div aria-hidden="true" className={cn(ROW, 'py-0')}>
+      <span className="hidden sm:order-1 sm:block" />
+      <div className="relative order-3 col-span-2 h-5 text-xs text-text-secondary sm:order-2 sm:col-span-1">
+        {axis.ticks.map((tick) => {
+          const percent = axisPercent(axis, tick);
+          return (
+            <span
+              key={tick}
+              data-tick={tick}
+              className={cn('absolute top-0 tabular-nums', tickShift(percent))}
+              style={at(percent)}
+            >
+              {formatAxisNumber(tick)}
+            </span>
+          );
+        })}
       </div>
-      <div className="flex justify-start pl-px">{side === 'right' && bar}</div>
+      <span className="hidden sm:order-3 sm:block" />
     </div>
   );
 }
 
 /**
- * The explanation of a forecast as an accessible list (a `ul` of rows), fully readable by screen
- * readers and responsive down to 360 px. Bars are `div`s whose width comes from `barFraction`.
- * Not drawn with Recharts on purpose (docs/forecast-display.md). Only call this with an
- * explanation that passed parseShap().
+ * The explanation of a forecast as a price staircase: the latest price, one step per part of the
+ * model (green with ▲ for up, hatched red with ▼ for down, always signed), and the forecast price.
+ * It is an accessible list: every row's name and amount are text, and the tracks are decorative
+ * (`aria-hidden`). Built from `div`s, not Recharts (docs/forecast-display.md). Only call this with
+ * the result of explainabilityChart().
  * @param {{
- *   rows: import('@/lib/forecast').ExplainabilityRow[],
- *   typical: { label: string, description: string, pct: number, barFraction: number },
- *   expectedChangePct: number,
- *   predictedPrice: number,
+ *   chart: ExplainabilityChart,
+ *   when: string,
  *   summary: string,
  *   className?: string,
- * }} props
+ * }} props  `when` is the horizon in words, for example "in 1 month".
  */
-export function ExplainabilityBars({
-  rows,
-  typical,
-  expectedChangePct,
-  predictedPrice,
-  summary,
-  className,
-}) {
+export function ExplainabilityBars({ chart, when, summary, className }) {
   const captionId = useId();
+  const { axis, steps, start, end } = chart;
+  const startAt = axisPercent(axis, start);
+  const endAt = axisPercent(axis, end);
+  const lastTo = steps.length > 0 ? steps[steps.length - 1].to : start;
+
   return (
-    <figure aria-labelledby={captionId} className={cn('m-0 flex flex-col gap-3', className)}>
+    <figure aria-labelledby={captionId} className={cn('m-0 flex flex-col gap-2', className)}>
       <figcaption id={captionId} className="sr-only">
         {summary}
       </figcaption>
-      <ul className="flex flex-col gap-4">
-        <li data-row="typical" className="flex flex-col gap-1.5">
-          <Badge variant="neutral" className="h-auto whitespace-normal">
-            <Minus aria-hidden="true" />
-            <span>
-              {typical.label}: {formatPct(typical.pct)}
-            </span>
-          </Badge>
-          <p className="text-sm text-text-secondary">{typical.description}</p>
-          <Bar
-            fraction={typical.barFraction}
-            side={typical.pct < 0 ? 'left' : 'right'}
-            className={EFFECT.neutral.bar}
-          />
+      <p className="text-sm text-text-secondary">{FORECAST_TEXT.chartIntro}</p>
+      <Scale axis={axis} />
+      <ul className="flex flex-col">
+        <li data-row="start" className={ROW}>
+          <span className={cn(NAME, 'font-medium text-text')}>{FORECAST_TEXT.startLabel}</span>
+          <span className={cn(AMOUNT, 'font-medium text-text')}>{formatKES(start)}</span>
+          <div aria-hidden="true" className={TRACK}>
+            <GridLines ticks={axis.ticks} axis={axis} />
+            <Connector percent={startAt} half="bottom" />
+            <Dot percent={startAt} />
+          </div>
         </li>
-        {rows.map((row) => {
-          const effect = EFFECT[row.direction];
-          const { Icon } = effect;
+
+        {steps.map((step) => {
+          const style = step.up ? DIRECTION.up : DIRECTION.down;
+          const fromAt = axisPercent(axis, step.from);
+          const toAt = axisPercent(axis, step.to);
           return (
             <li
-              key={row.label}
-              data-row="group"
-              data-effect={row.word}
-              className="flex flex-col gap-1.5"
+              key={step.id}
+              data-row="step"
+              data-kind={step.kind}
+              data-direction={step.up ? 'up' : 'down'}
+              className={ROW}
             >
-              <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-                <span className="font-medium text-text">{row.label}</span>
+              <span className={cn(NAME, 'flex items-start gap-1.5')}>
+                <Triangle
+                  aria-hidden="true"
+                  className={cn('mt-1.5 size-3 shrink-0 fill-current', style.text, style.icon)}
+                />
+                <span className="font-medium text-text">{step.label}</span>
+              </span>
+              <span className={cn(AMOUNT, 'font-medium', style.text)}>{stepAmountText(step)}</span>
+              <div aria-hidden="true" className={TRACK}>
+                <GridLines ticks={axis.ticks} axis={axis} />
+                <Connector percent={fromAt} half="top" />
+                <Connector percent={toAt} half="bottom" />
                 <span
+                  data-bar=""
                   className={cn(
-                    'inline-flex flex-wrap items-center gap-x-1.5 font-medium',
-                    effect.text,
+                    'absolute top-1/2 h-4 min-w-2 -translate-y-1/2 rounded-sm border',
+                    style.bar,
                   )}
-                >
-                  <Icon aria-hidden="true" className="size-4 shrink-0" />
-                  <span>{row.word}</span>
-                  <span className="tabular-nums">{formatPct(row.pct)}</span>
-                  <span className="text-sm text-text-secondary">
-                    (about {formatSignedKES(row.kesImpact)} per kg)
-                  </span>
-                </span>
+                  style={{
+                    left: `${Math.min(fromAt, toAt)}%`,
+                    width: `${Math.abs(toAt - fromAt)}%`,
+                  }}
+                />
               </div>
-              <p className="text-sm text-text-secondary">{row.description}</p>
-              <Bar
-                fraction={row.barFraction}
-                side={row.pct < 0 ? 'left' : 'right'}
-                className={effect.bar}
-              />
             </li>
           );
         })}
-        <li
-          data-row="total"
-          className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 border-t border-border pt-3"
-        >
-          <span className="font-semibold text-text">{FORECAST_TEXT.totalLabel}</span>
-          <span className="font-semibold text-text tabular-nums">
-            {formatPct(expectedChangePct)}, to {formatKES(predictedPrice)} per kg
+
+        <li data-row="end" className={cn(ROW, 'mt-1 border-t border-border pt-2.5')}>
+          <span className={cn(NAME, 'font-semibold text-text')}>
+            {FORECAST_TEXT.forecastLabel(when)}
           </span>
+          <span className={cn(AMOUNT, 'font-semibold text-text')}>{formatKES(end)}</span>
+          <div aria-hidden="true" className={TRACK}>
+            <GridLines ticks={axis.ticks} axis={axis} />
+            <Connector percent={axisPercent(axis, lastTo)} half="top" />
+            <span
+              data-line=""
+              className="absolute top-1/2 h-0.5 -translate-y-1/2 bg-text"
+              style={{
+                left: `${Math.min(startAt, endAt)}%`,
+                width: `${Math.abs(endAt - startAt)}%`,
+              }}
+            />
+            <Dot percent={endAt} />
+          </div>
         </li>
       </ul>
     </figure>

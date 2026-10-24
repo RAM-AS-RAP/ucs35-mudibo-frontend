@@ -1,17 +1,21 @@
-import { useEffect, useId, useMemo } from 'react';
+import { useEffect, useId, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
-import { AlertCircle, ArrowRight, CalendarClock, PackagePlus } from 'lucide-react';
+import {
+  AlertCircle,
+  ArrowRight,
+  CalendarClock,
+  ChevronDown,
+  ChartLine,
+  PackagePlus,
+} from 'lucide-react';
 import { useCurrentPrices, useForecast, useMarkets } from '@/api/queries';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
 import { DataTable } from '@/components/display/DataTable';
 import { DeltaTag } from '@/components/display/DeltaTag';
 import { ExplainabilityBars } from '@/components/display/ExplainabilityBars';
-import { FreshnessNote } from '@/components/display/FreshnessNote';
 import { PageHeader } from '@/components/display/PageHeader';
 import { PriceCard } from '@/components/display/PriceCard';
-import { Recommendation } from '@/components/display/Recommendation';
 import { Segmented } from '@/components/display/Segmented';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { ErrorState } from '@/components/feedback/ErrorState';
@@ -19,33 +23,23 @@ import { LoadingState } from '@/components/feedback/LoadingState';
 import {
   bagPriceText,
   directionOf,
-  explainabilityRows,
-  recommendationFor,
+  explainabilityChart,
+  stepAmountText,
   summaryText,
 } from '@/lib/forecast';
-import { formatKES, formatPct, formatSignedKES } from '@/lib/format';
-import { cropLabel, FORECAST_TEXT, FRESHNESS_FORECAST, PRICE_TEXT } from '@/lib/messages';
-import { horizonMonths, inLabel, inLabelCap } from '@/lib/relativeTime';
+import { formatKES, formatPct } from '@/lib/format';
+import { cropLabel, FORECAST_TEXT, PRICE_TEXT } from '@/lib/messages';
+import { horizonMonths, inLabel } from '@/lib/relativeTime';
 import { isForecastUsable, parseShap } from '@/lib/shapSchema';
 import { monthsOlderByMarket } from '@/lib/trends';
 import { usePageTitle } from '@/lib/usePageTitle';
-import { cn } from '@/lib/utils';
-import {
-  cleanParams,
-  CROP_OPTIONS,
-  CROPS,
-  DEFAULT_CROP,
-  DEFAULT_HORIZON,
-  HORIZON_OPTIONS,
-  HORIZONS,
-  pickValue,
-} from './params';
+import { cleanParams, CROP_OPTIONS, CROPS, DEFAULT_CROP, HORIZON, pickValue } from './params';
 
 /** @typedef {import('@/api/endpoints/forecasts').Forecast} Forecast */
 /** @typedef {ReturnType<typeof useForecast>} ForecastQuery */
 
 /**
- * The selected horizon's forecast, or why it cannot be shown.
+ * The forecast, or why it cannot be shown.
  * @param {ForecastQuery} query
  * @returns {{ kind: 'loading' } | { kind: 'error', error: unknown } | { kind: 'unavailable', reason: 'no_forecast' | 'stale' } | { kind: 'unusable' } | { kind: 'ok', forecast: Forecast }}
  */
@@ -138,55 +132,8 @@ function Headline({ forecast }) {
 }
 
 /**
- * One card of the horizon strip: selectable, the selected one outlined with aria-current.
- * @param {{ horizon: 'one_month' | 'two_month', query: ForecastQuery, selected: boolean, onSelect: () => void }} props
- */
-function HorizonCard({ horizon, query, selected, onSelect }) {
-  const state = forecastState(query);
-  let body;
-  if (state.kind === 'loading') {
-    body = <Skeleton className="h-6 w-24" />;
-  } else if (state.kind === 'ok') {
-    body = (
-      <>
-        <span className="text-xl font-bold text-text tabular-nums">
-          {formatKES(state.forecast.predicted_price)}
-        </span>
-        <DeltaTag
-          value={state.forecast.expected_change_pct}
-          direction={directionOf(state.forecast.expected_change_pct)}
-        />
-      </>
-    );
-  } else if (state.kind === 'error') {
-    body = (
-      <span className="inline-flex items-center gap-1 text-text-secondary">
-        <AlertCircle aria-hidden="true" className="size-4" />
-        <span>Could not load</span>
-      </span>
-    );
-  } else {
-    body = <span className="text-text-secondary">{FORECAST_TEXT.notAvailableShort}</span>;
-  }
-  return (
-    <button
-      type="button"
-      onClick={onSelect}
-      aria-current={selected ? 'true' : undefined}
-      data-horizon={horizon}
-      className={cn(
-        'flex min-h-11 flex-col items-start gap-1.5 rounded-xl border bg-card p-4 text-left transition-colors hover:bg-canvas',
-        selected ? 'border-primary ring-2 ring-primary' : 'border-border',
-      )}
-    >
-      <span className="font-semibold text-text">{inLabelCap(horizonMonths(horizon))}</span>
-      {body}
-    </button>
-  );
-}
-
-/**
- * "Why the model expects this": the bars, drawn from `shap_values` whenever it has the expected shape.
+ * "Why the model expects this": the price staircase, drawn from `shap_values` whenever it has the
+ * expected shape.
  * @param {{ forecast: Forecast }} props
  */
 function Explanation({ forecast }) {
@@ -199,31 +146,21 @@ function Explanation({ forecast }) {
       </p>
     );
   }
-  const { rows, typical } = explainabilityRows(shap);
-  const tableRows = [
-    {
-      id: 'typical',
-      label: typical.label,
-      effect: formatPct(typical.pct),
-      kes: '',
-    },
-    ...rows.map((row) => ({
-      id: row.label,
-      label: `${row.label} (${row.word})`,
-      effect: formatPct(row.pct),
-      kes: formatSignedKES(row.kesImpact),
-    })),
-  ];
+  const chart = explainabilityChart(shap);
+  const tableRows = chart.steps.map((step) => ({
+    id: step.id,
+    label: step.label,
+    effect: formatPct(step.pct),
+    kes: stepAmountText(step),
+    after: formatKES(step.to),
+  }));
   return (
     <div className="flex flex-col gap-4">
       <ExplainabilityBars
-        rows={rows}
-        typical={typical}
-        expectedChangePct={forecast.expected_change_pct}
-        predictedPrice={forecast.predicted_price}
-        summary={summaryText(forecast, rows)}
+        chart={chart}
+        when={inLabel(horizonMonths(forecast.horizon))}
+        summary={summaryText(forecast, chart.steps)}
       />
-      <p className="text-sm text-text-secondary">{FORECAST_TEXT.barsNote}</p>
       <details className="rounded-md border border-border">
         <summary className="flex min-h-11 cursor-pointer items-center px-3 font-medium text-text">
           {FORECAST_TEXT.howToRead}
@@ -232,6 +169,15 @@ function Explanation({ forecast }) {
           {FORECAST_TEXT.howToReadText.map((sentence) => (
             <p key={sentence}>{sentence}</p>
           ))}
+          <h3 className="mt-1 font-semibold">{FORECAST_TEXT.partsTitle}</h3>
+          <dl className="flex flex-col gap-2">
+            {chart.steps.map((step) => (
+              <div key={step.id}>
+                <dt className="font-medium">{step.label}</dt>
+                <dd className="text-text-secondary">{step.description}</dd>
+              </div>
+            ))}
+          </dl>
         </div>
       </details>
       <details className="rounded-md border border-border">
@@ -244,7 +190,8 @@ function Explanation({ forecast }) {
             columns={[
               { key: 'label', header: 'Part of the forecast' },
               { key: 'effect', header: 'Effect (percentage points)', numeric: true },
-              { key: 'kes', header: 'About KES per kg', numeric: true },
+              { key: 'kes', header: 'KES per kg', numeric: true },
+              { key: 'after', header: 'Price after this part', numeric: true },
             ]}
             rows={tableRows}
           />
@@ -255,37 +202,48 @@ function Explanation({ forecast }) {
 }
 
 /**
+ * The selection, the request button, and (only after the farmer asks) the forecast. The
+ * explanation opens only from its own button. Changing the market or crop clears both, so a
+ * shown forecast always matches the selection.
  * @param {{
  *   market: string,
  *   markets: string[],
  *   crop: 'maize' | 'beans',
- *   horizon: 'one_month' | 'two_month',
  *   update: (changes: Record<string, string>) => void,
  * }} props
  */
-function ForecastBody({ market, markets, crop, horizon, update }) {
+function ForecastBody({ market, markets, crop, update }) {
   const marketId = useId();
-  // Both horizons in parallel; switching only changes which one is shown.
-  const one = useForecast({ market, crop, horizon: 'one_month' });
-  const two = useForecast({ market, crop, horizon: 'two_month' });
-  const selectedQuery = horizon === 'one_month' ? one : two;
-  const state = forecastState(selectedQuery);
-  const forecast = state.kind === 'ok' ? state.forecast : null;
-  const recommendation = forecast
-    ? recommendationFor(forecast.expected_change_pct, forecast.horizon)
-    : null;
+  const explanationId = useId();
+  const selection = `${market}|${crop}`;
+  // The selection the farmer asked a forecast for, and whether the explanation is open.
+  const [requestedFor, setRequestedFor] = useState(/** @type {string | null} */ (null));
+  const [whyOpen, setWhyOpen] = useState(false);
+  const requested = requestedFor === selection;
+
+  // Farmers see only the 1 month ahead forecast, and nothing is fetched before the click.
+  const selectedQuery = useForecast({ market, crop, horizon: HORIZON, enabled: requested });
+  const state = requested ? forecastState(selectedQuery) : null;
+  const forecast = state?.kind === 'ok' ? state.forecast : null;
+
+  /** @param {Record<string, string>} changes */
+  function changeSelection(changes) {
+    setRequestedFor(null);
+    setWhyOpen(false);
+    update(changes);
+  }
 
   return (
     <>
-      <div className="grid gap-4 sm:grid-cols-[minmax(0,14rem)_1fr] sm:items-end">
-        <div className="flex flex-col gap-1.5">
+      <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end">
+        <div className="flex flex-col gap-1.5 sm:w-56">
           <label htmlFor={marketId} className="text-sm font-medium text-text-secondary">
             Market
           </label>
           <select
             id={marketId}
             value={market}
-            onChange={(event) => update({ market: event.target.value })}
+            onChange={(event) => changeSelection({ market: event.target.value })}
             className="min-h-11 w-full rounded-md border border-input bg-card px-3 text-base text-text"
           >
             {markets.map((name) => (
@@ -300,76 +258,66 @@ function ForecastBody({ market, markets, crop, horizon, update }) {
           name="crop"
           options={CROP_OPTIONS}
           value={crop}
-          onChange={(value) => update({ crop: value })}
+          onChange={(value) => changeSelection({ crop: value })}
         />
+        <Button
+          type="button"
+          className="min-h-11 w-full sm:w-fit"
+          disabled={requested && selectedQuery.isFetching}
+          onClick={() => setRequestedFor(selection)}
+        >
+          <ChartLine aria-hidden="true" />
+          <span>{FORECAST_TEXT.request}</span>
+        </Button>
       </div>
-      <Segmented
-        legend="Forecast for"
-        name="horizon"
-        options={HORIZON_OPTIONS}
-        value={horizon}
-        onChange={(value) => update({ horizon: value })}
-      />
 
-      <Card>
-        <CardHeader>
-          <CardTitle id="forecast-headline-title">
-            {`${cropLabel(crop)} in ${market}, ${inLabel(horizonMonths(horizon))}`}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {state.kind === 'loading' && <LoadingState label={FORECAST_TEXT.loading} rows={1} />}
-          {state.kind === 'error' && (
-            <ErrorState
-              error={state.error}
-              title={FORECAST_TEXT.errorTitle}
-              onRetry={() => selectedQuery.refetch()}
-            />
-          )}
-          {state.kind === 'unavailable' && (
-            <Unavailable reason={state.reason} market={market} crop={crop} />
-          )}
-          {state.kind === 'unusable' && (
-            <p className="text-text-secondary">{FORECAST_TEXT.forecastUnusable}</p>
-          )}
-          {forecast && <Headline forecast={forecast} />}
-        </CardContent>
-      </Card>
-
-      <section aria-labelledby="horizon-strip" className="flex flex-col gap-2">
-        <h2 id="horizon-strip" className="text-lg font-semibold text-text">
-          Compare the forecasts
-        </h2>
-        <div className="grid grid-cols-2 gap-3">
-          <HorizonCard
-            horizon="one_month"
-            query={one}
-            selected={horizon === 'one_month'}
-            onSelect={() => update({ horizon: 'one_month' })}
-          />
-          <HorizonCard
-            horizon="two_month"
-            query={two}
-            selected={horizon === 'two_month'}
-            onSelect={() => update({ horizon: 'two_month' })}
-          />
-        </div>
-      </section>
-
-      {forecast && recommendation && (
-        <div className="flex flex-col gap-3">
-          <Recommendation
-            tone={recommendation.tone}
-            title={recommendation.title}
-            body={recommendation.body}
-            note={FORECAST_TEXT.uncertainty}
-          />
-          <FreshnessNote text={FRESHNESS_FORECAST} />
-        </div>
+      {state && (
+        <Card>
+          <CardHeader>
+            <CardTitle id="forecast-headline-title">
+              {`${cropLabel(crop)} in ${market}, ${inLabel(horizonMonths(HORIZON))}`}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4">
+            {state.kind === 'loading' && <LoadingState label={FORECAST_TEXT.loading} rows={1} />}
+            {state.kind === 'error' && (
+              <ErrorState
+                error={state.error}
+                title={FORECAST_TEXT.errorTitle}
+                onRetry={() => selectedQuery.refetch()}
+              />
+            )}
+            {state.kind === 'unavailable' && (
+              <Unavailable reason={state.reason} market={market} crop={crop} />
+            )}
+            {state.kind === 'unusable' && (
+              <p className="text-text-secondary">{FORECAST_TEXT.forecastUnusable}</p>
+            )}
+            {forecast && (
+              <>
+                <Headline forecast={forecast} />
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="min-h-11 w-full sm:w-fit"
+                  aria-expanded={whyOpen}
+                  aria-controls={whyOpen ? explanationId : undefined}
+                  onClick={() => setWhyOpen((open) => !open)}
+                >
+                  <ChevronDown
+                    aria-hidden="true"
+                    className={whyOpen ? 'rotate-180 transition-transform' : 'transition-transform'}
+                  />
+                  <span>{FORECAST_TEXT.whyTitle}</span>
+                </Button>
+              </>
+            )}
+          </CardContent>
+        </Card>
       )}
 
-      {forecast && (
-        <Card>
+      {forecast && whyOpen && (
+        <Card id={explanationId}>
           <CardHeader>
             <CardTitle id="why-title">{FORECAST_TEXT.whyTitle}</CardTitle>
           </CardHeader>
@@ -379,26 +327,28 @@ function ForecastBody({ market, markets, crop, horizon, update }) {
         </Card>
       )}
 
-      <section
-        aria-labelledby="next-step"
-        className="flex flex-col gap-2 rounded-xl border border-border bg-card p-4"
-      >
-        <h2 id="next-step" className="text-lg font-semibold text-text">
-          Next step
-        </h2>
-        <p className="text-text-secondary">{FORECAST_TEXT.planListingHint}</p>
-        <Button asChild className="w-fit">
-          <Link to={`/farmer/listings/new?${new URLSearchParams({ crop, market }).toString()}`}>
-            <PackagePlus aria-hidden="true" />
-            <span>{FORECAST_TEXT.planListing}</span>
-          </Link>
-        </Button>
-      </section>
+      {forecast && (
+        <section
+          aria-labelledby="next-step"
+          className="flex flex-col gap-2 rounded-xl border border-border bg-card p-4"
+        >
+          <h2 id="next-step" className="text-lg font-semibold text-text">
+            Next step
+          </h2>
+          <p className="text-text-secondary">{FORECAST_TEXT.planListingHint}</p>
+          <Button asChild className="w-fit">
+            <Link to={`/farmer/listings/new?${new URLSearchParams({ crop, market }).toString()}`}>
+              <PackagePlus aria-hidden="true" />
+              <span>{FORECAST_TEXT.planListing}</span>
+            </Link>
+          </Button>
+        </section>
+      )}
     </>
   );
 }
 
-/** The explainable forecast for a market, crop and horizon. */
+/** The explainable 1 month ahead forecast for a market and crop. */
 export default function ForecastScreen() {
   const headingRef = usePageTitle('Forecast');
   const [params, setParams] = useSearchParams();
@@ -406,7 +356,6 @@ export default function ForecastScreen() {
   const markets = useMemo(() => (marketsQuery.data ?? []).map((m) => m.name), [marketsQuery.data]);
 
   const crop = pickValue(params.get('crop'), CROPS, DEFAULT_CROP);
-  const horizon = pickValue(params.get('horizon'), HORIZONS, DEFAULT_HORIZON);
   const market = pickValue(params.get('market'), markets, markets[0] ?? '');
 
   const marketsKnown = marketsQuery.isSuccess;
@@ -440,26 +389,17 @@ export default function ForecastScreen() {
   } else if (markets.length === 0 || !market) {
     body = <EmptyState title={PRICE_TEXT.emptyTitle} description={PRICE_TEXT.empty} />;
   } else {
-    body = (
-      <ForecastBody
-        market={market}
-        markets={markets}
-        crop={crop}
-        horizon={horizon}
-        update={update}
-      />
-    );
+    body = <ForecastBody market={market} markets={markets} crop={crop} update={update} />;
   }
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Forecast"
-        description="What the price model expects, and how it reached that forecast."
+        description="Choose a market and crop, then request what the price model expects."
         headingRef={headingRef}
       />
       {body}
-      <p className="text-sm text-text-secondary">{FORECAST_TEXT.limitations}</p>
     </div>
   );
 }

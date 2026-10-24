@@ -4,15 +4,13 @@ import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { expectNoAxeViolations } from '@/test/axe';
 import { fixtures } from '@/test/fixtures';
-import { explainabilityRows, summaryText } from '@/lib/forecast';
+import { explainabilityChart, summaryText } from '@/lib/forecast';
 import { parseShap } from '@/lib/shapSchema';
 import { DataTable } from './DataTable';
 import { DeltaTag } from './DeltaTag';
 import { ExplainabilityBars } from './ExplainabilityBars';
-import { FreshnessNote } from './FreshnessNote';
 import { MarketChips } from './MarketChips';
 import { PriceCard } from './PriceCard';
-import { Recommendation } from './Recommendation';
 import { Segmented } from './Segmented';
 
 describe('DeltaTag with a direction', () => {
@@ -117,63 +115,75 @@ describe('MarketChips', () => {
   });
 });
 
-describe('Recommendation and FreshnessNote', () => {
-  it.each([
-    ['rise', 'bg-positive-soft', 'lucide-arrow-up'],
-    ['fall', 'bg-negative-soft', 'lucide-arrow-down'],
-    ['flat', 'bg-neutral-bg', 'lucide-minus'],
-  ])('%s has its tint, an icon and the title text', async (tone, tint, icon) => {
-    const { container } = render(
-      <Recommendation tone={/** @type {any} */ (tone)} title="Title" body="Body" note="Note" />,
-    );
-    const box = container.firstElementChild;
-    expect(box).toHaveClass(tint);
-    expect(box?.querySelector('svg')).toHaveClass(icon);
-    expect(screen.getByRole('heading', { name: 'Title' })).toBeInTheDocument();
-    expect(screen.getByText('Note')).toBeInTheDocument();
-    await expectNoAxeViolations(container);
-  });
-
-  it('FreshnessNote shows its text with an icon', () => {
-    const { container } = render(
-      <FreshnessNote text="Prices are monthly figures from FEWS NET." />,
-    );
-    expect(container).toHaveTextContent('Prices are monthly figures from FEWS NET.');
-    expect(container.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
-  });
-});
-
 describe('ExplainabilityBars', () => {
   const forecast = fixtures.forecastOneMonth;
   const shap = /** @type {import('@/lib/shapSchema').ShapValues} */ (
     parseShap(forecast.shap_values)
   );
-  const { rows, typical } = explainabilityRows(shap);
+  const chart = explainabilityChart(shap);
+  const summary = summaryText(forecast, chart.steps);
 
-  it('is a list of rows with words, signs, KES and decorative bars sized by barFraction', async () => {
+  it('is a list from the latest price, through signed steps, to the forecast price', async () => {
     const { container } = render(
-      <ExplainabilityBars
-        rows={rows}
-        typical={typical}
-        expectedChangePct={forecast.expected_change_pct}
-        predictedPrice={forecast.predicted_price}
-        summary={summaryText(forecast, rows)}
-      />,
+      <ExplainabilityBars chart={chart} when="in 1 month" summary={summary} />,
     );
     const items = within(screen.getByRole('list')).getAllByRole('listitem');
-    expect(items).toHaveLength(5);
-    const bars = [...container.querySelectorAll('[data-bar]')];
-    expect(bars.map((b) => /** @type {HTMLElement} */ (b).style.width)).toEqual([
-      '20%',
-      '100%',
-      '86%',
-      '33%',
+    expect(items.map((li) => li.dataset.row)).toEqual([
+      'start',
+      'step',
+      'step',
+      'step',
+      'step',
+      'end',
     ]);
-    for (const bar of bars) expect(bar.closest('[aria-hidden="true"]')).not.toBeNull();
-    expect(items[1]).toHaveTextContent('Boost');
-    expect(items[3]).toHaveTextContent('Drag');
-    expect(screen.getByRole('figure')).toHaveAccessibleName(summaryText(forecast, rows));
+    expect(items[0]).toHaveTextContent('Latest priceKES 40.00');
+    expect(items[2]).toHaveTextContent('Time of year+KES 1.45');
+    expect(items[5]).toHaveTextContent('Forecast in 1 monthKES 42.49');
+    expect(container).not.toHaveTextContent(/Boost|Drag|No effect|do not add up/);
+    expect(screen.getByRole('figure')).toHaveAccessibleName(summary);
     await expectNoAxeViolations(container);
+  });
+
+  it('draws up steps solid green and down steps hatched red, each with a triangle', () => {
+    const { container } = render(
+      <ExplainabilityBars chart={chart} when="in 1 month" summary={summary} />,
+    );
+    const steps = [...container.querySelectorAll('[data-row="step"]')];
+    expect(steps.map((li) => /** @type {HTMLElement} */ (li).dataset.direction)).toEqual([
+      'up',
+      'up',
+      'up',
+      'down',
+    ]);
+    const upBar = steps[1].querySelector('[data-bar]');
+    const downBar = steps[3].querySelector('[data-bar]');
+    expect(upBar).toHaveClass('bg-positive-soft', 'border-positive');
+    expect(downBar).toHaveClass('bar-hatch-down', 'border-negative');
+    expect(steps[3]).toHaveTextContent('-KES 0.50');
+    expect(steps[3].querySelector('.lucide-triangle')).toHaveClass('rotate-180');
+    expect(steps[1].querySelector('.lucide-triangle')).not.toHaveClass('rotate-180');
+    for (const bar of container.querySelectorAll('[data-bar]')) {
+      expect(bar.closest('[aria-hidden="true"]')).not.toBeNull();
+      expect(bar).toHaveClass('min-w-2');
+    }
+  });
+
+  it('places each step where the one before ended, on the shared scale', () => {
+    const { container } = render(
+      <ExplainabilityBars chart={chart} when="in 1 month" summary={summary} />,
+    );
+    const bars = [...container.querySelectorAll('[data-bar]')].map(
+      (b) => /** @type {HTMLElement} */ (b).style,
+    );
+    const left = bars.map((style) => Number.parseFloat(style.left));
+    const width = bars.map((style) => Number.parseFloat(style.width));
+    // Each up step starts where the previous one ended.
+    expect(left[1]).toBeCloseTo(left[0] + width[0], 6);
+    expect(left[2]).toBeCloseTo(left[1] + width[1], 6);
+    // The down step ends where the previous one ended.
+    expect(left[3] + width[3]).toBeCloseTo(left[2] + width[2], 6);
+    const ticks = [...container.querySelectorAll('[data-tick]')].map((t) => t.textContent);
+    expect(ticks).toEqual(['40', '41', '42', '43']);
   });
 });
 

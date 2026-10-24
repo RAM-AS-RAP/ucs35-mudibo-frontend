@@ -200,8 +200,6 @@ export const MESSAGES = Object.freeze({
 
 /** Heading of a price card (one place to change). */
 export const LABEL_LATEST_PRICE = 'Latest price';
-export const FRESHNESS_PRICES = 'Prices are monthly figures from FEWS NET.';
-export const FRESHNESS_FORECAST = 'Forecasts look ahead from the latest published prices.';
 export const AXIS_TITLE = 'Months before the latest price';
 
 /** @type {Readonly<Record<string, string>>} */
@@ -238,23 +236,24 @@ export const PRICE_TEXT = Object.freeze({
 });
 
 export const FORECAST_TEXT = Object.freeze({
-  uncertainty:
-    'Forecasts are estimates and can be wrong. Weather, supply, policy and local conditions can change prices in ways the model cannot see.',
   explanationUnavailable: 'The explanation for this forecast is not available right now.',
   forecastUnusable: 'This forecast cannot be shown right now. Please check again soon.',
   whyTitle: 'Why the model expects this',
+  request: 'Request 1 month forecast',
   typicalDescription:
     'The change the model starts from for this market and crop, before looking at the recent prices.',
-  barsNote:
-    'The bars show how the model reached this forecast. They are approximate shares and do not add up exactly. They do not prove why prices move.',
+  chartIntro: 'How the model got from the latest price to the forecast, in KES per kg.',
+  startLabel: 'Latest price',
+  /** @param {string} when for example "in 1 month" */
+  forecastLabel: (when) => `Forecast ${when}`,
   howToRead: 'How to read this',
   howToReadText: [
-    'The typical change is where the model starts for this market and crop.',
-    'A Boost pushed the model’s forecast up and a Drag pulled it down.',
-    'Longer bars had a bigger effect on the forecast, but the shares are approximate.',
+    'The chart starts at the latest price. Each step shows how much one part of the model moved the forecast, in KES per kg.',
+    'Green steps with ▲ pushed the forecast up. Hatched red steps with ▼ pulled it down. The last row is the forecast price.',
+    'The steps show how the model reached this forecast. They do not prove why prices move.',
   ],
+  partsTitle: 'What each part means',
   seeNumbers: 'See the numbers',
-  totalLabel: 'Expected change',
   /** @param {string} market @param {string} crop */
   noForecast: (market, crop) =>
     `A forecast is not available yet for ${market} ${crop}. We forecast only from the latest published prices. Please check again soon.`,
@@ -264,8 +263,6 @@ export const FORECAST_TEXT = Object.freeze({
   notAvailableShort: 'Not available yet',
   planListing: 'Plan a listing',
   planListingHint: 'You choose the price you ask for.',
-  limitations:
-    'These forecasts use monthly prices published by FEWS NET. A model trained on past prices can be wrong, especially after sudden events.',
   /** @param {string} amount  "KES 40.00" @param {string} when  "in 1 month" */
   caption: (amount, when) =>
     `Expected ${when}, starting from the latest price of ${amount} per kg.`,
