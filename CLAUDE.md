@@ -192,8 +192,10 @@ docs/           backend/, architecture.md, auth.md, design-system.md, forecast-d
   `npm run check:build` fails if Recharts reaches the initial JavaScript or a lazy chunk exceeds 250 kB gzip.
 - **Forecast on request:** the forecast screen calls `GET /forecasts` only after the "Request 1
   month forecast" click (`useForecast({ ..., enabled })`), shows the explanation only after the "Why
-  the model expects this" click, and clears both when the market or crop changes. The request is
-  component state, never in the URL. There is no recommendation or uncertainty box.
+  the model expects this" click, and clears both when the market or crop changes. The request
+  lives in memory in `screens/farmer/forecastRequest.js` (never in the URL or storage), so it
+  survives a visit to another tab: the sidebar link brings it back. Sign out and reload forget it.
+  There is no recommendation or uncertainty box.
 - Screen selections live in the URL query string (validated, invalid values removed); `usePageTitle`
   moves focus to the heading on a pathname change only, not on a query string change.
 
