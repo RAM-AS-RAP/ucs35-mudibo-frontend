@@ -6,18 +6,15 @@
 import { cropLabel } from '@/lib/messages';
 
 export const CROPS = /** @type {const} */ (['maize', 'beans']);
-export const HORIZONS = /** @type {const} */ (['one_month', 'two_month']);
+// Farmers see only the 1 month ahead forecast; any other horizon in the URL is removed.
+export const HORIZON = /** @type {const} */ ('one_month');
+export const HORIZONS = /** @type {const} */ ([HORIZON]);
 export const RANGES = /** @type {const} */ ([12, 24, 60]);
 
 export const DEFAULT_CROP = 'maize';
-export const DEFAULT_HORIZON = 'one_month';
 export const DEFAULT_RANGE = 24;
 
 export const CROP_OPTIONS = CROPS.map((value) => ({ value, label: cropLabel(value) }));
-export const HORIZON_OPTIONS = [
-  { value: /** @type {const} */ ('one_month'), label: '1 month' },
-  { value: /** @type {const} */ ('two_month'), label: '2 months' },
-];
 export const RANGE_OPTIONS = [
   { value: '12', label: '12 months' },
   { value: '24', label: '24 months' },

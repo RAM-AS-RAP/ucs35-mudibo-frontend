@@ -48,8 +48,10 @@ Two starting values failed the contrast test on the mint canvas and were moved t
 ## Usage rules
 
 - **Never colour alone.** Every meaning has an icon or sign and a word: "+4.5% Increasing", "-2.0% Falling",
-  "Boost" or "Drag" on explanation bars, status badges with an icon and a label (`DeltaTag`, `StatusBadge`).
-- **Chart bars** use the soft fill plus the strong outline (`positive-soft` with `positive`, `negative-soft` with `negative`).
+  status badges with an icon and a label (`DeltaTag`, `StatusBadge`). The forecast explanation steps
+  use a triangle (▲ or ▼), a + or − sign and, for down steps, hatching instead of a word.
+- **Chart bars** use the soft fill plus the strong outline (`positive-soft` with `positive`, `negative-soft` with `negative`);
+  down steps of the explanation chart add `negative` hatching (`bar-hatch-down`).
 - **Chart lines** use `chart-1` to `chart-4`, read in the chart through CSS variables (`var(--chart-1)`),
   never as hex values in a component. Series are also told apart by line style (solid, dashed, dotted,
   dash dot) and by a direct label at the end of each line, never by colour alone.

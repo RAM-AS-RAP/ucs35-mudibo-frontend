@@ -140,13 +140,15 @@ describe('keyboard operation', () => {
     renderFarmer('/farmer/forecast');
     await screen.findByText(/Expected in 1 month/);
     const user = userEvent.setup();
-    const oneMonth = screen.getByRole('radio', { name: '1 month' });
-    oneMonth.focus();
+    const maize = screen.getByRole('radio', { name: 'Maize' });
+    maize.focus();
     await user.keyboard('{ArrowRight}');
-    const twoMonths = screen.getByRole('radio', { name: '2 months' });
-    expect(twoMonths).toBeChecked();
-    expect(twoMonths).toHaveFocus();
-    expect(await screen.findByText(/Expected in 2 months/)).toBeInTheDocument();
+    const beans = screen.getByRole('radio', { name: 'Beans' });
+    expect(beans).toBeChecked();
+    expect(beans).toHaveFocus();
+    expect(
+      await screen.findByRole('heading', { name: 'Beans in Nairobi, in 1 month' }),
+    ).toBeInTheDocument();
   });
 
   it('toggles market chips with Space and Enter', async () => {
@@ -161,15 +163,13 @@ describe('keyboard operation', () => {
     expect(kisumu).toHaveAttribute('aria-pressed', 'true');
   });
 
-  it('reaches the horizon cards and the details summaries with Tab', async () => {
+  it('reaches the details summaries with Tab', async () => {
     renderFarmer('/farmer/forecast');
     await screen.findByText(/Expected in 1 month/);
     const user = userEvent.setup();
-    const twoCard = screen.getByRole('button', { name: /^In 2 months/ });
-    for (let i = 0; i < 40 && document.activeElement !== twoCard; i += 1) await user.tab();
-    expect(twoCard).toHaveFocus();
-    await user.keyboard('{Enter}');
-    expect(twoCard).toHaveAttribute('aria-current', 'true');
+    const summary = screen.getByText('How to read this');
+    for (let i = 0; i < 40 && document.activeElement !== summary; i += 1) await user.tab();
+    expect(summary).toHaveFocus();
     // Every "details" element starts with its summary, the native keyboard control.
     for (const details of document.querySelectorAll('details')) {
       expect(details.firstElementChild?.tagName).toBe('SUMMARY');

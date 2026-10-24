@@ -14,11 +14,11 @@ contribution.
 | --------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Dashboard | `/farmer`          | Greeting; latest maize and beans prices per market with the change against the month before; the one month forecast for maize and beans in the first market; a summary of active listings and paid orders (F2b, see [listings-orders.md](listings-orders.md)) | `GET /markets`, `GET /prices/current?crop=maize`, `GET /prices/current?crop=beans` and the two counts `GET /listings/mine?status=active&limit=1`, `GET /listings/mine/orders?status=paid&limit=1` (in parallel), then `GET /forecasts?market=<first>&crop=maize\|beans&horizon=one_month` (in parallel) |
 | Prices    | `/farmer/prices`   | Crop control; a price card per market; the price trend for the selected markets and range, with a data table                                                                                                                                                  | `GET /prices/current?crop=`, `GET /markets`, `GET /prices/trends?market=&crop=&months=` (one per selected market, in parallel)                                                                                                                                                                          |
-| Forecast  | `/farmer/forecast` | Market, crop and horizon controls; headline; horizon strip; recommendation; "Why the model expects this"; unavailable state; "Plan a listing"; limitations                                                                                                    | `GET /markets`, `GET /forecasts?market=&crop=&horizon=one_month` and `two_month` (in parallel), `GET /prices/current?crop=` (only when a forecast is unavailable)                                                                                                                                       |
+| Forecast  | `/farmer/forecast` | Market and crop controls; the 1 month ahead headline; recommendation; "Why the model expects this"; unavailable state; "Plan a listing"; limitations                                                                                                          | `GET /markets`, `GET /forecasts?market=&crop=&horizon=one_month`, `GET /prices/current?crop=` (only when a forecast is unavailable)                                                                                                                                                                     |
 
 Selections live in the URL query string (`crop`, `markets`, `range`, `market`, `horizon`), so a
 screen can be bookmarked or shared. Only these non sensitive values are stored. Each is checked
-against its allowed values (crops, horizons, ranges 12, 24 and 60) or against the markets from
+against its allowed values (crops, the `one_month` horizon, ranges 12, 24 and 60) or against the markets from
 `GET /markets`. An invalid value is removed from the URL and the default applies (maize, all
 markets, 24 months, the first market, one month). Changing a selection does not move keyboard
 focus; navigating to another screen moves focus to its heading.
@@ -40,8 +40,9 @@ URL. Time is counted in whole months back from the latest published price, which
 - **Anchor for several markets:** the newest latest month among the markets shown. A market whose
   latest month is older gets a neutral tag "1 month older" ("N months older") and its points sit
   that many months back on the shared axis.
-- **Forecasts:** horizon `one_month` is "In 1 month", `two_month` is "In 2 months", counted from the
-  latest published price. The label comes from the `horizon` value.
+- **Forecasts:** farmers see only the `one_month` horizon, "In 1 month", counted from the latest
+  published price. The 2 month forecast is not offered: the screen never requests `two_month`, and
+  `?horizon=two_month` (an old link) is removed from the URL. The label comes from the `horizon` value.
 - The backend's date fields (`month`, `previous_month`, `origin_month`, `target_month`, `based_on`,
   `for_month`, `generated_at`, `fetched_at`, `first_month`, `last_month`, and each trend point's
   `month`) are used only to compute differences in whole months. The backend's `as_of_note` is not
@@ -83,9 +84,7 @@ The predicted price (`predicted_price`) in large text with "per kg", the bag lin
 change (`expected_change_pct`) with its direction word and icon, and the caption
 "Expected in 1 month, starting from the latest price of KES 40.00 per kg." (`origin_price`).
 
-The horizon strip shows both horizons side by side ("In 1 month", "In 2 months") with their predicted
-price and change; the selected card has an outline and `aria-current`. Both horizons are fetched in
-parallel, so switching does not refetch.
+There is no horizon choice: only the 1 month ahead forecast is requested and shown.
 
 ### Recommendation
 
@@ -111,46 +110,66 @@ groups: [{ label, log_contribution, pct_contribution, direction }]   direction: 
 ```
 
 The model predicts the log change of the price. In log space the explanation is exact:
-`typical_change.log_value + sum(groups[].log_contribution) = predicted_log_change`. The screen shows:
+`typical_change.log_value + sum(groups[].log_contribution) = predicted_log_change`.
 
-1. **Typical change** for this market and crop (for example +0.7%): where the model starts before it
-   looks at the recent prices. Neutral tag and a neutral bar.
-2. **One row per driver group**, largest absolute log contribution first: the label, a plain
-   description, the word **Boost** (the group pushed the model's forecast up) or **Drag** (it pulled
-   the forecast down) or "No effect", the sign and the percentage points (`pct_contribution`), and
-   the approximate effect in KES per kg ("about +KES 1.42 per kg" = `origin_price * pct / 100`,
-   rounded to 2 decimals, display only).
-3. **Total row** with the exact expected change and the predicted price from the server.
-4. The note: "The bars show how the model reached this forecast. They are approximate shares and do
-   not add up exactly. They do not prove why prices move." Then "How to read this" (three sentences)
-   and "See the numbers" (a table: part of the forecast, effect in percentage points, about KES per kg).
+The screen shows a **price staircase** (`explainabilityChart()` in `src/lib/forecast.js`, drawn by
+`ExplainabilityBars`):
 
-Bar length is `barFraction`: the absolute percentage divided by the largest absolute percentage among
-the groups and the typical change (between 0 and 1). Drag bars grow left from a centre line, Boost bars
-right. Boost bars use the `positive-soft` fill with a `positive` outline, Drag bars `negative-soft`
-with `negative`, and "No effect" and the typical change use `neutral-bg`. The word and the sign are
-always printed next to the bar, so colour is never the only signal. The percentage contributions are
-first order approximations: they do not add up to the expected change, which is why the note says so.
+1. **Latest price** (`origin_price`): a dot on the scale.
+2. **One step for the typical change**, then **one step per driver group**, largest absolute log
+   contribution first. Each step starts where the one before ended. A step that pushed the forecast
+   up is solid green (`positive-soft` fill, `positive` outline) with ▲ and a + sign; a step that
+   pulled it down is hatched red (`bar-hatch-down` in `index.css`: `negative` stripes on
+   `negative-soft`, `negative` outline) with ▼ and a − sign. There is no neutral step and no
+   Boost, Drag or "No effect" word: the direction comes from the sign of the log contribution (then
+   of the percentage, then the backend's `direction`), so even a part that rounds to KES 0.00 is
+   shown as "+KES 0.00" or "-KES 0.00".
+3. **Forecast** ("Forecast in 1 month", `predicted_price`): a thin dark line from the latest price
+   to a dot at the forecast price.
+
+Then "How to read this" (three sentences and "What each part means" with each part's description)
+and "See the numbers" (a table: part of the forecast, effect in percentage points, KES per kg and the
+price after that part).
+
+**KES per step (display only).** The parts add up in log terms, not in KES, so the KES change
+(`predicted_price - origin_price`, both from the server) is shared out between the parts in
+proportion to their log contributions, in whole cents with the largest remainder method. The steps
+therefore land exactly on the forecast price and no "do not add up" note is needed. For the sample
+(KES 40.00 to KES 42.49) the steps are +0.29, +1.45, +1.25 and −0.50. This is used only when the
+explanation agrees with the headline (the ratio of `ln(predicted / origin)` to the sum of the log
+contributions is between 0.8 and 1.25); otherwise each part keeps its own approximate amount
+(`origin_price * pct / 100`) and the last step may stop a little short of the forecast dot.
+
+**Scale.** One scale in KES per kg for every row, zoomed to the prices the steps pass through, with
+6% room on each side and tick marks at 1, 2, 2.5 or 5 times a power of ten. The scale is always at
+least 5% of the latest price wide (`MIN_AXIS_SHARE`), so a tiny forecast change does not fill the
+chart and look dramatic. Every step bar is at least 0.5 rem wide, so a one cent step is still
+visible. Dotted connectors join the end of each step to the start of the next.
+
+**Layout.** From `sm` each row is name, track and amount side by side, with fixed column widths so
+the tracks line up. On phones the name and amount share a line and the track sits underneath at full
+width.
 
 The explanation container is a `figure` whose accessible name is the summary sentence, for example:
 "Forecast for 1 month ahead: KES 42.49 per kg, up 6.2% from the latest price of KES 40.00. Time of
-year adds about KES 1.42, recent price momentum adds about KES 1.22, and price compared with its
-recent average takes away about KES 0.48."
+year adds about KES 1.45, recent price momentum adds about KES 1.25, and price compared with its
+recent average takes away about KES 0.50." The rows are a list whose names and amounts are text;
+the tracks are `aria-hidden`.
 
 ### Shape check
 
-The bars are drawn from the backend's `shap_values` whenever `parseShap(forecast.shap_values)`
+The staircase is drawn from the backend's `shap_values` whenever `parseShap(forecast.shap_values)`
 (`src/lib/shapSchema.js`) accepts it: every number finite, `direction` one of the three values, at
 least one group, every documented key present.
 
 The frontend does not reconcile the explanation against the headline. An earlier version checked
 that the log contributions added up to the top level `predicted_log_change` within 0.002, but the
 backend serialises that field rounded to 2 decimals (up to 0.005 off), so most real forecasts failed
-and the bars never appeared. The ML pipeline already asserts the sum to within 1e-6 before it stores
+and the chart never appeared. The ML pipeline already asserts the sum to within 1e-6 before it stores
 a forecast, so the frontend trusts the backend's numbers as given.
 
-When the shape check fails, the screen keeps the headline, the horizon strip and the recommendation,
-hides the bars, and says "The explanation for this forecast is not available right now." The headline itself needs finite
+When the shape check fails, the screen keeps the headline and the recommendation,
+hides the chart, and says "The explanation for this forecast is not available right now." The headline itself needs finite
 `origin_price` (above zero), `predicted_price` and `expected_change_pct`; otherwise the screen says
 "This forecast cannot be shown right now. Please check again soon."
 
@@ -166,7 +185,7 @@ hides the bars, and says "The explanation for this forecast is not available rig
   published yet. Please check again soon."
 
 Under the message the screen shows the latest price for that market and crop, if there is one, and
-a link to the Prices screen. The other horizon is shown independently. An older forecast is never
+a link to the Prices screen. An older forecast is never
 shown.
 
 ### Next step and limitations
@@ -179,21 +198,22 @@ events."
 ## Wording rules
 
 - Describe how the model reached the forecast. Never claim a cause for real price movements
-  ("Time of year adds about KES 1.42" describes the model, not the market).
+  ("Time of year adds about KES 1.45" describes the model, not the market).
 - Never "will": write "the model expects".
 - No financial guarantees and no instructions: the decision is the farmer's.
 - Plain English, short sentences.
-- The words Boost and Drag always appear next to the colour.
+- Explanation steps: the triangle (▲ or ▼) and the sign always appear next to the colour, and
+  down steps are hatched. No Boost, Drag or "No effect" words.
 - No absolute dates (see "Relative time only").
 
 The texts live in `src/lib/messages.js` (`FORECAST_TEXT`, `PRICE_TEXT`, the freshness constants and
 the group descriptions) and `src/lib/forecast.js` (the recommendation and summary sentences).
 
-## Explanation bars without Recharts (deviation from the project report)
+## Explanation chart without Recharts (deviation from the project report)
 
-The project report lists Recharts for all charts. The explanation bars are instead an accessible list
-(`ExplainabilityBars`: a `ul` of rows, bars are `div`s with `aria-hidden` and a width from
-`barFraction`). Reasons: each row carries a label, a description, a word, a sign and a KES amount
+The project report lists Recharts for all charts. The explanation staircase is instead an accessible
+list (`ExplainabilityBars`: a `ul` of rows, bars are `div`s with `aria-hidden`, placed on the shared
+scale with `axisPercent`). Reasons: each row carries a label, a sign and a KES amount
 that must stay readable and wrap at 360 px, which an SVG chart cannot do well; a list is read by
 screen readers row by row without extra work; and the screen needs no chart library for its most
 important part. Recharts is used for the price trend only, and it is loaded lazily inside the trend
@@ -203,13 +223,12 @@ chart component so it is not part of the initial JavaScript.
 
 - Every screen has an axe test in the success, loading, empty, error and unavailable states (and the
   inconsistent explanation state for the forecast).
-- Never colour alone: direction words and icons, Boost and Drag words, signs, line styles and end
+- Never colour alone: direction words and icons, explanation triangles, signs and hatching, line styles and end
   labels, a check mark on a selected market chip.
 - Chart tokens `chart-1` to `chart-4` have at least 3:1 contrast against the card (see
   `docs/design-system.md`).
-- Controls: crop, horizon and range are native radio groups (`fieldset` and `legend`, arrow keys);
-  market chips are toggle buttons with `aria-pressed`; the horizon cards are buttons with
-  `aria-current` on the selected one; every target is at least 44 by 44 px.
+- Controls: crop and range are native radio groups (`fieldset` and `legend`, arrow keys);
+  market chips are toggle buttons with `aria-pressed`; every target is at least 44 by 44 px.
 - The trend chart has `role="img"` with a summary and a data table alternative; the explanation is a
   `figure` named by its summary sentence; `details` elements hold the tables.
 - Focus moves to the screen heading on a route change only, not when a selection changes the URL.

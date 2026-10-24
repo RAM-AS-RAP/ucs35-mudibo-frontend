@@ -180,9 +180,12 @@ docs/           backend/, architecture.md, auth.md, design-system.md, forecast-d
   `formatDateTime`. Add a new price or forecast file to that list. Do not display the backend's
   `as_of_note`.
 - **Wording:** describe how the model reached a forecast, never a cause of real price movements; "the
-  model expects", never "will"; no guarantees; plain English; Boost and Drag always next to the colour.
-- Derived values are display only: the 90 kg bag price, the approximate KES per group, the summary
-  sentence. Everything else is the server's number.
+  model expects", never "will"; no guarantees; plain English. Explanation steps carry a triangle
+  (▲ or ▼) and a plus or minus sign next to the colour (down steps hatched); no Boost, Drag or
+  "No effect" words.
+- Derived values are display only: the 90 kg bag price, the KES per step of the explanation
+  staircase (the server's KES change shared out by log contribution, `explainabilityChart`), the
+  summary sentence. Everything else is the server's number.
 - **Chart tokens** `chart-1` to `chart-4` in `tokens.css`, used through `var(--chart-N)`; series also
   differ by line style and end labels.
 - **Lazy chart rule:** only `TrendChartCanvas.jsx` imports Recharts, and only through `React.lazy`.
@@ -306,7 +309,8 @@ docs/           backend/, architecture.md, auth.md, design-system.md, forecast-d
 ## 6. UI rules
 
 - Colours only through tokens (`src/styles/tokens.css`); no hex colours elsewhere in `src/`.
-- Never colour alone: pair it with an icon or sign and a word (`DeltaTag`, `StatusBadge`).
+- Never colour alone: pair it with an icon or sign and a word (`DeltaTag`, `StatusBadge`); the forecast
+  explanation steps use a triangle, a sign and hatching instead of a word.
 - Touch targets at least 44 by 44 px; phone first, no horizontal scroll at 360 px; inputs at 16 px or more.
 - English only. Keep user facing strings in `src/lib/messages.js` (auth screens), the component, or
   `src/api/errors.js` (backend codes) so they are easy to find.
