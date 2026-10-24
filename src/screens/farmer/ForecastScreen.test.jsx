@@ -331,6 +331,53 @@ describe('ForecastScreen: unavailable', () => {
   });
 });
 
+describe('ForecastScreen: kept across tabs', () => {
+  /** Follow a link of the main navigation. */
+  async function goTo(/** @type {string} */ name) {
+    const nav = screen.getByRole('navigation', { name: 'Main navigation' });
+    await userEvent.setup().click(within(nav).getByRole('link', { name }));
+  }
+
+  it('shows the requested forecast and its explanation again after another tab', async () => {
+    const recorder = recordRequests();
+    const { router } = await openExplanation('/farmer/forecast?market=Kisumu&crop=beans');
+    await goTo('Prices');
+    await screen.findByRole('heading', { name: 'Prices', level: 1 });
+    expect(screen.queryByTestId('forecast-headline')).not.toBeInTheDocument();
+
+    await goTo('Forecast');
+    await screen.findByRole('heading', { name: 'Forecast', level: 1 });
+    expect(await screen.findByTestId('forecast-headline')).toHaveTextContent('Expected in 1 month');
+    expect(screen.getByRole('heading', { name: 'Beans in Kisumu, in 1 month' })).toBeVisible();
+    expect(whyButton()).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByRole('figure')).toBeInTheDocument();
+    await waitFor(() =>
+      expect(Object.fromEntries(new URLSearchParams(router.state.location.search))).toEqual({
+        market: 'Kisumu',
+        crop: 'beans',
+      }),
+    );
+    // Still fresh in the cache, so coming back sends no new forecast request.
+    expect(recorder.requests.filter((r) => r.path === '/api/v1/forecasts')).toHaveLength(1);
+  });
+
+  it('a link with another selection shows the request button, not the old forecast', async () => {
+    const { router } = await openForecast();
+    await goTo('Prices');
+    await screen.findByRole('heading', { name: 'Prices', level: 1 });
+    await router.navigate('/farmer/forecast?market=Kisumu&crop=beans');
+    await screen.findByRole('heading', { name: 'Forecast', level: 1 });
+    expect(await screen.findByRole('button', { name: 'Request 1 month forecast' })).toBeEnabled();
+    expect(screen.queryByTestId('forecast-headline')).not.toBeInTheDocument();
+  });
+
+  it('asking again for the same forecast keeps the explanation open', async () => {
+    await openExplanation();
+    await userEvent.setup().click(requestButton());
+    expect(whyButton()).toHaveAttribute('aria-expanded', 'true');
+  });
+});
+
 describe('ForecastScreen: URL, next step and session', () => {
   it('initialises the controls from the URL', async () => {
     await openForecast('/farmer/forecast?market=Kisumu&crop=beans');

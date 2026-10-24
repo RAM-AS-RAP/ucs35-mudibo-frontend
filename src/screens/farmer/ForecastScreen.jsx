@@ -33,6 +33,13 @@ import { horizonMonths, inLabel } from '@/lib/relativeTime';
 import { isForecastUsable, parseShap } from '@/lib/shapSchema';
 import { monthsOlderByMarket } from '@/lib/trends';
 import { usePageTitle } from '@/lib/usePageTitle';
+import {
+  clearForecastRequest,
+  getForecastRequest,
+  requestForecast,
+  setWhyOpen,
+  useForecastRequest,
+} from './forecastRequest';
 import { cleanParams, CROP_OPTIONS, CROPS, DEFAULT_CROP, HORIZON, pickValue } from './params';
 
 /** @typedef {import('@/api/endpoints/forecasts').Forecast} Forecast */
@@ -204,7 +211,8 @@ function Explanation({ forecast }) {
 /**
  * The selection, the request button, and (only after the farmer asks) the forecast. The
  * explanation opens only from its own button. Changing the market or crop clears both, so a
- * shown forecast always matches the selection.
+ * shown forecast always matches the selection. The request is kept in `forecastRequest.js`, so
+ * it is still there after a visit to another tab.
  * @param {{
  *   market: string,
  *   markets: string[],
@@ -215,11 +223,10 @@ function Explanation({ forecast }) {
 function ForecastBody({ market, markets, crop, update }) {
   const marketId = useId();
   const explanationId = useId();
-  const selection = `${market}|${crop}`;
   // The selection the farmer asked a forecast for, and whether the explanation is open.
-  const [requestedFor, setRequestedFor] = useState(/** @type {string | null} */ (null));
-  const [whyOpen, setWhyOpen] = useState(false);
-  const requested = requestedFor === selection;
+  const saved = useForecastRequest();
+  const requested = saved?.market === market && saved?.crop === crop;
+  const whyOpen = requested && saved.whyOpen;
 
   // Farmers see only the 1 month ahead forecast, and nothing is fetched before the click.
   const selectedQuery = useForecast({ market, crop, horizon: HORIZON, enabled: requested });
@@ -228,8 +235,7 @@ function ForecastBody({ market, markets, crop, update }) {
 
   /** @param {Record<string, string>} changes */
   function changeSelection(changes) {
-    setRequestedFor(null);
-    setWhyOpen(false);
+    clearForecastRequest();
     update(changes);
   }
 
@@ -264,7 +270,7 @@ function ForecastBody({ market, markets, crop, update }) {
           type="button"
           className="min-h-11 w-full sm:w-fit"
           disabled={requested && selectedQuery.isFetching}
-          onClick={() => setRequestedFor(selection)}
+          onClick={() => requestForecast(market, crop)}
         >
           <ChartLine aria-hidden="true" />
           <span>{FORECAST_TEXT.request}</span>
@@ -302,7 +308,7 @@ function ForecastBody({ market, markets, crop, update }) {
                   className="min-h-11 w-full sm:w-fit"
                   aria-expanded={whyOpen}
                   aria-controls={whyOpen ? explanationId : undefined}
-                  onClick={() => setWhyOpen((open) => !open)}
+                  onClick={() => setWhyOpen(!whyOpen)}
                 >
                   <ChevronDown
                     aria-hidden="true"
@@ -355,10 +361,30 @@ export default function ForecastScreen() {
   const marketsQuery = useMarkets();
   const markets = useMemo(() => (marketsQuery.data ?? []).map((m) => m.name), [marketsQuery.data]);
 
-  const crop = pickValue(params.get('crop'), CROPS, DEFAULT_CROP);
-  const market = pickValue(params.get('market'), markets, markets[0] ?? '');
+  // Back from another tab through a link without a selection (the sidebar): show the forecast
+  // the farmer requested before. Read once when the screen opens, so a request made here does not
+  // rewrite the URL.
+  const [saved] = useState(getForecastRequest);
+  const current = useForecastRequest();
+  const stillCurrent = saved?.market === current?.market && saved?.crop === current?.crop;
+  const restore =
+    saved && stillCurrent && !params.has('market') && !params.has('crop') ? saved : null;
+  const crop = pickValue(params.get('crop') ?? restore?.crop ?? null, CROPS, DEFAULT_CROP);
+  const market = pickValue(
+    params.get('market') ?? restore?.market ?? null,
+    markets,
+    markets[0] ?? '',
+  );
 
   const marketsKnown = marketsQuery.isSuccess;
+  useEffect(() => {
+    // Write the restored selection into the URL, so the controls and links keep it.
+    if (!restore || !marketsKnown || !markets.includes(restore.market)) return;
+    const next = new URLSearchParams(params);
+    next.set('market', restore.market);
+    next.set('crop', restore.crop);
+    setParams(next, { replace: true });
+  }, [restore, marketsKnown, markets, params, setParams]);
   useEffect(() => {
     const next = cleanParams(params, {
       crop: true,
