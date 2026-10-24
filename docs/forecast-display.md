@@ -98,9 +98,14 @@ The screen fetches nothing about the forecast until the farmer asks for it:
 3. Under the headline, **Why the model expects this** (`aria-expanded`) opens and closes the
    explanation below; it starts closed. "Plan a listing" appears once a forecast is shown.
 4. Changing the market or crop clears the request and closes the explanation, so a shown forecast
-   always matches the selection. The request lives in component state only, not in the URL: a
-   reload, or a link from the dashboard or the listing form (which fills in the market and crop),
-   needs the click again.
+   always matches the selection.
+5. The request (market, crop and whether the explanation is open) is kept in memory by
+   `src/screens/farmer/forecastRequest.js`, not in the URL or storage. After a visit to another
+   tab, the sidebar link (which carries no selection) brings back that market and crop, writes
+   them into the URL and shows the forecast and explanation again, from the cache while it is
+   fresh. A link with a selection of its own (from the dashboard or the listing form) shows the
+   request button instead, unless it names the requested market and crop. Signing out or
+   reloading forgets the request.
 
 There is no recommendation box, no uncertainty box, no hint text and no limitations line: the
 headline's direction word and icon say which way the model expects the price to move.
