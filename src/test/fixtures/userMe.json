@@ -1,8 +1,7 @@
 {
   "id": "0d6f4e0a-2c1b-4a55-9b1e-6c2f8d0b7e11",
   "name": "Wanjiku Kamau",
-  "phone_number": "+254712345678",
-  "email": null,
+  "email": "wanjiku@example.com",
   "role": "farmer",
   "is_super_admin": false,
   "must_change_password": false,

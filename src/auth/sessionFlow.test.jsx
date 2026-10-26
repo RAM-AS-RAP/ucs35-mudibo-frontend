@@ -219,7 +219,9 @@ describe('isSuperAdmin', () => {
       http.post(apiUrl('/api/v1/auth/login'), () => HttpResponse.json(token)),
       http.get(apiUrl('/api/v1/auth/me'), () => HttpResponse.json(me)),
     );
-    const session = await signIn('amina@example.com', 'not-a-real-password');
+    const result = await signIn('amina@example.com', 'not-a-real-password');
+    expect(result.status).toBe('signed_in');
+    const session = result.status === 'signed_in' ? result.session : null;
     expect(session).toMatchObject({
       role: 'admin',
       isSuperAdmin: true,

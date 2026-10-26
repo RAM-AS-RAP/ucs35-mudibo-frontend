@@ -35,7 +35,7 @@ export function validationErrorResponse(details) {
 }
 
 /**
- * A token response for a role (the login fixture with another role).
+ * A `signed_in` AuthResult for a role (the login fixture with another role).
  * @param {{ role?: string, mustChangePassword?: boolean, token?: string, isSuperAdmin?: boolean }} [options]
  */
 export function tokenFor({
@@ -339,7 +339,7 @@ export const buyerHandlers = [
  */
 
 /**
- * GET /admin/users over a set of users: role, is_disabled, q (name, email or phone), paged.
+ * GET /admin/users over a set of users: role, is_disabled, q (name or email), paged.
  * @param {Array<Record<string, any>>} users
  * @param {URL} url
  */
@@ -352,8 +352,7 @@ export function adminUsersResponse(users, url) {
     (u) =>
       (!role || u.role === role) &&
       (disabled === null || String(u.is_disabled) === disabled) &&
-      (!search ||
-        [u.name, u.email ?? '', u.phone_number].some((v) => v.toLowerCase().includes(search))),
+      (!search || [u.name, u.email ?? ''].some((v) => v.toLowerCase().includes(search))),
   );
   return pageOf(items, url);
 }
@@ -511,11 +510,19 @@ export const handlers = [
   // Authentication: the happy path. Tests override these with server.use().
   http.post(apiUrl('/api/v1/auth/login'), () => HttpResponse.json(fixtures.tokenResponse)),
   http.get(apiUrl('/api/v1/auth/me'), () => HttpResponse.json(fixtures.userMe)),
+  http.post(apiUrl('/api/v1/auth/login/verify'), () => HttpResponse.json(fixtures.tokenResponse)),
+  http.post(apiUrl('/api/v1/auth/login/resend'), () => HttpResponse.json(fixtures.loginResent)),
   http.post(apiUrl('/api/v1/auth/register/farmer'), () =>
-    HttpResponse.json(fixtures.registeredUser, { status: 201 }),
+    HttpResponse.json(fixtures.registrationAccepted, { status: 202 }),
   ),
   http.post(apiUrl('/api/v1/auth/register/buyer'), () =>
-    HttpResponse.json({ ...fixtures.registeredUser, role: 'buyer' }, { status: 201 }),
+    HttpResponse.json(fixtures.registrationAccepted, { status: 202 }),
+  ),
+  http.post(apiUrl('/api/v1/auth/register/verify'), () =>
+    HttpResponse.json(fixtures.tokenResponse, { status: 201 }),
+  ),
+  http.post(apiUrl('/api/v1/auth/register/resend'), () =>
+    HttpResponse.json(fixtures.registrationResent, { status: 202 }),
   ),
   http.post(apiUrl('/api/v1/auth/change-password'), () =>
     HttpResponse.json(fixtures.passwordChanged),
@@ -528,7 +535,7 @@ export const handlers = [
     () => new HttpResponse(null, { status: 204 }),
   ),
   http.post(apiUrl('/api/v1/auth/accept-invite'), () =>
-    HttpResponse.json(fixtures.adminMe, { status: 201 }),
+    HttpResponse.json({ ...fixtures.tokenResponse, role: 'admin' }, { status: 201 }),
   ),
   http.post(apiUrl('/api/v1/auth/invite/request-code'), () =>
     HttpResponse.json(fixtures.codeRequested, { status: 202 }),

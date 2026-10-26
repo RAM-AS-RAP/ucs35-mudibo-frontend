@@ -42,14 +42,10 @@ async function openInvites(path = '/admin/invites') {
 }
 
 /** @param {ReturnType<typeof userEvent.setup>} user */
-async function fillForm(
-  user,
-  { name = 'New Admin', phone = '0712 345 678', email = 'new@example.com' } = {},
-) {
+async function fillForm(user, { name = 'New Admin', email = 'new@example.com' } = {}) {
   await user.click(screen.getByRole('button', { name: 'Send invitation' }));
   const dialog = screen.getByRole('dialog', { name: 'Send an invitation' });
   if (name) await user.type(within(dialog).getByLabelText('Full name'), name);
-  if (phone) await user.type(within(dialog).getByLabelText('Phone number'), phone);
   if (email) await user.type(within(dialog).getByLabelText('Email'), email);
   return dialog;
 }
@@ -58,18 +54,16 @@ async function fillForm(
 const submit = (dialog) => within(dialog).getByRole('button', { name: 'Send invitation' });
 
 describe('InvitesScreen: sending an invitation', () => {
-  it('sends the normalised phone and shows where the invitation went', async () => {
+  it('sends exactly {name, email}, has no phone field, and shows where the invitation went', async () => {
     const user = userEvent.setup();
     await openInvites();
     const dialog = await fillForm(user);
+    expect(within(dialog).queryByLabelText(/phone/i)).toBeNull();
+    expect(dialog.textContent).not.toMatch(/phone/i);
     await user.click(submit(dialog));
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     const [call] = recorder.of('POST', '/api/v1/admin/invites');
-    expect(JSON.parse(await call.body)).toEqual({
-      name: 'New Admin',
-      phone_number: '254712345678',
-      email: 'new@example.com',
-    });
+    expect(JSON.parse(await call.body)).toEqual({ name: 'New Admin', email: 'new@example.com' });
     const result = screen.getByTestId('invite-result');
     expect(result).toHaveTextContent(
       'Invitation sent to n***@example.com. The person receives an 8 character code and chooses their own password.',
@@ -110,20 +104,17 @@ describe('InvitesScreen: sending an invitation', () => {
     expect(await screen.findByText('Address copied.')).toBeInTheDocument();
   });
 
-  it('requires the email and a valid phone, and sends nothing until they are valid', async () => {
+  it('requires the email, and sends nothing until it is valid', async () => {
     const user = userEvent.setup();
     await openInvites();
-    const dialog = await fillForm(user, { phone: '12345', email: '' });
+    const dialog = await fillForm(user, { email: '' });
     await user.click(submit(dialog));
     expect(await within(dialog).findByText('Enter your email address.')).toBeInTheDocument();
-    expect(
-      within(dialog).getByText('Enter a Kenyan mobile number, for example 0712 345 678.'),
-    ).toBeInTheDocument();
     expect(recorder.of('POST', '/api/v1/admin/invites')).toEqual([]);
   });
 
   it.each([
-    ['user_exists', 'An account with this phone number or email already exists.'],
+    ['user_exists', 'An account with this email already exists.'],
     [
       'too_many_pending_invites',
       'There are too many open invitations. Revoke one before sending another.',

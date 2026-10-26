@@ -1,0 +1,7 @@
+{
+  "message": "If this address can be registered, we have sent a code to it.",
+  "registration_token": "test-registration-token-decoy-for-existing",
+  "email_masked": "w***@e***.com",
+  "code_expires_at": "2026-10-26T09:15:00Z",
+  "resend_available_in": 60
+}

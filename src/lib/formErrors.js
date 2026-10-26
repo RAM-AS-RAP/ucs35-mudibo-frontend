@@ -2,7 +2,7 @@
  * Turn a server error into form field errors.
  *
  * 422 validation_error bodies carry `fields` (dotted names without the "body" prefix, for
- * example "phone_number") and `details` ([{ field, message }]). A model level problem (for
+ * example "new_password") and `details` ([{ field, message }]). A model level problem (for
  * example a new password equal to the current one) is reported on the field "request".
  * 422 password_too_weak has no field: its `reason` belongs on the password field.
  */

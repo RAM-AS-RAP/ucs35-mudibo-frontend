@@ -11,12 +11,17 @@ import { AppShell } from '@/components/layout/AppShell';
 import { RouteErrorBoundary, RouteErrorElement } from '@/components/feedback/ErrorBoundary';
 import { LoadingState } from '@/components/feedback/LoadingState';
 import LoginScreen from '@/screens/auth/LoginScreen';
-import RegisterScreen from '@/screens/auth/RegisterScreen';
-import ForgotPasswordScreen from '@/screens/auth/ForgotPasswordScreen';
-import ResetPasswordScreen from '@/screens/auth/ResetPasswordScreen';
-import AcceptInviteScreen from '@/screens/auth/AcceptInviteScreen';
 import ChangePasswordScreen from '@/screens/auth/ChangePasswordScreen';
 import NotFoundScreen from '@/screens/shared/NotFoundScreen';
+
+// Registration, the code steps and password recovery (identity v2): lazily loaded, so the first
+// screen most people see (sign in) stays small.
+const RegisterScreen = lazy(() => import('@/screens/auth/RegisterScreen'));
+const RegisterVerifyScreen = lazy(() => import('@/screens/auth/RegisterVerifyScreen'));
+const LoginCodeScreen = lazy(() => import('@/screens/auth/LoginCodeScreen'));
+const ForgotPasswordScreen = lazy(() => import('@/screens/auth/ForgotPasswordScreen'));
+const ResetPasswordScreen = lazy(() => import('@/screens/auth/ResetPasswordScreen'));
+const AcceptInviteScreen = lazy(() => import('@/screens/auth/AcceptInviteScreen'));
 
 // Farmer screens: each lazily loaded. The trend chart loads Recharts lazily on top of that, and
 // the listing form loads the photo helper (lib/image.js) lazily when a photo is chosen.
@@ -80,6 +85,28 @@ function RoleLayout({ role }) {
   );
 }
 
+/**
+ * A lazily loaded account screen, with a loading placeholder in the account layout's colours.
+ * @param {import('react').ReactNode} element
+ */
+function lazyAuth(element) {
+  return (
+    <Suspense
+      fallback={
+        <main
+          id="main-content"
+          tabIndex={-1}
+          className="mx-auto flex min-h-dvh w-full max-w-md flex-col justify-center bg-canvas px-4 py-8 outline-none"
+        >
+          <LoadingState label="Loading page…" rows={2} />
+        </main>
+      }
+    >
+      {element}
+    </Suspense>
+  );
+}
+
 /** @type {import('react-router').RouteObject[]} */
 export const routes = [
   {
@@ -91,13 +118,16 @@ export const routes = [
         element: <PublicOnly />,
         children: [
           { path: '/login', element: <LoginScreen /> },
-          { path: '/register', element: <RegisterScreen /> },
-          { path: '/forgot-password', element: <ForgotPasswordScreen /> },
+          // The code steps redirect to their start screen when their in memory flow is missing.
+          { path: '/login/code', element: lazyAuth(<LoginCodeScreen />) },
+          { path: '/register', element: lazyAuth(<RegisterScreen />) },
+          { path: '/register/verify', element: lazyAuth(<RegisterVerifyScreen />) },
+          { path: '/forgot-password', element: lazyAuth(<ForgotPasswordScreen />) },
         ],
       },
       // Reachable with or without a session: they show SignedInNotice when signed in.
-      { path: '/reset-password', element: <ResetPasswordScreen /> },
-      { path: '/accept-invite', element: <AcceptInviteScreen /> },
+      { path: '/reset-password', element: lazyAuth(<ResetPasswordScreen />) },
+      { path: '/accept-invite', element: lazyAuth(<AcceptInviteScreen />) },
       {
         path: '/change-password',
         element: (

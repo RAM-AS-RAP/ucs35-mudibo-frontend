@@ -10,8 +10,11 @@ import { useSyncExternalStore } from 'react';
 import { queryClient } from '@/lib/queryClient';
 import { MESSAGES } from '@/lib/messages';
 import { isKnownRole } from './roles';
+import { clearFlow } from './flow';
 
 const STORAGE_KEY = 'agrisence.session';
+/** Token lifetime when a signed_in AuthResult has no expires_in (the server default, 8 hours). */
+const DEFAULT_EXPIRES_IN_SECONDS = 8 * 60 * 60;
 
 /**
  * @typedef {object} Session
@@ -130,19 +133,24 @@ function setState(next) {
 }
 
 /**
- * Store the session from a successful POST /auth/login.
- * @param {import('@/api/schema').components['schemas']['TokenResponse']} tokenResponse
+ * Store the session from a `signed_in` AuthResult (login, login verify, register verify,
+ * accept invite). The caller has checked `status === 'signed_in'` and the access token.
+ * @param {import('@/api/schema').components['schemas']['AuthResult']} authResult
  */
-export function setFromLogin(tokenResponse) {
+export function setFromLogin(authResult) {
   lastClearReason = null;
   flash = null;
   restoreId = 0;
+  const expiresIn =
+    typeof authResult.expires_in === 'number' && authResult.expires_in > 0
+      ? authResult.expires_in
+      : DEFAULT_EXPIRES_IN_SECONDS;
   setState({
-    accessToken: tokenResponse.access_token,
-    role: tokenResponse.role,
-    mustChangePassword: Boolean(tokenResponse.must_change_password),
-    isSuperAdmin: tokenResponse.is_super_admin === true,
-    expiresAt: Date.now() + tokenResponse.expires_in * 1000,
+    accessToken: /** @type {string} */ (authResult.access_token),
+    role: /** @type {string} */ (authResult.role),
+    mustChangePassword: Boolean(authResult.must_change_password),
+    isSuperAdmin: authResult.is_super_admin === true,
+    expiresAt: Date.now() + expiresIn * 1000,
     name: null,
     userId: null,
   });
@@ -185,6 +193,8 @@ export function markPasswordChangeRequired() {
  * @param {ClearReason} [reason]
  */
 export function clear(reason = 'logout') {
+  // A sign in or registration in progress ends with the session (logout, expiry).
+  clearFlow();
   lastClearReason = reason;
   flash = FLASH_BY_REASON[reason] ?? null;
   restoreId = 0;

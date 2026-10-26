@@ -3,6 +3,8 @@
  * added later. Error codes from the backend keep their messages in src/api/errors.js.
  */
 
+import { formatWait } from './waitTime';
+
 /** @param {number} seconds */
 const secondsText = (seconds) => `${seconds} ${seconds === 1 ? 'second' : 'seconds'}`;
 
@@ -12,8 +14,10 @@ export const MESSAGES = Object.freeze({
     expired: 'Your session expired. Please sign in again.',
     passwordChanged: 'Password changed. Please sign in again.',
     unauthorized: 'Please sign in to continue.',
-    accountCreated: 'Account created. Please sign in.',
     passwordUpdated: 'Password updated. Please sign in.',
+    challengeClosed: 'Your sign in session ended. Please sign in again.',
+    flowLost: 'Your sign in was interrupted. Please start again.',
+    registrationLost: 'Your registration was interrupted. Please start again.',
   },
 
   // Shared form messages.
@@ -23,7 +27,7 @@ export const MESSAGES = Object.freeze({
     offline: 'You are offline. Connect to the internet to continue.',
     network: "Can't reach AgriSence. Check your internet connection and try again.",
     /** @param {number} seconds */
-    tooManyAttempts: (seconds) => `Too many attempts. Try again in ${secondsText(seconds)}.`,
+    tooManyAttempts: (seconds) => `Too many attempts. Try again in ${formatWait(seconds)}.`,
     /** @param {number} seconds */
     tryAgainIn: (seconds) => `Try again in ${seconds} s`,
     /** @param {number} seconds */
@@ -34,16 +38,13 @@ export const MESSAGES = Object.freeze({
 
   // Field validation.
   field: {
-    identifierRequired: 'Enter your phone number or email.',
-    identifierShort: 'Enter at least 3 characters.',
     passwordRequired: 'Enter your password.',
     currentPasswordRequired: 'Enter your current password.',
     nameRequired: 'Enter your full name.',
     nameShort: 'Your name needs at least 2 characters.',
     nameLong: 'Your name can have at most 100 characters.',
-    phoneRequired: 'Enter your phone number.',
-    phoneInvalid: 'Enter a Kenyan mobile number, for example 0712 345 678.',
     emailRequired: 'Enter your email address.',
+    emailLong: 'An email address can have at most 254 characters.',
     emailInvalid: 'Enter a valid email address, for example name@example.com.',
     codeRequired: 'Enter the code from the email.',
     codeInvalid: 'The code has 8 letters and numbers, for example ABCD-2345.',
@@ -64,21 +65,65 @@ export const MESSAGES = Object.freeze({
     lower: 'A lower case letter (a to z)',
     digit: 'A number (0 to 9)',
     symbol: 'A symbol, for example ! ? # or @',
-    personal: 'Not your name, phone number or email',
+    personal: 'Not your name or email',
     met: 'Done',
     unmet: 'Not yet',
   },
 
   login: {
     title: 'Sign in',
-    subtitle: 'Use the phone number or email of your AgriSence account.',
-    identifierLabel: 'Phone number or email',
+    subtitle: 'Use the email address of your AgriSence account.',
+    emailLabel: 'Email',
     passwordLabel: 'Password',
+    help: 'After you enter your password we may email you a code to confirm it is you.',
     submit: 'Sign in',
     pending: 'Signing in…',
-    invalid: 'Incorrect phone number, email or password.',
+    invalid: 'Incorrect email or password.',
     createAccount: 'Create an account',
     forgotPassword: 'Forgot your password?',
+    /** @param {string} email  the masked email from the server */
+    existingFlow: (email) => `Enter the code we emailed to ${email}`,
+    continue: 'Continue',
+  },
+
+  // The code screens (shared parts).
+  code: {
+    label: 'Code',
+    hint: '8 letters and numbers, for example ABCD-2345.',
+    pending: 'Checking…',
+    resend: 'Send a new code',
+    resendPending: 'Sending…',
+    /** @param {number} seconds */
+    resendIn: (seconds) => `Send a new code in ${seconds} s`,
+    resendReady: 'You can send a new code now.',
+    startAgain: 'Start again',
+    otherActions: 'Other options',
+    spam: 'No email? Check your spam folder.',
+  },
+
+  loginCode: {
+    title: 'Check your email',
+    /** @param {string} email  the masked email from the server */
+    intro: (email) => `We sent an 8 character code to ${email}. It is valid for 10 minutes.`,
+    notSent: 'We could not send the email. Press Send a new code.',
+    submit: 'Sign in',
+    invalid: 'That code is incorrect or has expired.',
+    sent: 'A new code was sent.',
+    sendFailed: 'We could not send the email. Try again shortly.',
+  },
+
+  registerVerify: {
+    title: 'Confirm your email',
+    /** @param {string} email  the masked email from the server */
+    intro: (email) =>
+      `If this address can be registered, we have sent an 8 character code to ${email}. It is valid for 15 minutes.`,
+    submit: 'Confirm email',
+    invalid: 'That code is incorrect or has expired. Request a new code or start again.',
+    resent: 'If a code can be sent, it is on its way.',
+    haveAccount: 'Already have an account?',
+    signIn: 'Sign in',
+    or: 'or',
+    resetPassword: 'reset your password',
   },
 
   register: {
@@ -90,16 +135,13 @@ export const MESSAGES = Object.freeze({
     buyer: 'I am a buyer',
     buyerHint: 'Browse produce from farmers and pay with M-Pesa.',
     nameLabel: 'Full name',
-    phoneLabel: 'Phone number',
-    phoneHint: 'For example 0712 345 678, 0112 345 678 or +254 712 345 678.',
-    emailLabel: 'Email (optional)',
-    emailHint: 'Needed if you want to reset your password later.',
+    emailLabel: 'Email',
+    emailInfo: 'You need an email address you can open. We will send you a code to confirm it.',
     passwordLabel: 'Password',
     confirmLabel: 'Confirm password',
     submit: 'Create account',
     pending: 'Creating your account…',
     info: 'AgriSence is a research prototype. Payments run in the M-Pesa test environment (sandbox) and no real money moves.',
-    exists: 'An account with these details already exists.',
     signIn: 'Sign in',
     resetPassword: 'Reset your password',
     haveAccount: 'Already have an account?',
@@ -109,7 +151,6 @@ export const MESSAGES = Object.freeze({
     title: 'Forgot your password?',
     subtitle: 'Enter the email address of your account and we will send you a code.',
     emailLabel: 'Email',
-    help: 'Accounts without an email address cannot reset a forgotten password.',
     submit: 'Send code',
     pending: 'Sending…',
     sent: 'If an account with that email exists, we have sent a code. It is valid for 15 minutes.',
@@ -366,7 +407,7 @@ export const IMAGE_ERROR_MESSAGES = Object.freeze({
   unsupported_type: 'Choose a JPEG or PNG photo. Other file types cannot be used.',
   input_too_large: 'That photo is larger than 20 MB. Choose a smaller photo.',
   decode_failed: 'That photo could not be opened. Choose another photo.',
-  too_many_pixels: 'That photo is too big to prepare on this phone. Choose a smaller photo.',
+  too_many_pixels: 'That photo is too big to prepare on this device. Choose a smaller photo.',
   still_too_large: 'That photo could not be made small enough to upload. Choose another photo.',
 });
 

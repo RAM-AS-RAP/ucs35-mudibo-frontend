@@ -35,11 +35,15 @@ afterEach(() => {
 });
 
 describe('admin query keys', () => {
-  it('never hold a search text, a phone number or an email', () => {
-    const key = queryKeys.adminUsers({ role: 'farmer', isDisabled: null, q: '254712345678' });
+  it('never hold a search text or an email', () => {
+    const key = queryKeys.adminUsers({
+      role: 'farmer',
+      isDisabled: null,
+      q: 'wanjiku@example.com',
+    });
     const keyText = JSON.stringify(key);
-    expect(keyText).not.toContain('254712345678');
-    expect(keyText).toContain(searchKey('254712345678'));
+    expect(keyText).not.toContain('wanjiku@example.com');
+    expect(keyText).toContain(searchKey('wanjiku@example.com'));
     expect(
       JSON.stringify(queryKeys.adminUsers({ role: null, isDisabled: null, q: 'a@b.co' })),
     ).not.toContain('a@b.co');
@@ -122,7 +126,7 @@ describe('admin writes are never retried', () => {
       'post',
       '/api/v1/admin/invites',
       () => useCreateInvite(),
-      (m) => m.mutateAsync({ name: 'A B', phoneNumber: '254712345678', email: 'a@b.co' }),
+      (m) => m.mutateAsync({ name: 'A B', email: 'a@b.co' }),
     ],
     [
       'resend invite',

@@ -30,6 +30,15 @@ const BUYER_SCREEN_MARKER = 'Check payment request';
 // Text only the admin screens contain (src/lib/adminMessages.js). The admin screens are lazily
 // loaded routes, so it must never be in the initial JavaScript (F4).
 const ADMIN_SCREEN_MARKER = 'Data pipeline health';
+// Strings only the lazily loaded account screens contain (identity v2, prompt 4): the code form
+// (both code screens), the registration role cards, and the reset and invitation forms. The
+// sign in screen stays in the initial JavaScript; these must not.
+const AUTH_LAZY_MARKERS = Object.freeze({
+  'code screens': 'data-auth-code-step',
+  registration: 'register-role-',
+  'password reset': 'reset-confirmPassword',
+  'accept invitation': 'invite-confirmPassword',
+});
 
 const DIST = 'dist';
 const DEV_SWITCHER_MARKER = 'agrisence-dev-role-switcher';
@@ -229,6 +238,16 @@ for (const chunk of adminChunks) {
 }
 if (adminChunks.length === 0) fail('The admin screens were not found in the build.');
 else console.log(`  Admin screens: lazy chunk(s) ${adminChunks.map((c) => c.file).join(', ')}`);
+
+for (const [name, marker] of Object.entries(AUTH_LAZY_MARKERS)) {
+  const found = chunks.filter((chunk) => read(chunk.file).includes(marker));
+  for (const chunk of found) {
+    if (initial.has(chunk.file))
+      fail(`The ${name} are in the initial JavaScript (${chunk.file}); load them lazily.`);
+  }
+  if (found.length === 0) fail(`The ${name} were not found in the build.`);
+  else console.log(`  Account ${name}: lazy chunk(s) ${found.map((c) => c.file).join(', ')}`);
+}
 
 if (failures.length) {
   console.error('check:build FAILED');

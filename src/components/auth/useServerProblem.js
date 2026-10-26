@@ -2,9 +2,10 @@ import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import { ApiError, getUserMessage } from '@/api/errors';
 import { serverFieldErrors } from '@/lib/formErrors';
 import { MESSAGES } from '@/lib/messages';
-import { useCountdown } from '@/lib/useCountdown';
+import { useRetryWait } from '@/lib/useRetryWait';
+import { DEFAULT_WAIT_SECONDS, waitSecondsFrom } from '@/lib/waitTime';
 
-export const DEFAULT_RETRY_SECONDS = 60;
+export const DEFAULT_RETRY_SECONDS = DEFAULT_WAIT_SECONDS;
 
 /**
  * The request id only helps support with failures on the server's side. A 4xx (wrong password,
@@ -25,7 +26,9 @@ function supportReference(error) {
 
 /**
  * State for a form's server errors: the problem list for FormErrorSummary (focused whenever a
- * new problem is set), 422 field errors pushed into React Hook Form, and the 429 countdown.
+ * new problem is set), 422 field errors pushed into React Hook Form, and the wait after a 429:
+ * up to 120 seconds count down on the button (`countdown.remaining`); a longer wait is shown
+ * approximately and keeps the button disabled until a stored end time (`countdown.longWait`).
  * @param {{
  *   setError: import('react-hook-form').UseFormSetError<any>,
  *   fieldMap?: Record<string, string>,
@@ -36,7 +39,7 @@ function supportReference(error) {
 export function useServerProblem({ setError, fieldMap = {}, passwordField, idPrefix }) {
   const [problem, setProblem] = useState(/** @type {ServerProblem | null} */ (null));
   const summaryRef = useRef(/** @type {HTMLDivElement | null} */ (null));
-  const countdown = useCountdown();
+  const countdown = useRetryWait();
   const startCountdown = countdown.start;
 
   // A layout effect: focus moves right after the summary is committed, before paint, and does
@@ -63,10 +66,10 @@ export function useServerProblem({ setError, fieldMap = {}, passwordField, idPre
       if (text) {
         problems.push(fieldId ? { text, fieldId } : { text });
       } else if (error instanceof ApiError && error.status === 429) {
-        const seconds =
-          error.retryAfter && error.retryAfter > 0 ? error.retryAfter : DEFAULT_RETRY_SECONDS;
+        const seconds = waitSecondsFrom(error.retryAfter);
         startCountdown(seconds);
-        problems.push({ text: MESSAGES.form.tooManyAttempts(seconds) });
+        const own = code === 'too_many_login_codes' ? getUserMessage(error) : null;
+        problems.push({ text: messages[code] ?? own ?? MESSAGES.form.tooManyAttempts(seconds) });
       } else if (error instanceof ApiError && error.status === 422) {
         const { fields, unmapped } = serverFieldErrors(error, { fieldMap, passwordField });
         for (const [field, message] of Object.entries(fields)) {

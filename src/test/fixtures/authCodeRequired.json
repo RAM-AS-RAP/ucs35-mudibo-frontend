@@ -1,0 +1,8 @@
+{
+  "status": "code_required",
+  "challenge_token": "test-challenge-token-not-a-secret-0001",
+  "email_masked": "w***@e***.com",
+  "code_expires_at": "2026-10-26T09:10:00Z",
+  "resend_available_in": 60,
+  "code_sent": true
+}

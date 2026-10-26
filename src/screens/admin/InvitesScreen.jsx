@@ -57,7 +57,7 @@ import { copyText } from '@/lib/clipboard';
 import { formatDateTime } from '@/lib/format';
 import { useCountdown } from '@/lib/useCountdown';
 import { usePageTitle } from '@/lib/usePageTitle';
-import { inviteSchema, normalizePhone } from '@/lib/validation';
+import { inviteSchema } from '@/lib/validation';
 
 /** @typedef {import('@/api/endpoints/admin').Invite} Invite */
 /** @typedef {import('@/api/endpoints/admin').InviteSent} InviteSent */
@@ -74,7 +74,7 @@ const RULES = Object.freeze({
 });
 
 /** Server field to form field for a 422 on POST /admin/invites. */
-const SERVER_FIELDS = Object.freeze({ name: 'name', phone_number: 'phone', email: 'email' });
+const SERVER_FIELDS = Object.freeze({ name: 'name', email: 'email' });
 
 /** The accept invitation page address. It holds no code and no secret. */
 export function acceptInviteAddress() {
@@ -82,8 +82,8 @@ export function acceptInviteAddress() {
 }
 
 /**
- * "Send invitation": name, phone and email, validated like registration (the phone is sent
- * normalised). A 409 or 422 stays in the dialog; a 429 counts down on the submit button. The
+ * "Send invitation": name and email, validated like registration; the body is exactly
+ * {name, email}. A 409 or 422 stays in the dialog; a 429 counts down on the submit button. The
  * dialog has its own trigger button, so focus returns to it when the dialog closes.
  * @param {{ open: boolean, onOpenChange: (open: boolean) => void, onSent: (sent: InviteSent) => void }} props
  */
@@ -98,7 +98,7 @@ function InviteFormDialog({ open, onOpenChange, onSent }) {
     formState: { errors },
   } = useForm({
     resolver: zodResolver(inviteSchema),
-    defaultValues: { name: '', phone: '', email: '' },
+    defaultValues: { name: '', email: '' },
   });
   const { problem, summaryRef, showError, clearProblem, countdown } = useServerProblem({
     setError,
@@ -114,7 +114,6 @@ function InviteFormDialog({ open, onOpenChange, onSent }) {
     try {
       const sent = await create.mutateAsync({
         name: values.name.trim(),
-        phoneNumber: /** @type {string} */ (normalizePhone(values.phone)),
         email: values.email.trim(),
       });
       reset();
@@ -165,16 +164,6 @@ function InviteFormDialog({ open, onOpenChange, onSent }) {
             autoComplete="off"
             error={errors.name?.message}
             {...register('name')}
-          />
-          <FormField
-            id="invite-phone"
-            label={INVITES_TEXT.phoneLabel}
-            hint={INVITES_TEXT.phoneHint}
-            type="tel"
-            inputMode="tel"
-            autoComplete="off"
-            error={errors.phone?.message}
-            {...register('phone')}
           />
           <FormField
             id="invite-email"

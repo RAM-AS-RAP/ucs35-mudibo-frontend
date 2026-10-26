@@ -27,10 +27,10 @@ afterEach(() => {
 
 /**
  * @param {ReturnType<typeof userEvent.setup>} user
- * @param {{ identifier?: string, password?: string }} [values]
+ * @param {{ email?: string, password?: string }} [values]
  */
-async function signIn(user, { identifier = '0712345678', password = PASSWORD } = {}) {
-  await user.type(await screen.findByLabelText('Phone number or email'), identifier);
+async function signIn(user, { email = 'wanjiku@example.com', password = PASSWORD } = {}) {
+  await user.type(await screen.findByLabelText('Email'), email);
   await user.type(screen.getByLabelText('Password'), password);
   await user.click(screen.getByRole('button', { name: 'Sign in' }));
 }
@@ -52,7 +52,7 @@ function backendFor(role, { mustChangePassword = false, name = 'Wanjiku Kamau' }
   );
 }
 
-describe('LoginScreen', () => {
+describe('LoginScreen (signed_in without a code)', () => {
   it.each([
     ['farmer', '/farmer'],
     // The buyer home /buyer redirects to the browse screen (F3).
@@ -112,12 +112,12 @@ describe('LoginScreen', () => {
     );
     const user = userEvent.setup();
     renderApp('/login');
-    await signIn(user, { identifier: 'wanjiku@example.com' });
+    await signIn(user, { email: 'wanjiku@example.com' });
     const alert = await screen.findByRole('alert');
-    expect(alert).toHaveTextContent('Incorrect phone number, email or password.');
+    expect(alert).toHaveTextContent('Incorrect email or password.');
     expect(alert).not.toHaveTextContent('Reference');
     expect(alert).toHaveFocus();
-    expect(screen.getByLabelText('Phone number or email')).toHaveValue('wanjiku@example.com');
+    expect(screen.getByLabelText('Email')).toHaveValue('wanjiku@example.com');
     expect(screen.getByLabelText('Password')).toHaveValue('');
     expect(getSession()).toBeNull();
   });
@@ -210,7 +210,7 @@ describe('LoginScreen', () => {
   it('keeps the password out of storage and query keys; only the session key is written', async () => {
     const user = userEvent.setup();
     const { router } = renderApp('/login');
-    await signIn(user, { identifier: 'wanjiku@example.com' });
+    await signIn(user, { email: 'wanjiku@example.com' });
     await waitFor(() => expect(router.state.location.pathname).toBe('/farmer'));
     expect(Object.keys(window.sessionStorage)).toEqual(['agrisence.session']);
     expect(window.sessionStorage.getItem('agrisence.session')).not.toContain(PASSWORD);
@@ -239,10 +239,10 @@ describe('LoginScreen', () => {
     const user = userEvent.setup();
     renderApp('/login');
     await user.click(await screen.findByRole('button', { name: 'Sign in' }));
-    expect(await screen.findByText('Enter your phone number or email.')).toBeInTheDocument();
+    expect(await screen.findByText('Enter your email address.')).toBeInTheDocument();
     expect(screen.getByText('Enter your password.')).toBeInTheDocument();
-    expect(screen.getByLabelText('Phone number or email')).toHaveFocus();
-    expect(screen.getByLabelText('Phone number or email')).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByLabelText('Email')).toHaveFocus();
+    expect(screen.getByLabelText('Email')).toHaveAttribute('aria-invalid', 'true');
   });
 
   it('disables submission while offline', async () => {

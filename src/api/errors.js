@@ -5,6 +5,7 @@
  * and show getUserMessage(error). The message table mirrors the "Suggested user messages"
  * table in docs/backend/frontend_contract.md; a test fails if a documented code is missing.
  */
+import { formatWait, waitSecondsFrom } from '@/lib/waitTime';
 
 export class ApiError extends Error {
   /**
@@ -84,12 +85,14 @@ export const GENERIC_MESSAGE = 'Something went wrong. Please try again.';
  * wording of the F3 task, which names the buyer's next step.
  */
 export const ERROR_MESSAGES = Object.freeze({
-  invalid_credentials: 'Wrong phone/email or password.',
+  invalid_credentials: 'Incorrect email or password.',
+  challenge_closed: 'Your sign in session ended. Please start again.',
+  too_many_login_codes: 'Too many sign in codes were requested. Try again later.',
   password_change_required: 'Please set a new password to continue.',
   forbidden: "You don't have access to this page.",
   wrong_current_password: 'Your current password is incorrect.',
   password_too_weak: 'Choose a stronger password.',
-  conflict: 'An account with this phone number or email already exists.',
+  conflict: 'An account with this email already exists.',
   validation_error: 'Please check the highlighted fields.',
   body_not_allowed: GENERIC_MESSAGE,
   not_found: 'This page is not available.',
@@ -127,17 +130,25 @@ export const ERROR_MESSAGES = Object.freeze({
   invalid_idempotency_key: GENERIC_MESSAGE,
   too_many_payment_attempts:
     'Too many payment attempts for this phone number. Please try again later.',
+  too_many_buyer_payment_attempts:
+    'You have made too many payment attempts. Please try again later.',
+  too_many_phone_numbers:
+    'You have used too many different phone numbers today. Use a number you already used, or try again later.',
+  invalid_phone: 'Enter a valid Safaricom number, for example 0712 345 678.',
+  phone_required: 'Enter the M-Pesa number to send the payment prompt to.',
+  idempotency_key_reused:
+    'This request was already used with a different number. Start a new payment attempt.',
   payment_request_failed: 'Could not start the M-Pesa prompt. Please try again.',
   payments_unavailable: 'Payments are temporarily unavailable. Please try again soon.',
   invalid_or_expired_code: 'The code is invalid or has expired.',
   codes_unavailable: 'This feature is temporarily unavailable.',
-  user_exists: 'An account with this phone number or email already exists.',
+  user_exists: 'An account with this email already exists.',
   too_many_pending_invites: 'Too many open invitations. Revoke one first.',
   invite_conflict: 'An invitation for this person was just created. Refresh the list.',
   invite_not_found: 'Invitation not found.',
   invite_not_pending: 'This invitation is no longer open.',
-  send_limit_reached: 'No more codes can be sent for this invitation.',
-  resend_cooldown: 'Please wait a minute before sending another code.',
+  send_limit_reached: 'You have used all the code resends. Please start again.',
+  resend_cooldown: 'Please wait before asking for another code.',
   no_email: 'Your account has no email address.',
   email_failed: 'The email could not be sent.',
   user_not_found: 'User not found.',
@@ -153,6 +164,10 @@ export const ERROR_MESSAGES = Object.freeze({
   // Client side codes (no HTTP response).
   network_error: "Can't reach AgriSence. Check your internet connection and try again.",
   timeout: 'The request took too long. Check your connection and try again.',
+  // The code step lost its in memory flow (a reload): the person starts again.
+  flow_lost: 'Your sign in was interrupted. Please start again.',
+  // A response that does not match the documented shape.
+  unexpected_response: GENERIC_MESSAGE,
 });
 
 /**
@@ -165,7 +180,10 @@ export function getUserMessage(error) {
   const { code, retryAfter, reason } = error;
 
   if (code === 'rate_limited' && retryAfter) {
-    return `Too many attempts. Please wait ${retryAfter} ${retryAfter === 1 ? 'second' : 'seconds'} and try again.`;
+    return `Too many attempts. Please wait ${formatWait(retryAfter)} and try again.`;
+  }
+  if (code === 'too_many_login_codes') {
+    return `Too many sign in codes were requested. Try again in ${formatWait(waitSecondsFrom(retryAfter))}.`;
   }
   /** @type {string | undefined} */
   const base = Object.prototype.hasOwnProperty.call(ERROR_MESSAGES, code)

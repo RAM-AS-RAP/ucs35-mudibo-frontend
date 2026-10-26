@@ -170,7 +170,7 @@ export function getAdminStats() {
 /* Users */
 
 /**
- * GET /api/v1/admin/users. `q` searches names, emails and phone numbers (2 to 50 characters).
+ * GET /api/v1/admin/users. `q` searches names and emails (2 to 50 characters).
  * @param {{ role?: UserRole | null, isDisabled?: boolean | null, q?: string | null } & Paging} [params]
  * @returns {Promise<AdminUserPage>}
  */
@@ -221,15 +221,13 @@ export function getInvites({ status, limit, offset } = {}) {
 }
 
 /**
- * POST /api/v1/admin/invites with exactly `{name, phone_number, email}`: 201 with the masked
- * contact and `email_sent`. 409 user_exists, too_many_pending_invites; 422; 429.
- * @param {{ name: string, phoneNumber: string, email: string }} invite
+ * POST /api/v1/admin/invites with exactly `{name, email}`: 201 with the masked email and
+ * `email_sent`. 409 user_exists, too_many_pending_invites; 422; 429.
+ * @param {{ name: string, email: string }} invite
  * @returns {Promise<InviteSent>}
  */
-export function createInvite({ name, phoneNumber, email }) {
-  return unwrap(
-    api.POST('/api/v1/admin/invites', { body: { name, phone_number: phoneNumber, email } }),
-  );
+export function createInvite({ name, email }) {
+  return unwrap(api.POST('/api/v1/admin/invites', { body: { name, email } }));
 }
 
 /**
