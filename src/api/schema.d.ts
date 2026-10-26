@@ -348,6 +348,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/login/resend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Resend Login Code */
+        post: operations["resend_login_code_api_v1_auth_login_resend_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/login/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Verify Login */
+        post: operations["verify_login_api_v1_auth_login_verify_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/me": {
         parameters: {
             query?: never;
@@ -427,6 +461,40 @@ export interface paths {
         put?: never;
         /** Register Farmer */
         post: operations["register_farmer_api_v1_auth_register_farmer_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/register/resend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Resend Registration Code */
+        post: operations["resend_registration_code_api_v1_auth_register_resend_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/register/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Verify Registration */
+        post: operations["verify_registration_api_v1_auth_register_verify_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -685,7 +753,10 @@ export interface paths {
         put?: never;
         /**
          * Pay Order
-         * @description Send an M-Pesa STK prompt for the buyer's order; amount and phone always come from the server.
+         * @description Send an M-Pesa STK prompt for the buyer's order to the number entered for this payment.
+         *
+         *     The body ``{"phone_number": "..."}`` is required: a missing body, a missing field or an empty value
+         *     gives 422 ``phone_required``. The amount always comes from the server.
          */
         post: operations["pay_order_api_v1_orders__order_id__pay_post"];
         delete?: never;
@@ -978,6 +1049,8 @@ export interface components {
             id: string;
             /** Mpesa Receipt Number */
             mpesa_receipt_number: string | null;
+            /** Phone Masked */
+            phone_masked: string | null;
             /** Result Code */
             result_code: number | null;
             /** Result Desc */
@@ -1022,6 +1095,8 @@ export interface components {
             order_reference: string;
             /** Order Status */
             order_status: string;
+            /** Phone Masked */
+            phone_masked: string | null;
             /** Result Code */
             result_code: number | null;
             /** Result Desc */
@@ -1048,6 +1123,36 @@ export interface components {
             orders_needing_reconciliation: number;
             /** Payments Initiated Over 10 Minutes */
             payments_initiated_over_10_minutes: number;
+        };
+        /** AuthResult */
+        AuthResult: {
+            /** Access Token */
+            access_token?: string | null;
+            /** Challenge Token */
+            challenge_token?: string | null;
+            /** Code Expires At */
+            code_expires_at?: string | null;
+            /** Code Sent */
+            code_sent?: boolean | null;
+            /** Email Masked */
+            email_masked?: string | null;
+            /** Expires In */
+            expires_in?: number | null;
+            /** Is Super Admin */
+            is_super_admin?: boolean | null;
+            /** Must Change Password */
+            must_change_password?: boolean | null;
+            /** Resend Available In */
+            resend_available_in?: number | null;
+            /** Role */
+            role?: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "signed_in" | "code_required";
+            /** Token Type */
+            token_type?: string | null;
         };
         /** Body_create_listing_api_v1_listings_post */
         Body_create_listing_api_v1_listings_post: {
@@ -1107,8 +1212,6 @@ export interface components {
             email: string;
             /** Name */
             name: string;
-            /** Phone Number */
-            phone_number: string;
         };
         /**
          * CropType
@@ -1281,8 +1384,6 @@ export interface components {
             message: string;
             /** Name */
             name: string;
-            /** Phone Masked */
-            phone_masked: string;
         };
         /**
          * InviteStatus
@@ -1337,10 +1438,37 @@ export interface components {
         ListingStatus: "active" | "sold_out" | "removed";
         /** LoginRequest */
         LoginRequest: {
-            /** Identifier */
-            identifier: string;
+            /**
+             * Email
+             * Format: email
+             */
+            email: string;
             /** Password */
             password: string;
+        };
+        /** LoginResendOut */
+        LoginResendOut: {
+            /**
+             * Code Expires At
+             * Format: date-time
+             */
+            code_expires_at: string;
+            /** Code Sent */
+            code_sent: boolean;
+            /** Resend Available In */
+            resend_available_in: number;
+        };
+        /** LoginResendRequest */
+        LoginResendRequest: {
+            /** Challenge Token */
+            challenge_token: string;
+        };
+        /** LoginVerifyRequest */
+        LoginVerifyRequest: {
+            /** Challenge Token */
+            challenge_token: string;
+            /** Code */
+            code: string;
         };
         /** MarketSummary */
         MarketSummary: {
@@ -1430,6 +1558,10 @@ export interface components {
         /**
          * OrderPaymentSummary
          * @description Latest payment of an order, without identifiers, full phone numbers, or callback data.
+         *
+         *     ``phone_masked`` is the number the buyer entered for the payment and ``stk_target_masked`` the
+         *     number the prompt was sent to (the sandbox test number in ``test_msisdn`` mode); both keep only
+         *     their last three digits.
          */
         OrderPaymentSummary: {
             /** Attempts */
@@ -1438,6 +1570,8 @@ export interface components {
             completed_at: string | null;
             /** Mpesa Receipt Number */
             mpesa_receipt_number: string | null;
+            /** Phone Masked */
+            phone_masked: string | null;
             /** Result Desc */
             result_desc: string | null;
             /** Status */
@@ -1476,6 +1610,21 @@ export interface components {
             email: string;
             /** New Password */
             new_password: string;
+        };
+        /**
+         * PayRequest
+         * @description Body of ``POST /orders/{id}/pay``: the M-Pesa number to send the prompt to (required).
+         *
+         *     Accounts have no phone number, so this is the only source of the number. A missing body, a missing
+         *     field or an empty value is answered with 422 ``phone_required`` by the service (not by validation),
+         *     which is why the field is optional to the validator but required in the published schema.
+         */
+        PayRequest: {
+            /**
+             * Phone Number
+             * @description The M-Pesa number for this payment, for example 0712 345 678.
+             */
+            phone_number: string | null;
         };
         /** PaymentEventList */
         PaymentEventList: {
@@ -1676,16 +1825,61 @@ export interface components {
             /** Reason */
             reason: string | null;
         };
-        /** RegisterRequest */
+        /**
+         * RegisterRequest
+         * @description Farmer or buyer registration; the account is created only after the emailed code is entered.
+         */
         RegisterRequest: {
-            /** Email */
-            email?: string | null;
+            /**
+             * Email
+             * Format: email
+             */
+            email: string;
             /** Name */
             name: string;
             /** Password */
             password: string;
-            /** Phone Number */
-            phone_number: string;
+        };
+        /** RegisterResendRequest */
+        RegisterResendRequest: {
+            /** Registration Token */
+            registration_token: string;
+        };
+        /** RegisterVerifyRequest */
+        RegisterVerifyRequest: {
+            /** Code */
+            code: string;
+            /** Registration Token */
+            registration_token: string;
+        };
+        /**
+         * RegistrationAccepted
+         * @description The identical 202 body of every registration request, whether or not the address has an account.
+         */
+        RegistrationAccepted: {
+            /**
+             * Code Expires At
+             * Format: date-time
+             */
+            code_expires_at: string;
+            /** Email Masked */
+            email_masked: string;
+            /** Message */
+            message: string;
+            /** Registration Token */
+            registration_token: string;
+            /** Resend Available In */
+            resend_available_in: number;
+        };
+        /**
+         * ResendAccepted
+         * @description The identical 202 body of every registration resend request.
+         */
+        ResendAccepted: {
+            /** Message */
+            message: string;
+            /** Resend Available In */
+            resend_available_in: number;
         };
         /**
          * ResolutionOut
@@ -1735,24 +1929,6 @@ export interface components {
             pipeline: components["schemas"]["PipelineStatus"];
             users: components["schemas"]["UserCounts"];
         };
-        /** TokenResponse */
-        TokenResponse: {
-            /** Access Token */
-            access_token: string;
-            /** Expires In */
-            expires_in: number;
-            /** Is Super Admin */
-            is_super_admin: boolean;
-            /** Must Change Password */
-            must_change_password: boolean;
-            /** Role */
-            role: string;
-            /**
-             * Token Type
-             * @default bearer
-             */
-            token_type: string;
-        };
         /** UserAdminOut */
         UserAdminOut: {
             /**
@@ -1767,7 +1943,12 @@ export interface components {
             /** Disabled By Name */
             disabled_by_name: string | null;
             /** Email */
-            email: string | null;
+            email: string;
+            /**
+             * Email Verified At
+             * Format: date-time
+             */
+            email_verified_at: string;
             /**
              * Id
              * Format: uuid
@@ -1785,8 +1966,6 @@ export interface components {
             name: string;
             /** Order Count */
             order_count: number | null;
-            /** Phone Number */
-            phone_number: string;
             /** Role */
             role: string;
         };
@@ -1820,7 +1999,7 @@ export interface components {
              */
             created_at: string;
             /** Email */
-            email: string | null;
+            email: string;
             /**
              * Id
              * Format: uuid
@@ -1832,8 +2011,6 @@ export interface components {
             must_change_password: boolean;
             /** Name */
             name: string;
-            /** Phone Number */
-            phone_number: string;
             /** Role */
             role: string;
         };
@@ -2417,7 +2594,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["UserOut"];
+                    "application/json": components["schemas"]["AuthResult"];
                 };
             };
             /** @description Validation Error */
@@ -2516,7 +2693,73 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["TokenResponse"];
+                    "application/json": components["schemas"]["AuthResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    resend_login_code_api_v1_auth_login_resend_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LoginResendRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LoginResendOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    verify_login_api_v1_auth_login_verify_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LoginVerifyRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthResult"];
                 };
             };
             /** @description Validation Error */
@@ -2628,12 +2871,12 @@ export interface operations {
         };
         responses: {
             /** @description Successful Response */
-            201: {
+            202: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["UserOut"];
+                    "application/json": components["schemas"]["RegistrationAccepted"];
                 };
             };
             /** @description Validation Error */
@@ -2661,12 +2904,78 @@ export interface operations {
         };
         responses: {
             /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RegistrationAccepted"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    resend_registration_code_api_v1_auth_register_resend_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RegisterResendRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResendAccepted"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    verify_registration_api_v1_auth_register_verify_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RegisterVerifyRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
             201: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["UserOut"];
+                    "application/json": components["schemas"]["AuthResult"];
                 };
             };
             /** @description Validation Error */
@@ -3197,7 +3506,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PayRequest"] | null;
+            };
+        };
         responses: {
             /** @description Successful Response */
             202: {

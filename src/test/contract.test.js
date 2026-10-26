@@ -20,9 +20,20 @@ describe('the validator catches drift', () => {
     expect(validateResponse(FIXTURE_CONTRACT.health, { status: 1 }).valid).toBe(false);
   });
 
-  it('rejects a token response without access_token (resolving $ref)', () => {
-    const { access_token: _omit, ...broken } = fixtures.tokenResponse;
+  it('rejects an AuthResult without status or with an unknown status (resolving $ref)', () => {
+    // AuthResult requires only `status`; the other fields depend on it and may be omitted.
+    const { status: _omit, ...broken } = fixtures.tokenResponse;
     expect(validateResponse(FIXTURE_CONTRACT.tokenResponse, broken).valid).toBe(false);
+    expect(
+      validateResponse(FIXTURE_CONTRACT.tokenResponse, { ...fixtures.tokenResponse, status: 'ok' })
+        .valid,
+    ).toBe(false);
+    expect(
+      validateResponse(FIXTURE_CONTRACT.tokenResponse, {
+        ...fixtures.tokenResponse,
+        expires_in: '8h',
+      }).valid,
+    ).toBe(false);
   });
 
   it('rejects a profile with a wrong type', () => {
