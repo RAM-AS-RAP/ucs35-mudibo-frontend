@@ -127,28 +127,84 @@ seconds and at the end ("The time to pay has ended."), from an `aria-live="polit
 the order screen keeps mounted (the countdown itself disappears when the order expires). At zero
 the screen refetches the order once and then shows the server's expired state.
 
-## 5. The idempotency key
+## 5. The payment step: the M-Pesa number and the idempotency key
 
-`POST /orders/{id}/pay` needs an `Idempotency-Key` header (8 to 64 letters, digits, `-` and `_`)
-and an empty body. Sending the same key again returns the current state with 202 and **never sends
-a second STK prompt**; a new key may send a new prompt.
+### The number (identity v2, prompt 2)
 
-| Moment                                                | Key                                                                                   |
-| ----------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| The buyer clicks "Pay with M-Pesa" or "Try again"     | A new key from `newIdempotencyKey()` (`crypto.randomUUID`, or 16 random bytes as hex) |
-| The request fails with `network_error` or `timeout`   | Kept. The button reads "Check payment request" and sends the same key                 |
-| A 202 arrives                                         | Discarded. Polling starts                                                             |
-| Any error with an HTTP status (409, 429, 502, 503, …) | Discarded. The next deliberate attempt gets a new key                                 |
+The buyer states the M-Pesa number for each payment:
+
+1. While the server's `can_pay` is true and no prompt is open, the payment panel shows the field
+   "M-Pesa phone number" (`PhoneField`, `type="tel"`, hint "The Safaricom number that will get the
+   payment prompt. For example 0712 345 678.") above "Pay with M-Pesa". It starts empty: the buyer
+   always types the M-Pesa number (accounts have no phone number). Under the button: "You will get a prompt on this number.
+   Approve it with your M-Pesa PIN."
+2. "Pay with M-Pesa" checks the field with `phoneFieldError` (`src/lib/phone.js`, the F1
+   `normalizePhone` rules: `07…`, `01…`, `+2547…`, `2547…`, `2541…`, spaces and dashes allowed).
+   An empty or invalid number shows the error on the field, moves focus there and sends nothing.
+3. A valid number opens "Send the payment prompt?" (`ConfirmPhoneDialog`): "We will send an M-Pesa
+   prompt for KES 282.00 to 0712 345 678." (the server's `total_amount`, and the typed number in
+   full so a typing mistake can be caught) and "Make sure this is your own number and that your
+   phone is on." Only "Send prompt" sends the request; "Change number" (or Escape) closes the
+   dialog and returns focus to the field. While the request is in flight the dialog stays open
+   with a spinner, both buttons are disabled, Escape does not close it, the field is disabled and
+   leaving the page asks first (`beforeunload`).
+4. `payOrder(orderId, key, { phoneNumber })` sends `{"phone_number": "254712345678"}` (normalised,
+   no other field) with the `Idempotency-Key` header. It is the only place that builds the pay
+   request (source check), and it refuses to send without a valid number.
+5. While the prompt is open the panel shows "Prompt sent to 254\*\*\*\*\*\*\*149"
+   (`stk_target_masked`). When the server's `phone_masked` (the number entered) differs from it,
+   the panel adds "In this test environment the prompt goes to a fixed test number instead of
+   254\*\*\*\*\*\*\*678." (`targetDiffers`, `src/lib/paymentView.js`).
+6. After a cancelled, failed or timed out payment (while `can_pay` is true) the field comes back
+   with the number the buyer last typed, "Use the same number or enter a different one", and
+   "Try again".
+
+The number lives only in the order screen's component state. It is never written to
+`sessionStorage`, `localStorage`, a URL, router state, a query key, the mutation's variables, a log
+or an error message, and it is gone when the screen unmounts (also on logout). Every later display
+uses the server's masked values.
+
+### The idempotency key
+
+`POST /orders/{id}/pay` takes an `Idempotency-Key` header (8 to 64 letters, digits, `-` and `_`).
+Sending the same key **with the same number** again returns the current state with 202 and **never
+sends a second STK prompt**; the same key with a different number gives 409
+`idempotency_key_reused`; a new key may send a new prompt.
+
+| Moment                                                | Key                                                                                                                            |
+| ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| "Send prompt" (a new deliberate attempt)              | A new key (`payKey.begin(phone)`, from `newIdempotencyKey()`), tied to the normalised number                                   |
+| The request fails with `network_error` or `timeout`   | Kept with the number (`markUncertain`). The field is disabled; "Check payment request" resends the same key and number at once |
+| A 202 arrives                                         | Discarded (`clear`). Polling starts, focus moves to the panel headline                                                         |
+| Any error with an HTTP status (409, 422, 429, 502, …) | Discarded. The field is enabled again; the next attempt gets a new key                                                         |
+| The number is different from the held one             | Always a new key, even after an unknown result                                                                                 |
 
 Why: after a network failure or a timeout the browser cannot know whether the server received the
-request and sent a prompt. Resending with the same key is safe (the server replays), while a new
-key could send a second prompt. Once the server has answered, the attempt is over, and reusing that
-key for a new attempt would only replay the old answer.
+request and sent a prompt. Resending with the same key and number is safe (the server replays),
+while a new key could send a second prompt. Once the server has answered, the attempt is over.
 
-The key lives only in a component ref (`useRef`) of the order screen. It is never written to
-`sessionStorage`, `localStorage`, the URL, router state, a query key or the mutation's variables
-(the mutation reads it from the ref), and never logged. Only `src/api/endpoints/payments.js` sets
-the header and only `src/lib/idempotency.js` creates keys (source checks).
+The key and its number live only in a `createPayKey()` holder (`src/lib/payKey.js`) in a component
+ref of the order screen; `usePayOrder(orderId, attemptRef)` reads both from the ref, so neither
+sits in the mutation cache. Only `src/api/endpoints/payments.js` sets the header and only
+`src/lib/idempotency.js` creates keys (source checks).
+
+### The three payment limits
+
+| Code                              | Limit                                         | Message                                                                                                               |
+| --------------------------------- | --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `too_many_payment_attempts`       | attempts for one number in an hour            | "Too many payment attempts for this phone number. Try again in 30 seconds."                                           |
+| `too_many_buyer_payment_attempts` | more than 10 attempts by the buyer in an hour | "You have made too many payment attempts. Try again in about 10 minutes."                                             |
+| `too_many_phone_numbers`          | more than 3 numbers in 24 hours               | "You have used too many different phone numbers today. Use a number you already used, or try again in about 2 hours." |
+
+All three are 429 with `Retry-After` (60 seconds without it). The wait in words comes from
+`formatWait` (`src/lib/waitTime.js`): "N seconds" under 90 seconds, "about N minutes" under 90
+minutes, "about N hours" otherwise, rounded up and never zero. The message is announced once in the
+panel's polite region. Waits up to 120 seconds count down on the button ("Try again in 30 s",
+`CountdownButton`, which then announces "You can try again now."). Longer waits keep the button
+disabled without a per second countdown: the end time is stored and checked every 15 seconds, on
+window focus and when the tab becomes visible (`useWaitUntil`), so a sleeping device or a hidden tab
+still ends the wait on time; the region then says "You can try again now." Nothing is retried
+automatically.
 
 ## 6. A payment as seen by the browser
 
@@ -159,13 +215,18 @@ Buyer            Browser (AgriSence)                         Backend API        
   |                 |<------------- 201 OrderOut (pending_payment, expires_at, server_time,
   |                 |               total_amount, can_pay, can_cancel)                       |
   |                 | open /buyer/orders/<id>, start countdown    |                          |
-  |  Pay with       |                                             |                          |
-  |  M-Pesa ------->| key = newIdempotencyKey()  (ref only)       |                          |
-  |                 | POST /orders/<id>/pay  Idempotency-Key: key, no body ------>|           |
-  |                 |                                             | STK push --------------->|
-  |                 |<------------- 202 PaymentStartOut (payment initiated, message, prompt)|
-  |                 | discard key, show "Check your phone",       |                          |
-  |                 | start the 150 s polling window              |                          |
+  |  types number,  |                                             |                          |
+  |  Pay with       | phoneFieldError(number) ok: open            |                          |
+  |  M-Pesa ------->| "Send the payment prompt?" (KES total, number)                         |
+  |  Send prompt -->| key = payKey.begin(number)  (ref only)      |                          |
+  |                 | POST /orders/<id>/pay  Idempotency-Key: key |                          |
+  |                 |   {"phone_number": "2547XXXXXXXX"} -------->| normalise, check limits  |
+  |                 |                                             | STK push to the number ->|
+  |                 |<------------- 202 PaymentStartOut (payment initiated, phone_masked,    |
+  |                 |               stk_target_masked, message, prompt)                      |
+  |                 | discard key, close the dialog, show         |                          |
+  |                 | "Prompt sent to 254*******678", start the   |                          |
+  |                 | 150 s polling window                        |                          |
   |  phone prompt <-|---------------------------------------------|--------------------------|
   |  enters PIN on  |                                             |                          |
   |  the phone ---->|---------------------------------------------|------------------------->|
@@ -177,9 +238,10 @@ Buyer            Browser (AgriSence)                         Backend API        
   |                 | stop polling, show "Payment received (test)"|                          |
 ```
 
-Variations: a network failure or timeout on the pay request keeps the key and "Check payment
-request" repeats it; a cancelled, failed or timed out payment stops polling and offers "Try again"
-(a new key) while `can_pay` is true; 150 seconds without a result stops polling and offers "Check
+Variations: a network failure or timeout on the pay request keeps the key and the number, and
+"Check payment request" repeats both; a cancelled, failed or timed out payment stops polling and
+offers the field again and "Try again" (a new key) while `can_pay` is true; in a test environment
+the prompt goes to a fixed sandbox number (`stk_target_masked` differs from `phone_masked`); 150 seconds without a result stops polling and offers "Check
 again"; the countdown reaching zero refetches once and shows the expired state.
 
 ## 7. Error codes and messages
@@ -202,20 +264,25 @@ Order creation (`src/api/errors.js`, shown in the error summary of the listing s
 Payment (`mapPayError`, `src/lib/payErrors.js`; every message is announced in the panel's
 `aria-live="polite"` region):
 
-| Code                                                  | Status | Message                                                                                                                                   | Action                             |
-| ----------------------------------------------------- | ------ | ----------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------- |
-| `order_not_payable`                                   | 409    | "This order can no longer be paid. Its current state is shown below."                                                                     | refetch                            |
-| `order_expiring` (reason `too_close`)                 | 409    | "There is not enough time left to start a payment. Cancel this order and start again."                                                    | cancel hint                        |
-| `order_expiring` (reason `expired`)                   | 409    | "This order has expired."                                                                                                                 | refetch                            |
-| `payment_in_progress`                                 | 409    | "A payment is already in progress. Check your phone."                                                                                     | refetch (waiting panel)            |
-| `max_attempts_reached`                                | 409    | "You have tried to pay for this order 3 times. Cancel it and start a new order."                                                          | cancel hint                        |
-| `too_many_payment_attempts`                           | 429    | "Too many payment attempts for this phone number. Please try again later."                                                                | wait `Retry-After` (60 without it) |
-| `payments_unavailable`, any 503                       | 503    | "Payments are temporarily unavailable. Please try again soon."                                                                            | wait `Retry-After` when given      |
-| `payment_request_failed`                              | 502    | "Could not start the M-Pesa prompt. Please try again."                                                                                    | new key                            |
-| `idempotency_key_required`, `invalid_idempotency_key` | 422    | "Something went wrong. Please try again."                                                                                                 | new key                            |
-| `order_not_found`                                     | 404    | "This order could not be found."                                                                                                          | refetch (not found state)          |
-| `network_error`, `timeout`                            | none   | "We could not confirm whether the payment request was sent. Press "Check payment request" to find out. You will not get a second prompt." | same key                           |
-| anything else                                         |        | `getUserMessage(error)`                                                                                                                   | none                               |
+| Code                                                  | Status | Message                                                                                                                        | Action                             |
+| ----------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------- |
+| `order_not_payable`                                   | 409    | "This order can no longer be paid. Its current state is shown below."                                                          | refetch                            |
+| `order_expiring` (reason `too_close`)                 | 409    | "There is not enough time left to start a payment. Cancel this order and start again."                                         | cancel hint                        |
+| `order_expiring` (reason `expired`)                   | 409    | "This order has expired."                                                                                                      | refetch                            |
+| `payment_in_progress`                                 | 409    | "A payment is already in progress. Check your phone."                                                                          | refetch (waiting panel)            |
+| `max_attempts_reached`                                | 409    | "You have tried to pay for this order 3 times. Cancel it and start a new order."                                               | cancel hint                        |
+| `invalid_phone`                                       | 422    | "Enter a valid Safaricom number, for example 0712 345 678." (on the field, focus moves there)                                  | none                               |
+| `phone_required`                                      | 422    | "Enter the M-Pesa number to send the payment prompt to." (on the field, focus moves there)                                     | none                               |
+| `idempotency_key_reused`                              | 409    | "This request was already used with a different number. Start a new payment attempt."                                          | new key                            |
+| `too_many_payment_attempts`                           | 429    | "Too many payment attempts for this phone number. Try again in <wait>."                                                        | wait `Retry-After` (60 without it) |
+| `too_many_buyer_payment_attempts`                     | 429    | "You have made too many payment attempts. Try again in <wait>."                                                                | wait `Retry-After` (60 without it) |
+| `too_many_phone_numbers`                              | 429    | "You have used too many different phone numbers today. Use a number you already used, or try again in <wait>."                 | wait `Retry-After` (60 without it) |
+| `payments_unavailable`, any 503                       | 503    | "Payments are temporarily unavailable. Please try again soon."                                                                 | wait `Retry-After` when given      |
+| `payment_request_failed`                              | 502    | "Could not start the M-Pesa prompt. Please try again."                                                                         | new key                            |
+| `idempotency_key_required`, `invalid_idempotency_key` | 422    | "Something went wrong. Please try again."                                                                                      | new key                            |
+| `order_not_found`                                     | 404    | "This order could not be found."                                                                                               | refetch (not found state)          |
+| `network_error`, `timeout`                            | none   | "We could not confirm that the payment request was sent. Check the request to avoid sending it twice." (the field is disabled) | same key and number                |
+| anything else                                         |        | `getUserMessage(error)`                                                                                                        | none                               |
 
 Cancel: a 200 shows the toast "Order cancelled" and the cancelled state (also when it was already
 cancelled). 409 `payment_in_progress` ("A payment is in progress. Please wait for it to finish.")
@@ -236,12 +303,19 @@ below.") close the dialog and refetch the order. Other errors stay in the dialog
   moves focus to its headline when the state changes, and announces messages in a polite live
   region. Status badges pair an icon with words ("Waiting for your phone", "Payment failed").
 - The countdown is announced only at 60 seconds, 30 seconds and at the end, never every second.
+- The number field has a visible label, `type="tel"`, `inputMode="tel"`, `autoComplete="tel"`,
+  16 px text and 44 px height; its hint and error are linked with `aria-describedby`, and the
+  error has an icon. The confirmation dialog traps focus, returns it to the field ("Change
+  number", Escape, a number error) or to the panel headline (after the 202), and says "Sending
+  request" once in a polite region inside the dialog.
+- A wait after a 429 is announced once, never every second.
 - The cancel dialog takes focus when it opens and returns it to the "Cancel order" button (or to
   the panel headline once the order is cancelled).
 - The navigation badge's number is hidden from screen readers and replaced by "2 orders waiting
   for payment". Its colours (white on the negative text colour) pass the contrast test.
 - The PIN warning is plain text on every checkout and payment screen: "Enter your M-Pesa PIN only
-  on the prompt on your phone. AgriSence never asks for your PIN." There is no PIN field.
+  on the prompt on your phone. AgriSence never asks for your PIN." There is no PIN field; the
+  only input on the payment screen is the M-Pesa number.
 
 ## 9. Limitations
 
@@ -260,3 +334,12 @@ below.") close the dialog and refetch the order. Other errors stay in the dialog
 - **"Not paid"** groups only the orders loaded so far (as in F2b).
 - The idempotency key is lost if the tab is closed during an unknown result; the buyer then checks
   the order again, and a new attempt is protected by the server's `payment_in_progress` check.
+- **The number is not verified.** The app and the server only check its format; a prompt can reach
+  a number the buyer does not own (the dialog asks the buyer to make sure it is their own).
+- **Nothing is saved between payments.** The buyer always types the number, each time; accounts
+  have no phone number, and nothing is remembered on the device.
+- **Full number only in the dialog.** The confirmation shows the full number the buyer typed so a
+  typing mistake can be caught; every later display (panel, My orders, admin) uses the server's
+  masked value.
+- **Long waits are approximate.** A wait of minutes or hours reads "about N minutes/hours" and ends
+  up to 15 seconds after its end time (or at once on focus).

@@ -66,7 +66,7 @@ Two starting values failed the contrast test on the mint canvas and were moved t
 - **Text** is never below 16px in inputs (no mobile zoom on focus). System font stack, no web fonts.
 - **Focus** is always visible (2px `focus-ring` with an offset). `prefers-reduced-motion` disables animation.
 - **Money and dates** go through `src/lib/format.js` (`formatKES`, `formatPct`, `formatMonth`,
-  `formatDateTime` in Africa/Nairobi, `maskedPhone`). The client never recomputes a charged amount.
+  `formatDateTime` in Africa/Nairobi). The client never recomputes a charged amount.
 - **English only**, with user facing strings kept in the component or in `src/api/errors.js` so they are easy to find.
 
 ## Measured contrast ratios
