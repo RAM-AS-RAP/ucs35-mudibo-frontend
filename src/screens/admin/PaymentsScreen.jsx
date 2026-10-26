@@ -65,6 +65,16 @@ const COLUMNS = [
     cell: (p) => <StatusBadge kind="adminPayment" status={p.status} />,
   },
   {
+    key: 'entered',
+    header: PAYMENTS_TEXT.entered,
+    cell: (p) =>
+      p.phone_masked ? (
+        <span className="font-mono">{p.phone_masked}</span>
+      ) : (
+        PAYMENTS_TEXT.notRecorded
+      ),
+  },
+  {
     key: 'target',
     header: PAYMENTS_TEXT.target,
     cell: (p) => <span className="font-mono">{p.stk_target_masked}</span>,

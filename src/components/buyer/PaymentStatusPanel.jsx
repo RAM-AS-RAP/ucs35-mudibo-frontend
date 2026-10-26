@@ -16,7 +16,9 @@ import {
 import { Button } from '@/components/ui/button';
 import { CountdownButton } from '@/components/auth/CountdownButton';
 import { StatusBadge } from '@/components/display/StatusBadge';
+import { PhoneField } from '@/components/buyer/PhoneField';
 import { formatKES } from '@/lib/format';
+import { targetDiffers } from '@/lib/paymentView';
 import { ORDER_SCREEN_TEXT } from '@/lib/buyerMessages';
 import { cn } from '@/lib/utils';
 
@@ -62,12 +64,28 @@ const text = (value) => (typeof value === 'string' && value.trim() ? value.trim(
  * The payment panel of the order screen: for each kind from deriveOrderView an icon, a headline
  * and body text, the allowed buttons, and an aria-live="polite" status region for messages.
  * Focus moves to the headline when the kind changes (not on the first render).
+ * While Pay is possible (the server's can_pay) the M-Pesa number field sits above the button;
+ * `pay.phone` carries its value from the screen's state. `pay.blocked` disables Pay during a
+ * long wait (minutes or hours); short waits count down on the button (`pay.waitSeconds`).
  * @param {{
  *   view: OrderView,
  *   order: Order,
  *   pollWindowOver?: boolean,
  *   message?: string | null,
- *   pay: { onPay: () => void, pending: boolean, waitSeconds: number, sameKey: boolean },
+ *   pay: {
+ *     onPay: () => void,
+ *     pending: boolean,
+ *     waitSeconds: number,
+ *     blocked?: boolean,
+ *     uncertain: boolean,
+ *     phone?: {
+ *       value: string,
+ *       onChange: (value: string) => void,
+ *       error?: string | null,
+ *       disabled?: boolean,
+ *       inputRef?: import('react').Ref<HTMLInputElement>,
+ *     },
+ *   },
  *   onCancel: (trigger: HTMLElement) => void,
  *   onCheckAgain: () => void,
  *   checking?: boolean,
@@ -110,9 +128,16 @@ export function PaymentStatusPanel({
       break;
     case 'awaiting_phone': {
       const masked = text(payment?.stk_target_masked);
+      const entered = text(payment?.phone_masked);
       body = (
         <>
           {masked && <p className="font-medium">{ORDER_SCREEN_TEXT.promptSent(masked)}</p>}
+          {entered && targetDiffers(payment) && (
+            <p className="flex items-start gap-2" data-testid="test-target-note">
+              <Info aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-primary" />
+              <span>{ORDER_SCREEN_TEXT.testTarget(entered)}</span>
+            </p>
+          )}
           {statusMessage && <p>{statusMessage}</p>}
           <p className="text-sm text-text-secondary">{ORDER_SCREEN_TEXT.promptTip}</p>
           {pollWindowOver && (
@@ -225,8 +250,11 @@ export function PaymentStatusPanel({
   }
 
   let payLabel = ORDER_SCREEN_TEXT.pay;
-  if (pay.sameKey) payLabel = ORDER_SCREEN_TEXT.checkPayment;
+  if (pay.uncertain) payLabel = ORDER_SCREEN_TEXT.checkPayment;
   else if (RETRY_KINDS.has(view.kind)) payLabel = ORDER_SCREEN_TEXT.tryAgain;
+
+  // The number field only while the server allows a payment (no prompt is open then).
+  const showPhone = PAY_KINDS.has(view.kind) && view.canPay;
 
   return (
     <section
@@ -275,24 +303,42 @@ export function PaymentStatusPanel({
       {(PAY_KINDS.has(view.kind) || view.canCancel) && (
         <div className="flex flex-col gap-3">
           {PAY_KINDS.has(view.kind) && (
-            <div className="flex flex-col gap-1.5">
-              <CountdownButton
-                type="button"
-                size="lg"
-                className="w-full sm:w-fit"
-                remaining={pay.waitSeconds}
-                pending={pay.pending}
-                pendingLabel={ORDER_SCREEN_TEXT.sending}
-                disabled={!view.canPay}
-                aria-describedby="pay-hint"
-                onClick={pay.onPay}
-              >
-                <Smartphone aria-hidden="true" />
-                {payLabel}
-              </CountdownButton>
-              <p id="pay-hint" className="text-sm text-text-secondary">
-                {ORDER_SCREEN_TEXT.payHint}
-              </p>
+            <div className="flex flex-col gap-3">
+              {showPhone && pay.phone && (
+                <>
+                  {RETRY_KINDS.has(view.kind) && <p>{ORDER_SCREEN_TEXT.phoneAgain}</p>}
+                  <PhoneField
+                    value={pay.phone.value}
+                    onChange={pay.phone.onChange}
+                    error={pay.phone.error}
+                    disabled={pay.phone.disabled}
+                    inputRef={pay.phone.inputRef}
+                  />
+                </>
+              )}
+              <div className="flex flex-col gap-1.5">
+                <CountdownButton
+                  type="button"
+                  size="lg"
+                  className="w-full sm:w-fit"
+                  remaining={pay.waitSeconds}
+                  pending={pay.pending}
+                  pendingLabel={ORDER_SCREEN_TEXT.sending}
+                  announceStart={false}
+                  disabled={!view.canPay || pay.blocked}
+                  aria-describedby={showPhone ? 'pay-hint' : undefined}
+                  onClick={pay.onPay}
+                  data-testid="pay-button"
+                >
+                  <Smartphone aria-hidden="true" />
+                  {payLabel}
+                </CountdownButton>
+                {showPhone && (
+                  <p id="pay-hint" className="text-sm text-text-secondary">
+                    {ORDER_SCREEN_TEXT.payHint}
+                  </p>
+                )}
+              </div>
             </div>
           )}
           {view.canCancel && (

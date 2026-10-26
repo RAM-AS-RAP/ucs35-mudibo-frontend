@@ -120,8 +120,20 @@ export const ORDER_SCREEN_TEXT = Object.freeze({
   countdown30: '30 seconds left to complete the payment.',
   countdownExpired: 'The time to pay has ended.',
   pay: 'Pay with M-Pesa',
-  payHint:
-    'You will get a prompt on your registered phone number. Approve it with your M-Pesa PIN.',
+  payHint: 'You will get a prompt on this number. Approve it with your M-Pesa PIN.',
+  phoneLabel: 'M-Pesa phone number',
+  phoneHint: 'The Safaricom number that will get the payment prompt. For example 0712 345 678.',
+  phoneAgain: 'Use the same number or enter a different one',
+  confirmTitle: 'Send the payment prompt?',
+  /** @param {string} amount  formatKES(total_amount) @param {string} phone  formatPhoneLocal() */
+  confirmText: (amount, phone) => `We will send an M-Pesa prompt for ${amount} to ${phone}.`,
+  confirmOwn: 'Make sure this is your own number and that your phone is on.',
+  sendPrompt: 'Send prompt',
+  changeNumber: 'Change number',
+  /** @param {string} masked  phone_masked */
+  testTarget: (masked) =>
+    `In this test environment the prompt goes to a fixed test number instead of ${masked}.`,
+  waitOver: 'You can try again now.',
   checkPayment: 'Check payment request',
   sending: 'Sending request',
   tryAgain: 'Try again',

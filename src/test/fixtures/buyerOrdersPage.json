@@ -50,6 +50,7 @@
       "payment": {
         "status": "completed",
         "status_message": "Payment received",
+        "phone_masked": "254*******149",
         "stk_target_masked": "254*******149",
         "mpesa_receipt_number": "SBX4F7H2KQ",
         "result_desc": null,
@@ -133,6 +134,7 @@
       "payment": {
         "status": "failed",
         "status_message": "The payment failed",
+        "phone_masked": "254*******149",
         "stk_target_masked": "254*******149",
         "mpesa_receipt_number": null,
         "result_desc": "Insufficient balance",
@@ -166,6 +168,7 @@
       "payment": {
         "status": "completed",
         "status_message": "Payment received",
+        "phone_masked": "254*******149",
         "stk_target_masked": "254*******149",
         "mpesa_receipt_number": null,
         "result_desc": null,

@@ -5,23 +5,47 @@ import { SearchX } from 'lucide-react';
 import { useCancelOrder, useOrder, usePayOrder } from '@/api/queries';
 import { ApiError, getUserMessage } from '@/api/errors';
 import { Button } from '@/components/ui/button';
-import { DEFAULT_RETRY_SECONDS } from '@/components/auth/useServerProblem';
 import { PageHeader } from '@/components/display/PageHeader';
 import { ConfirmDialog } from '@/components/feedback/ConfirmDialog';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { ErrorState } from '@/components/feedback/ErrorState';
 import { LoadingState } from '@/components/feedback/LoadingState';
+import { ConfirmPhoneDialog } from '@/components/buyer/ConfirmPhoneDialog';
 import { CountdownAnnouncement, ExpiryCountdown } from '@/components/buyer/ExpiryCountdown';
 import { OrderSummaryCard } from '@/components/buyer/OrderSummaryCard';
 import { PaymentStatusPanel } from '@/components/buyer/PaymentStatusPanel';
 import { SandboxNote } from '@/components/buyer/SandboxNote';
 import { isUuid } from '@/lib/filterParams';
-import { newIdempotencyKey } from '@/lib/idempotency';
 import { deriveOrderView } from '@/lib/orderView';
 import { isDefinitivePayError, mapPayError } from '@/lib/payErrors';
+import { createPayKey } from '@/lib/payKey';
+import { phoneFieldError } from '@/lib/phone';
+import { COUNTDOWN_MAX_SECONDS } from '@/lib/waitTime';
 import { ORDER_SCREEN_TEXT } from '@/lib/buyerMessages';
 import { useCountdown } from '@/lib/useCountdown';
 import { usePageTitle } from '@/lib/usePageTitle';
+import { useWaitUntil } from '@/lib/useWaitUntil';
+
+/** @typedef {'field' | 'heading' | 'button'} FocusTarget */
+
+/**
+ * The element for a focus target: the number field, the panel headline, or the pay button
+ * (the headline when the field or the button is gone or disabled).
+ * @param {FocusTarget} target
+ * @param {HTMLInputElement | null} field
+ * @returns {HTMLElement | null}
+ */
+function focusElement(target, field) {
+  const heading = document.getElementById('payment-panel-title');
+  if (target === 'field' && field?.isConnected && !field.disabled) return field;
+  if (target === 'button') {
+    const button = /** @type {HTMLButtonElement | null} */ (
+      document.querySelector('[data-testid="pay-button"]')
+    );
+    if (button && !button.disabled) return button;
+  }
+  return heading;
+}
 
 /** Panel kinds where an earlier pay or cancel message no longer applies (the order is closed). */
 const FINAL_KINDS = new Set(['paid', 'expired', 'cancelled', 'under_review', 'closed_other']);
@@ -44,11 +68,17 @@ function OrderNotFound() {
 /**
  * One order and its payment (/buyer/orders/:orderId).
  *
- * Pay: one Idempotency-Key per deliberate attempt, held in a ref only. After a network failure
- * or a timeout the key is kept and the button reads "Check payment request" (the server replays
- * its first answer and sends no second prompt); after any answer from the server (202 or an
- * error with a status) the key is discarded and the next click makes a new one. Pay and Cancel
- * are enabled only when the server's can_pay and can_cancel are true.
+ * Pay: the buyer types the M-Pesa number (never prefilled or stored), "Pay with M-Pesa" checks
+ * it and opens "Send the payment prompt?", and only "Send prompt" sends the request. The number
+ * lives in this component's state only and is gone when the screen unmounts (also on logout).
+ * One Idempotency-Key per deliberate attempt and number (lib/payKey.js, held in a ref with the
+ * number, never in the mutation's variables). After a network failure or a timeout the key and
+ * the number are kept, the field is disabled and the button reads "Check payment request" (the
+ * server replays its first answer and sends no second prompt); after any answer from the server
+ * (202 or an error with a status) the key is discarded and the next attempt makes a new one.
+ * Waits from Retry-After up to 120 seconds count down on the button; longer ones are shown
+ * approximately and end at a stored time (useWaitUntil). Pay and Cancel are enabled only when
+ * the server's can_pay and can_cancel are true.
  * While the prompt is open the order is polled every 3 seconds for up to 150 seconds (useOrder).
  */
 export default function OrderScreen() {
@@ -56,12 +86,23 @@ export default function OrderScreen() {
   const { orderId = '' } = useParams();
   const validId = isUuid(orderId);
   const order = useOrder(validId ? orderId : '', { pollWhileWaiting: true });
-  const keyRef = useRef(/** @type {string | null} */ (null));
-  const pay = usePayOrder(orderId, keyRef);
+  const [payKey] = useState(createPayKey);
+  const attemptRef = useRef(payKey);
+  const pay = usePayOrder(orderId, attemptRef);
   const cancel = useCancelOrder();
   const wait = useCountdown();
-  const [sameKey, setSameKey] = useState(false);
+  const [uncertain, setUncertain] = useState(false);
   const [message, setMessage] = useState(/** @type {string | null} */ (null));
+  const onLongWaitOver = useCallback(() => setMessage(ORDER_SCREEN_TEXT.waitOver), []);
+  const longWait = useWaitUntil(onLongWaitOver);
+  const [phone, setPhone] = useState('');
+  const [phoneError, setPhoneError] = useState(/** @type {string | null} */ (null));
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const phoneRef = useRef(/** @type {HTMLInputElement | null} */ (null));
+  const focusAfterConfirm = useRef(/** @type {FocusTarget} */ ('field'));
+  const [focusRequest, setFocusRequest] = useState(
+    /** @type {{ target: FocusTarget, n: number } | null} */ (null),
+  );
   const [promptTarget, setPromptTarget] = useState(/** @type {string | null} */ (null));
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelError, setCancelError] = useState(/** @type {unknown} */ (null));
@@ -69,6 +110,19 @@ export default function OrderScreen() {
   const cancelTrigger = useRef(/** @type {HTMLElement | null} */ (null));
   const paying = useRef(false);
   const { refetch, restartPollWindow } = order;
+
+  // The key and the number held for an attempt are dropped when the screen goes away.
+  useEffect(() => () => payKey.clear(), [payKey]);
+
+  // Focus after a pay step, once the field or the button is enabled again.
+  useEffect(() => {
+    if (focusRequest) focusElement(focusRequest.target, phoneRef.current)?.focus();
+  }, [focusRequest]);
+
+  const requestFocus = useCallback((/** @type {FocusTarget} */ target) => {
+    focusAfterConfirm.current = target;
+    setFocusRequest((last) => ({ target, n: (last?.n ?? 0) + 1 }));
+  }, []);
 
   // Warn before leaving the page only while a pay request is in flight.
   const payPending = pay.isPending;
@@ -83,47 +137,84 @@ export default function OrderScreen() {
     return () => window.removeEventListener('beforeunload', warn);
   }, [payPending]);
 
-  const startPayment = useCallback(() => {
+  const sendPayment = useCallback(() => {
     if (paying.current) return;
+    try {
+      // A new key for a deliberate attempt; the same key again only after an unknown result
+      // with the same number.
+      payKey.begin(phone);
+    } catch {
+      setPhoneError(phoneFieldError(phone));
+      setConfirmOpen(false);
+      requestFocus('field');
+      return;
+    }
     paying.current = true;
-    // A new key for a deliberate attempt; the same key again after an unknown result.
-    if (!keyRef.current) keyRef.current = newIdempotencyKey();
     setMessage(null);
     pay.mutate(undefined, {
       onSuccess: (result) => {
-        keyRef.current = null;
-        setSameKey(false);
+        payKey.clear();
+        setUncertain(false);
         setPromptTarget(typeof result.prompt === 'string' ? result.prompt : null);
         setMessage(typeof result.message === 'string' ? result.message : null);
         restartPollWindow();
+        setConfirmOpen(false);
+        requestFocus('heading');
       },
       onError: (error) => {
-        if (isDefinitivePayError(error)) {
-          keyRef.current = null;
-          setSameKey(false);
-        } else {
-          setSameKey(true);
-        }
         const mapped = mapPayError(error);
-        setMessage(mapped.message);
+        if (isDefinitivePayError(error)) {
+          payKey.clear();
+          setUncertain(false);
+        } else {
+          payKey.markUncertain();
+          setUncertain(true);
+        }
+        if (mapped.field === 'phone') {
+          setPhoneError(mapped.message);
+          requestFocus('field');
+        } else {
+          setMessage(mapped.message);
+          requestFocus('button');
+        }
         if (mapped.action === 'refetch') {
           restartPollWindow();
           void refetch();
-        } else if (mapped.action === 'wait' && error instanceof ApiError) {
-          const seconds =
-            error.retryAfter && error.retryAfter > 0
-              ? error.retryAfter
-              : error.status === 429
-                ? DEFAULT_RETRY_SECONDS
-                : 0;
-          if (seconds > 0) wait.start(seconds);
+        } else if (mapped.action === 'wait' && mapped.waitSeconds) {
+          if (mapped.waitSeconds <= COUNTDOWN_MAX_SECONDS) wait.start(mapped.waitSeconds);
+          else longWait.start(mapped.waitSeconds);
         }
+        setConfirmOpen(false);
       },
       onSettled: () => {
         paying.current = false;
       },
     });
-  }, [pay, refetch, restartPollWindow, wait]);
+  }, [longWait, pay, payKey, phone, refetch, requestFocus, restartPollWindow, wait]);
+
+  // "Pay with M-Pesa": check the number, then ask for confirmation. "Check payment request"
+  // (after an unknown result) sends the same key and number again at once.
+  const onPay = useCallback(() => {
+    if (paying.current) return;
+    if (uncertain) {
+      sendPayment();
+      return;
+    }
+    const problem = phoneFieldError(phone);
+    if (problem) {
+      setPhoneError(problem);
+      requestFocus('field');
+      return;
+    }
+    setPhoneError(null);
+    focusAfterConfirm.current = 'field';
+    setConfirmOpen(true);
+  }, [phone, requestFocus, sendPayment, uncertain]);
+
+  const onPhoneChange = useCallback((/** @type {string} */ value) => {
+    setPhone(value);
+    setPhoneError(null);
+  }, []);
 
   const checkAgain = useCallback(() => {
     restartPollWindow();
@@ -202,10 +293,18 @@ export default function OrderScreen() {
           pollWindowOver={order.pollWindowOver}
           message={FINAL_KINDS.has(view.kind) ? null : message}
           pay={{
-            onPay: startPayment,
+            onPay,
             pending: pay.isPending,
             waitSeconds: wait.remaining,
-            sameKey,
+            blocked: longWait.active,
+            uncertain,
+            phone: {
+              value: phone,
+              onChange: onPhoneChange,
+              error: phoneError,
+              disabled: pay.isPending || uncertain,
+              inputRef: phoneRef,
+            },
           }}
           onCancel={(trigger) => {
             cancelTrigger.current = trigger;
@@ -216,6 +315,15 @@ export default function OrderScreen() {
           checking={order.isFetching}
         />
         <SandboxNote note={data.note} />
+        <ConfirmPhoneDialog
+          open={confirmOpen}
+          onOpenChange={setConfirmOpen}
+          phone={phone}
+          totalAmount={data.total_amount}
+          pending={pay.isPending}
+          onSend={sendPayment}
+          returnFocus={() => focusElement(focusAfterConfirm.current, phoneRef.current)}
+        />
       </div>
     );
   }

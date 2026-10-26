@@ -204,16 +204,20 @@ export function useCreateOrder() {
 }
 
 /**
- * POST /orders/{id}/pay with the key in `keyRef` (read when the request starts). The key is
- * passed through a ref so it never sits in the mutation's variables. Never retried
+ * POST /orders/{id}/pay with the key and the number held in `attemptRef` (a lib/payKey.js
+ * holder, read when the request starts). Both pass through a ref so neither the key nor the
+ * phone number ever sits in the mutation's variables (the mutation cache). Never retried
  * automatically; the screen decides when the same key is sent again.
  * @param {string} orderId
- * @param {{ current: string | null }} keyRef
+ * @param {{ current: { key: string | null, phone: string | null } | null }} attemptRef
  */
-export function usePayOrder(orderId, keyRef) {
+export function usePayOrder(orderId, attemptRef) {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: () => payOrder(orderId, keyRef.current ?? ''),
+    mutationFn: () =>
+      payOrder(orderId, attemptRef.current?.key ?? '', {
+        phoneNumber: attemptRef.current?.phone ?? '',
+      }),
     ...writePolicy,
     onSuccess: (result) => {
       const { message: _message, prompt: _prompt, ...order } = result;

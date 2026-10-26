@@ -153,7 +153,9 @@ describe('buyer writes', () => {
 
   it('usePayOrder stores the order without message and prompt', async () => {
     loginAs('buyer');
-    const keyRef = { current: '0f8fad5b-d9cb-469f-a165-70867728950e' };
+    const keyRef = {
+      current: { key: '0f8fad5b-d9cb-469f-a165-70867728950e', phone: '254712345678' },
+    };
     const { result } = renderHook(() => usePayOrder(ORDER_ID, keyRef), { wrapper });
     const answer = await act(() => result.current.mutateAsync());
     expect(answer.message).toBe('Check your phone and enter your M-Pesa PIN.');
@@ -186,7 +188,9 @@ describe('buyer writes', () => {
           return answer();
         }),
       );
-      const keyRef = { current: '0f8fad5b-d9cb-469f-a165-70867728950e' };
+      const keyRef = {
+        current: { key: '0f8fad5b-d9cb-469f-a165-70867728950e', phone: '254712345678' },
+      };
       const { result, unmount } = renderHook(
         () => ({
           create: useCreateOrder(),

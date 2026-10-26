@@ -23,6 +23,7 @@
   "payment": {
     "status": "initiated",
     "status_message": "Waiting for you to confirm on your phone",
+    "phone_masked": "254*******149",
     "stk_target_masked": "254*******149",
     "mpesa_receipt_number": null,
     "result_desc": null,

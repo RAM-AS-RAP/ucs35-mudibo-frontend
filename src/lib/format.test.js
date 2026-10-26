@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatDateTime, formatKES, formatMonth, formatPct, maskedPhone } from './format';
+import { formatDateTime, formatKES, formatMonth, formatPct } from './format';
 
 // Intl may use (narrow) no-break spaces in some outputs; the regex class for whitespace matches
 // them, so normalise to plain spaces.
@@ -68,14 +68,5 @@ describe('formatDateTime', () => {
   it('handles bad input', () => {
     expect(formatDateTime(null)).toBe('—');
     expect(formatDateTime('nope')).toBe('—');
-  });
-});
-
-describe('maskedPhone', () => {
-  it('keeps the first four and last three digits', () => {
-    expect(maskedPhone('0712345678')).toBe('0712***678');
-    expect(maskedPhone('+254712345678')).toBe('+2547*****678');
-    expect(maskedPhone('0712 345 678')).toBe('0712***678');
-    expect(maskedPhone('')).toBe('—');
   });
 });

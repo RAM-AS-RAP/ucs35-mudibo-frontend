@@ -6,13 +6,14 @@ import { ApiError } from '../errors';
 /** @typedef {Schemas['PaymentStatus']} PaymentStatus */
 
 /**
- * The latest payment of an order (OrderPaymentSummary): no identifiers and no full phone
- * number, only the masked prompt target. The receipt is null when the payment was confirmed by
- * a status query.
+ * The latest payment of an order (OrderPaymentSummary): no ids and no full phone
+ * number, only the masked entered number and prompt target. The receipt is null when the
+ * payment was confirmed by a status query.
  * @typedef {object} OrderPayment
  * @property {PaymentStatus} status
  * @property {string} status_message
- * @property {string} stk_target_masked
+ * @property {string | null} phone_masked  the number the buyer entered, masked (null on older payments)
+ * @property {string} stk_target_masked  the number the prompt went to, masked
  * @property {string | null} mpesa_receipt_number
  * @property {string | null} result_desc
  * @property {string | null} completed_at

@@ -8,16 +8,26 @@ import { MESSAGES } from '@/lib/messages';
  * showing "Try again in 42 s". Screen readers hear the wait once when it starts and once when
  * it ends: the second by second text is not in a live region.
  * Also shows a spinner and stays disabled while `pending` (no double submit).
+ * `announceStart={false}` leaves the start of the wait to the caller (the payment screen puts
+ * its own wait message in its status region, so the wait is announced once).
+ * `waitingLabel` and `doneAnnouncement` replace the "Try again in N s" texts (the resend control
+ * reads "Send a new code in N s").
  * @param {import('react').ComponentProps<typeof Button> & {
  *   remaining: number,
  *   pending?: boolean,
  *   pendingLabel?: string,
+ *   announceStart?: boolean,
+ *   waitingLabel?: (seconds: number) => string,
+ *   doneAnnouncement?: string,
  * }} props
  */
 export function CountdownButton({
   remaining,
   pending = false,
   pendingLabel,
+  announceStart = true,
+  waitingLabel = MESSAGES.form.tryAgainIn,
+  doneAnnouncement = MESSAGES.form.countdownDone,
   disabled,
   children,
   ...props
@@ -30,12 +40,14 @@ export function CountdownButton({
     if (active === wasActive.current) return;
     wasActive.current = active;
     // Only on the transitions, never on each tick.
-    setAnnouncement(active ? MESSAGES.form.countdownStart(remaining) : MESSAGES.form.countdownDone);
+    let next = doneAnnouncement;
+    if (active) next = announceStart ? MESSAGES.form.countdownStart(remaining) : '';
+    setAnnouncement(next);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `remaining` is read at the start only
   }, [active]);
 
   let label = children;
-  if (active) label = MESSAGES.form.tryAgainIn(remaining);
+  if (active) label = waitingLabel(remaining);
   else if (pending && pendingLabel) label = pendingLabel;
 
   return (

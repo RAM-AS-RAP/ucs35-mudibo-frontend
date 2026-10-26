@@ -261,6 +261,83 @@ describe('OrderScreen accessibility', () => {
     expect(container).toBeTruthy();
   });
 
+  /** Open the order screen with a payable order; returns the panel. */
+  async function openPayable() {
+    serveOrder((call) =>
+      call === 1
+        ? makeOrder({}, { secondsLeft: 280 })
+        : makeOrder({ can_pay: false, payment: makePayment('initiated') }),
+    );
+    const utils = renderBuyer(path);
+    const panel = await screen.findByTestId('payment-panel', undefined, { timeout: 5000 });
+    return { ...utils, panel };
+  }
+
+  /** @param {ReturnType<typeof userEvent.setup>} user @param {HTMLElement} panel */
+  async function confirmPay(user, panel, number = '0712 345 678') {
+    await user.type(within(panel).getByLabelText('M-Pesa phone number'), number);
+    await user.click(within(panel).getByRole('button', { name: /Pay with M-Pesa/ }));
+    const dialog = await screen.findByRole('dialog', { name: 'Send the payment prompt?' });
+    await user.click(within(dialog).getByRole('button', { name: 'Send prompt' }));
+  }
+
+  it('the number field with an error', async () => {
+    const user = userEvent.setup();
+    const { container, panel } = await openPayable();
+    await user.click(within(panel).getByRole('button', { name: /Pay with M-Pesa/ }));
+    await within(panel).findByText('Enter the M-Pesa number to send the payment prompt to.');
+    await check(container);
+  });
+
+  it('the confirmation dialog', async () => {
+    const user = userEvent.setup();
+    const { panel } = await openPayable();
+    await user.type(within(panel).getByLabelText('M-Pesa phone number'), '0712345678');
+    await user.click(within(panel).getByRole('button', { name: /Pay with M-Pesa/ }));
+    await screen.findByRole('dialog', { name: 'Send the payment prompt?' });
+    expectNoBrokenValues(document.body);
+    await expectNoAxeViolations(document.body);
+  });
+
+  it('waiting with the test environment line', async () => {
+    serveOrder(() =>
+      makeOrder({
+        can_pay: false,
+        can_cancel: false,
+        payment: makePayment('initiated', { phone_masked: '254*******678' }),
+      }),
+    );
+    const { container } = renderBuyer(path);
+    await screen.findByTestId('test-target-note', undefined, { timeout: 5000 });
+    await check(container);
+  });
+
+  it('the uncertain state ("Check payment request")', async () => {
+    const user = userEvent.setup();
+    server.use(http.post(apiUrl('/api/v1/orders/:orderId/pay'), () => HttpResponse.error()));
+    const { container, panel } = await openPayable();
+    await confirmPay(user, panel);
+    await within(panel).findByRole('button', { name: /Check payment request/ });
+    await check(container);
+  });
+
+  it.each([
+    ['too_many_payment_attempts', '30', /Try again in 30 s/],
+    ['too_many_buyer_payment_attempts', '600', /Pay with M-Pesa/],
+    ['too_many_phone_numbers', '7200', /Pay with M-Pesa/],
+  ])('the wait after %s (%s seconds)', async (code, after, button) => {
+    const user = userEvent.setup();
+    server.use(
+      http.post(apiUrl('/api/v1/orders/:orderId/pay'), () =>
+        errorResponse(429, code, { headers: { 'Retry-After': after } }),
+      ),
+    );
+    const { container, panel } = await openPayable();
+    await confirmPay(user, panel);
+    await waitFor(() => expect(within(panel).getByRole('button', { name: button })).toBeDisabled());
+    await check(container);
+  });
+
   it('the "no result yet" state after the polling window', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     try {

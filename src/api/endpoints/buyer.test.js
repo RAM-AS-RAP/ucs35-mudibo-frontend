@@ -135,24 +135,51 @@ describe('order endpoints', () => {
 });
 
 describe('payOrder', () => {
-  it('sends the Idempotency-Key header and no body', async () => {
+  it('sends the Idempotency-Key header and exactly {phone_number} in the 254 form', async () => {
     const seen = capture('post', '/api/v1/orders/:orderId/pay', () =>
       HttpResponse.json(fixtures.paymentStarted, { status: 202 }),
     );
-    const result = await payOrder(ORDER_ID, KEY);
+    const result = await payOrder(ORDER_ID, KEY, { phoneNumber: '0712 345 678' });
     expect(result.message).toBe('Check your phone and enter your M-Pesa PIN.');
     expect(result.prompt).toBe('254*******149');
     expect(seen).toHaveLength(1);
     expect(seen[0].headers.get('Idempotency-Key')).toBe(KEY);
-    expect(seen[0].body).toBe('');
+    expect(seen[0].headers.get('Content-Type')).toMatch(/^application\/json/);
+    const body = JSON.parse(seen[0].body);
+    expect(Object.keys(body)).toEqual(['phone_number']);
+    expect(body.phone_number).toBe('254712345678');
   });
 
-  it('refuses to send a request without a valid key', async () => {
+  it.each([
+    ['0712 345 678', '254712345678'],
+    ['0712-345-678', '254712345678'],
+    ['+254 712 345 678', '254712345678'],
+    ['254712345678', '254712345678'],
+    ['0110 123 456', '254110123456'],
+    ['254110123456', '254110123456'],
+    ['  0712345678  ', '254712345678'],
+  ])('normalises %s to %s', async (typed, sent) => {
+    const seen = capture('post', '/api/v1/orders/:orderId/pay', () =>
+      HttpResponse.json(fixtures.paymentStarted, { status: 202 }),
+    );
+    await payOrder(ORDER_ID, KEY, { phoneNumber: typed });
+    expect(JSON.parse(seen[0].body)).toEqual({ phone_number: sent });
+  });
+
+  it('refuses to send a request without a valid key or number', async () => {
     const seen = capture('post', '/api/v1/orders/:orderId/pay', () =>
       HttpResponse.json(fixtures.paymentStarted, { status: 202 }),
     );
     for (const key of ['', 'short', 'has space in it', /** @type {any} */ (undefined)]) {
-      await expect(payOrder(ORDER_ID, key)).rejects.toBeInstanceOf(TypeError);
+      await expect(payOrder(ORDER_ID, key, { phoneNumber: '0712345678' })).rejects.toBeInstanceOf(
+        TypeError,
+      );
+    }
+    for (const phone of ['', '0712', '255712345678', 'abc', /** @type {any} */ (undefined)]) {
+      const error = await payOrder(ORDER_ID, KEY, { phoneNumber: phone }).catch((e) => e);
+      expect(error).toBeInstanceOf(TypeError);
+      // The number never ends up in an error message.
+      if (phone) expect(String(error.message)).not.toContain(phone);
     }
     expect(seen).toHaveLength(0);
   });
@@ -161,6 +188,11 @@ describe('payOrder', () => {
     [409, 'order_expiring', { reason: 'too_close' }],
     [409, 'max_attempts_reached', {}],
     [429, 'too_many_payment_attempts', {}],
+    [429, 'too_many_buyer_payment_attempts', {}],
+    [429, 'too_many_phone_numbers', {}],
+    [409, 'idempotency_key_reused', {}],
+    [422, 'invalid_phone', {}],
+    [422, 'phone_required', {}],
     [502, 'payment_request_failed', {}],
     [503, 'payments_unavailable', {}],
   ])('turns %i %s into an ApiError', async (status, code, extra) => {
@@ -169,7 +201,7 @@ describe('payOrder', () => {
         errorResponse(status, code, { extra, headers: { 'Retry-After': '45' } }),
       ),
     );
-    const error = await payOrder(ORDER_ID, KEY).catch((e) => e);
+    const error = await payOrder(ORDER_ID, KEY, { phoneNumber: '0712345678' }).catch((e) => e);
     expect(error).toBeInstanceOf(ApiError);
     expect(error).toMatchObject({ status, code, retryAfter: 45 });
     if ('reason' in extra) expect(error.reason).toBe('too_close');
@@ -177,7 +209,7 @@ describe('payOrder', () => {
 
   it('reports a network failure as network_error (status 0)', async () => {
     server.use(http.post(apiUrl('/api/v1/orders/:orderId/pay'), () => HttpResponse.error()));
-    const error = await payOrder(ORDER_ID, KEY).catch((e) => e);
+    const error = await payOrder(ORDER_ID, KEY, { phoneNumber: '0712345678' }).catch((e) => e);
     expect(error).toMatchObject({ status: 0, code: 'network_error' });
   });
 

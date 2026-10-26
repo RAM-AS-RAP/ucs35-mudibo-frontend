@@ -23,6 +23,7 @@
   "payments": [
     {
       "amount": 1138,
+      "phone_masked": null,
       "stk_target_masked": "2547*****678",
       "mpesa_receipt_number": null,
       "result_code": 1037,
@@ -36,6 +37,7 @@
     },
     {
       "amount": 1138,
+      "phone_masked": "2547*****678",
       "stk_target_masked": "2547*****678",
       "mpesa_receipt_number": "SJK4H7Q2LM",
       "result_code": 0,
