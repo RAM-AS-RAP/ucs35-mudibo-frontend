@@ -146,7 +146,7 @@ function ResetPasswordForm() {
           pending={isSubmitting}
           pendingLabel={T.pending}
           remaining={countdown.remaining}
-          disabled={offline}
+          disabled={offline || countdown.longWait}
         >
           {T.submit}
         </SubmitButton>

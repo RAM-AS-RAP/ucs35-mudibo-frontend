@@ -239,10 +239,10 @@ export function ListingForm({ mode, initial, markets = [], listing = null, disab
     isEdit && listing?.status === 'sold_out' && quantity.ok && quantity.value !== '0';
   const formDisabled = Boolean(disabled);
   const submitDisabled =
-    formDisabled || pending || offline || countdown.active || !confirmed || !hasChanges;
+    formDisabled || pending || offline || countdown.blocked || !confirmed || !hasChanges;
 
   let submitLabel = isEdit ? LISTING_TEXT.submitEdit : LISTING_TEXT.submitCreate;
-  if (countdown.active) submitLabel = MESSAGES.form.tryAgainIn(countdown.remaining);
+  if (countdown.remaining > 0) submitLabel = MESSAGES.form.tryAgainIn(countdown.remaining);
   else if (phase === 'photo') submitLabel = LISTING_TEXT.preparingPhoto;
   else if (phase === 'saving') submitLabel = LISTING_TEXT.saving;
 

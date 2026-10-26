@@ -168,17 +168,3 @@ export function formatDateTime(iso) {
     timeZone: TIME_ZONE,
   }).format(date);
 }
-
-/**
- * Mask a phone number, keeping the first four and the last three digits:
- * `0712345678` becomes `0712***678`, `+254712345678` becomes `+2547*****678`.
- * @param {string | null | undefined} phone
- */
-export function maskedPhone(phone) {
-  if (!phone) return PLACEHOLDER;
-  const trimmed = phone.replace(/[\s-]/g, '');
-  const plus = trimmed.startsWith('+') ? '+' : '';
-  const digits = trimmed.replace(/\D/g, '');
-  if (digits.length < 8) return plus + '*'.repeat(digits.length);
-  return `${plus}${digits.slice(0, 4)}${'*'.repeat(digits.length - 7)}${digits.slice(-3)}`;
-}

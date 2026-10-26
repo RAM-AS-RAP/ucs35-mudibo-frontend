@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { ArrowRight, Mail } from 'lucide-react';
 import { ApiError } from '@/api/errors';
 import { ApiStatus } from '@/components/feedback/ApiStatus';
 import { AuthLayout } from '@/components/auth/AuthLayout';
@@ -12,8 +13,9 @@ import { SubmitButton } from '@/components/auth/CountdownButton';
 import { InfoMessage, OfflineFormNotice } from '@/components/auth/FormNotices';
 import { useServerProblem } from '@/components/auth/useServerProblem';
 import { useSignInHold } from '@/auth/auth';
+import { hasActiveFlow, useFlowView } from '@/auth/flow';
 import { useAuth } from '@/auth/useAuth';
-import { getPostLoginPath } from '@/auth/redirects';
+import { fromState, getPostLoginPath } from '@/auth/redirects';
 import { consumeFlash, peekFlash } from '@/auth/session';
 import { useIsOffline } from '@/lib/connectivity';
 import { MESSAGES } from '@/lib/messages';
@@ -22,8 +24,13 @@ import { loginSchema } from '@/lib/validation';
 
 const T = MESSAGES.login;
 const linkClass = 'flex min-h-11 items-center text-primary underline underline-offset-2';
+export const LOGIN_CODE_PATH = '/login/code';
 
-/** Sign in with a phone number or email and a password (POST /auth/login, then GET /auth/me). */
+/**
+ * Sign in with an email and a password (POST /auth/login). The answer is an AuthResult:
+ * `signed_in` opens the intended path, `code_required` opens /login/code (the challenge token
+ * stays in the in memory flow store; router state carries only `{from}`).
+ */
 export default function LoginScreen() {
   const headingRef = usePageTitle(T.title);
   const location = useLocation();
@@ -31,10 +38,13 @@ export default function LoginScreen() {
   const { login } = useAuth();
   const offline = useIsOffline();
   const holdRedirect = useSignInHold();
+  const busy = useRef(false);
+  const flow = useFlowView('login');
+  const [flowActive] = useState(() => hasActiveFlow('login'));
 
-  // The one time message (session expired, password changed, account created...), read once.
-  // Without one, a visitor sent here by the guard is told why. A sign out leaves an empty
-  // flash, so nothing is shown right after it.
+  // The one time message (session expired, password changed, sign in interrupted...), read
+  // once. Without one, a visitor sent here by the guard is told why. A sign out leaves an
+  // empty flash, so nothing is shown right after it.
   const [flash] = useState(() => {
     const message = peekFlash();
     if (message !== null) return message || null;
@@ -54,62 +64,94 @@ export default function LoginScreen() {
     formState: { errors, isSubmitting },
   } = useForm({
     resolver: zodResolver(loginSchema),
-    defaultValues: { identifier: '', password: '' },
+    defaultValues: { email: '', password: '' },
   });
   const { problem, summaryRef, showError, clearProblem, countdown } = useServerProblem({
     setError,
     idPrefix: 'login',
-    fieldMap: { identifier: 'identifier', password: 'password' },
+    fieldMap: { email: 'email', password: 'password' },
     passwordField: 'password',
   });
 
-  /** @param {{ identifier: string, password: string }} values */
-  async function onSubmit({ identifier, password }) {
+  /** @param {{ email: string, password: string }} values */
+  async function onSubmit({ email, password }) {
+    if (busy.current) return;
+    busy.current = true;
     clearProblem();
     // PublicOnly waits until this screen has navigated away (the hold ends when it unmounts).
     const release = holdRedirect();
     try {
-      const session = await login(identifier.trim(), password);
-      const next = getPostLoginPath(session, location.state);
+      const result = await login(email, password);
+      // The password is not kept after the request.
+      resetField('password');
+      if (result.status === 'code_required') {
+        await navigate(LOGIN_CODE_PATH, { state: fromState(location.state) });
+        return;
+      }
+      const next = getPostLoginPath(result.session, location.state);
       if (next === location.pathname) release();
       else await navigate(next, { replace: true });
     } catch (error) {
       release();
+      resetField('password');
       if (error instanceof ApiError && error.status === 401) {
-        // Same message for an unknown account, a wrong password and a disabled account.
-        resetField('password');
+        // Same message for an unknown email, a wrong password and a disabled account.
         showError(error, { text: T.invalid });
       } else {
         showError(error);
       }
+    } finally {
+      busy.current = false;
     }
   }
 
   return (
     <AuthLayout title={T.title} subtitle={T.subtitle} headingRef={headingRef} after={<ApiStatus />}>
       {flash && <InfoMessage>{flash}</InfoMessage>}
+      {flow && flowActive && (
+        <div className="flex flex-col gap-2 rounded-lg border border-border bg-canvas px-4 py-3 text-text">
+          <p className="flex items-start gap-2">
+            <Mail aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-primary" />
+            <span>{T.existingFlow(flow.emailMasked)}</span>
+          </p>
+          <Link
+            className="flex min-h-11 items-center gap-1 font-medium text-primary underline underline-offset-2"
+            to={LOGIN_CODE_PATH}
+            state={fromState(location.state)}
+          >
+            {T.continue}
+            <ArrowRight aria-hidden="true" className="size-4" />
+          </Link>
+        </div>
+      )}
       <FormErrorSummary
         ref={summaryRef}
         problems={problem?.problems ?? []}
         reference={problem?.reference}
       />
       <OfflineFormNotice offline={offline} />
-      <form noValidate onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
+      <form
+        noValidate
+        onSubmit={(event) => handleSubmit(onSubmit)(event)}
+        className="flex flex-col gap-4"
+      >
         <FormField
-          id="login-identifier"
-          label={T.identifierLabel}
-          type="text"
+          id="login-email"
+          label={T.emailLabel}
+          type="email"
+          inputMode="email"
           autoComplete="username"
           autoCapitalize="none"
           autoCorrect="off"
           spellCheck={false}
-          error={errors.identifier?.message}
-          {...register('identifier')}
+          error={errors.email?.message}
+          {...register('email')}
         />
         <PasswordField
           id="login-password"
           label={T.passwordLabel}
           autoComplete="current-password"
+          hint={T.help}
           error={errors.password?.message}
           {...register('password')}
         />
@@ -117,7 +159,7 @@ export default function LoginScreen() {
           pending={isSubmitting}
           pendingLabel={T.pending}
           remaining={countdown.remaining}
-          disabled={offline}
+          disabled={offline || countdown.longWait}
         >
           {T.submit}
         </SubmitButton>

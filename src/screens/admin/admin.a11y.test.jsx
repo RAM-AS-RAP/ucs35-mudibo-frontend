@@ -238,7 +238,6 @@ describe('dialogs on the list screens', () => {
     expect(await within(dialog).findByText('Enter your email address.')).toBeInTheDocument();
     await check();
     await user.type(within(dialog).getByLabelText('Full name'), 'New Admin');
-    await user.type(within(dialog).getByLabelText('Phone number'), '0712345678');
     await user.type(within(dialog).getByLabelText('Email'), 'new@example.com');
     await user.click(within(dialog).getByRole('button', { name: 'Send invitation' }));
     await screen.findByTestId('invite-result');

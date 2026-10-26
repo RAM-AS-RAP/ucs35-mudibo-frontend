@@ -82,7 +82,6 @@ export default function ForgotPasswordScreen() {
           inputMode="email"
           autoComplete="email"
           autoCapitalize="none"
-          hint={T.help}
           error={errors.email?.message}
           {...register('email')}
         />
@@ -90,7 +89,7 @@ export default function ForgotPasswordScreen() {
           pending={isSubmitting}
           pendingLabel={T.pending}
           remaining={countdown.remaining}
-          disabled={offline}
+          disabled={offline || countdown.longWait}
           variant={sentTo ? 'outline' : 'default'}
         >
           {T.submit}

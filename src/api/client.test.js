@@ -214,7 +214,7 @@ describe('401 and 403 handling', () => {
       ),
     );
     const error = await unwrap(
-      api.POST('/api/v1/auth/login', { body: { identifier: '0712345678', password: 'x' } }),
+      api.POST('/api/v1/auth/login', { body: { email: 'wanjiku@example.com', password: 'x' } }),
     ).catch((e) => e);
     expect(error.code).toBe('invalid_credentials');
     expect(session.getSession()).not.toBeNull();

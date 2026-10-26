@@ -1,12 +1,17 @@
 import '@testing-library/jest-dom/vitest';
 import { afterAll, afterEach, beforeAll } from 'vitest';
-import { cleanup } from '@testing-library/react';
+import { cleanup, configure } from '@testing-library/react';
 import { server } from './msw/server';
 import { markReachable } from '@/lib/connectivity';
 import { RETRY_POLICY } from '@/api/queries/policy';
 
 // Keep the number of retries (tested in src/api/queries) but not the real back off delay.
 RETRY_POLICY.baseDelayMs = 1;
+
+// findBy/waitFor wait up to 5 seconds (Testing Library's default is 1). Screens are lazy loaded,
+// and with many parallel workers the first import of a screen can take longer than a second;
+// many tests already passed { timeout: 5000 } for this. Only the wait changes, no assertion.
+configure({ asyncUtilTimeout: 5000 });
 
 // jsdom gaps used by Radix UI and layout code.
 if (!window.matchMedia) {

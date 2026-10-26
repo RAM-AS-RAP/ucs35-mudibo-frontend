@@ -51,6 +51,7 @@ export function loginAs(
   } = {},
 ) {
   setFromLogin({
+    status: 'signed_in',
     access_token: token,
     token_type: 'bearer',
     expires_in: 3600,
@@ -62,8 +63,7 @@ export function loginAs(
     setProfile({
       id: userId,
       name,
-      phone_number: '254700000000',
-      email: null,
+      email: 'test.user@example.com',
       role,
       is_super_admin: isSuperAdmin,
       must_change_password: mustChangePassword,

@@ -30,7 +30,7 @@ describe('AcceptInviteScreen', () => {
     server.use(
       http.post(apiUrl('/api/v1/auth/accept-invite'), () => {
         calls += 1;
-        return HttpResponse.json(fixtures.adminMe, { status: 201 });
+        return HttpResponse.json(tokenFor({ role: 'admin' }), { status: 201 });
       }),
     );
     const user = userEvent.setup();
@@ -44,13 +44,20 @@ describe('AcceptInviteScreen', () => {
     expect(calls).toBe(0);
   });
 
-  it('signs the new administrator in and opens the admin home', async () => {
+  it('signs in with the returned AuthResult, never calls login, and opens the admin home', async () => {
+    let logins = 0;
     /** @type {any} */
-    let loginBody = null;
+    let body = null;
     server.use(
-      http.post(apiUrl('/api/v1/auth/login'), async ({ request }) => {
-        loginBody = await request.json();
-        return HttpResponse.json(tokenFor({ role: 'admin' }));
+      http.post(apiUrl('/api/v1/auth/accept-invite'), async ({ request }) => {
+        body = await request.json();
+        return HttpResponse.json(tokenFor({ role: 'admin', token: 'invite-access-token' }), {
+          status: 201,
+        });
+      }),
+      http.post(apiUrl('/api/v1/auth/login'), () => {
+        logins += 1;
+        return HttpResponse.json(fixtures.authCodeRequired);
       }),
       http.get(apiUrl('/api/v1/auth/me'), () => HttpResponse.json(fixtures.adminMe)),
     );
@@ -58,18 +65,33 @@ describe('AcceptInviteScreen', () => {
     const { router } = renderApp('/accept-invite');
     await fillInvite(user);
     await waitFor(() => expect(router.state.location.pathname).toBe('/admin'));
-    expect(loginBody).toEqual({ identifier: 'amina.admin@example.com', password: ADMIN_PASSWORD });
+    expect(body).toEqual({
+      email: 'amina.admin@example.com',
+      code: 'WXYZ6789',
+      password: ADMIN_PASSWORD,
+    });
+    expect(logins).toBe(0);
+    expect(getSession()?.accessToken).toBe('invite-access-token');
     expect(await screen.findByText('Welcome, Amina Odhiambo')).toBeInTheDocument();
     expect(getSession()?.isSuperAdmin).toBe(false);
   });
 
-  it('falls back to /login with a flash when the sign in fails', async () => {
-    server.use(http.post(apiUrl('/api/v1/auth/login'), () => HttpResponse.error()));
+  it('keeps the password and the code out of storage, the URL and history state', async () => {
+    server.use(http.get(apiUrl('/api/v1/auth/me'), () => HttpResponse.json(fixtures.adminMe)));
     const user = userEvent.setup();
     const { router } = renderApp('/accept-invite');
     await fillInvite(user);
-    await waitFor(() => expect(router.state.location.pathname).toBe('/login'));
-    expect(await screen.findByText('Account created. Please sign in.')).toBeInTheDocument();
+    await waitFor(() => expect(router.state.location.pathname).toBe('/admin'));
+    const exposed = JSON.stringify({
+      session: { ...window.sessionStorage },
+      local: { ...window.localStorage },
+      url: window.location.href,
+      state: router.state.location.state,
+      history: window.history.state,
+    });
+    for (const secret of [ADMIN_PASSWORD, 'WXYZ6789', 'wxyz 6789']) {
+      expect(exposed).not.toContain(secret);
+    }
   });
 
   it('shows the generic 400 message, the guidance and the request a new code flow', async () => {

@@ -5,7 +5,7 @@ import { api, unwrap } from '../client';
 
 /**
  * An order on one of the farmer's listings. FarmerOrderOut in openapi.json names the fields
- * without types, so they are described here. There is never a buyer phone, email or id.
+ * without types, so they are described here. There is never a buyer contact detail or id.
  * `total_amount` is the server's total; show it as returned, never recompute it.
  * @typedef {object} FarmerOrder
  * @property {string} order_id

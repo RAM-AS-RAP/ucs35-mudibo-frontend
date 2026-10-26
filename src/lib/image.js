@@ -1,14 +1,14 @@
 /**
  * Listing photo preparation in the browser (F2b): check, decode, downscale and re-encode as
  * JPEG before upload. Re-encoding through a canvas drops all metadata, including the GPS
- * location that phone cameras write into photos. The server re-encodes again.
+ * location that cameras write into photos. The server re-encodes again.
  *
  * Loaded only with a dynamic import, from the photo picker on the create and edit screens.
  */
 
 /** The server's MAX_IMAGE_BYTES (5 MiB, docs/backend/frontend_contract.md "Uploads"). */
 export const UPLOAD_LIMIT_BYTES = 5 * 1024 * 1024;
-/** Larger originals are refused before decoding, to protect low end phones. */
+/** Larger originals are refused before decoding, to protect low end devices. */
 export const INPUT_LIMIT_BYTES = 20 * 1024 * 1024;
 export const MAX_PIXELS = 40_000_000;
 export const MAX_SIDE = 1600;
@@ -126,7 +126,7 @@ async function encode(decoded, size, quality) {
     if (!blob) throw new ImageError('decode_failed');
     return /** @type {Blob} */ (blob);
   } finally {
-    // Release the canvas memory straight away (it matters on low end phones).
+    // Release the canvas memory straight away (it matters on low end devices).
     canvas.width = 0;
     canvas.height = 0;
   }

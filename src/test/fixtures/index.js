@@ -5,7 +5,11 @@ import dbHealth from './dbHealth.json';
 import tokenResponse from './tokenResponse.json';
 import userMe from './userMe.json';
 import adminMe from './adminMe.json';
-import registeredUser from './registeredUser.json';
+import authCodeRequired from './authCodeRequired.json';
+import loginResent from './loginResent.json';
+import registrationAccepted from './registrationAccepted.json';
+import registrationAcceptedExisting from './registrationAcceptedExisting.json';
+import registrationResent from './registrationResent.json';
 import passwordChanged from './passwordChanged.json';
 import codeRequested from './codeRequested.json';
 import markets from './markets.json';
@@ -46,7 +50,11 @@ export const fixtures = {
   tokenResponse,
   userMe,
   adminMe,
-  registeredUser,
+  authCodeRequired,
+  loginResent,
+  registrationAccepted,
+  registrationAcceptedExisting,
+  registrationResent,
   passwordChanged,
   codeRequested,
   markets,
@@ -86,10 +94,20 @@ export const fixtures = {
 export const FIXTURE_CONTRACT = {
   health: { path: '/api/v1/health', method: 'get', status: '200' },
   dbHealth: { path: '/api/v1/health/db', method: 'get', status: '200' },
+  // AuthResult in both statuses (fields that do not apply are omitted).
   tokenResponse: { path: '/api/v1/auth/login', method: 'post', status: '200' },
+  authCodeRequired: { path: '/api/v1/auth/login', method: 'post', status: '200' },
+  loginResent: { path: '/api/v1/auth/login/resend', method: 'post', status: '200' },
   userMe: { path: '/api/v1/auth/me', method: 'get', status: '200' },
-  adminMe: { path: '/api/v1/auth/accept-invite', method: 'post', status: '201' },
-  registeredUser: { path: '/api/v1/auth/register/farmer', method: 'post', status: '201' },
+  adminMe: { path: '/api/v1/auth/me', method: 'get', status: '200' },
+  // The same shape for a new and an existing email (the second token is a decoy).
+  registrationAccepted: { path: '/api/v1/auth/register/farmer', method: 'post', status: '202' },
+  registrationAcceptedExisting: {
+    path: '/api/v1/auth/register/buyer',
+    method: 'post',
+    status: '202',
+  },
+  registrationResent: { path: '/api/v1/auth/register/resend', method: 'post', status: '202' },
   passwordChanged: { path: '/api/v1/auth/change-password', method: 'post', status: '200' },
   codeRequested: { path: '/api/v1/auth/password-reset/request', method: 'post', status: '202' },
   markets: { path: '/api/v1/markets', method: 'get', status: '200' },

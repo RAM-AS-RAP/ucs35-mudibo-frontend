@@ -176,20 +176,17 @@ describe('admin writes', () => {
     expect(await calls[1].body).toBe('');
   });
 
-  it('createInvite sends exactly {name, phone_number, email}', async () => {
+  it('createInvite sends exactly {name, email}', async () => {
     record();
     const sent = await createInvite({
       name: 'New Admin',
-      phoneNumber: '254712345678',
       email: 'new@example.com',
+      // @ts-expect-error an extra key must not pass through
+      phoneNumber: '254712345678',
     });
     expect(sent).toEqual(fixtures.inviteSent);
     const [call] = recorder.of('POST', '/api/v1/admin/invites');
-    expect(JSON.parse(await call.body)).toEqual({
-      name: 'New Admin',
-      phone_number: '254712345678',
-      email: 'new@example.com',
-    });
+    expect(JSON.parse(await call.body)).toEqual({ name: 'New Admin', email: 'new@example.com' });
   });
 
   it('resend, revoke and the email test send no body', async () => {

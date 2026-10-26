@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils';
 /** @typedef {import('@/lib/forecast').ExplainabilityStep} ExplainabilityStep */
 
 /*
- * Every row shares one grid so the tracks line up: on phones the name and amount share a line and
+ * Every row shares one grid so the tracks line up: on small screens the name and amount share a line and
  * the track sits underneath at full width; from `sm` the name, track and amount are side by side.
  */
 const ROW =

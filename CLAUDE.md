@@ -19,6 +19,8 @@ Roles: `farmer` (prices, forecasts, listings, orders on their listings), `buyer`
 | F3     | Buyer: browse, listing detail, checkout, M-Pesa payment polling, my orders                                | Done        |
 | F4-A   | Follow-up: `is_super_admin` and user id in the session, edit via `GET /listings/mine/{id}`, buyer markets | Done        |
 | F4     | Admin: dashboard, users, invites, moderation, orders, payments, reconciliation, accuracy                  | Done        |
+| P2     | Identity v2, prompt 2 (payment phone): the buyer enters the M-Pesa number for each payment                | Done        |
+| P4     | Identity v2, prompt 4: email only accounts, registration and sign in codes, phone removed from auth       | Done        |
 | F5     | Polish: end to end tests (Playwright), performance, accessibility review                                  | Not started |
 
 Update this table at the end of every module.
@@ -80,6 +82,8 @@ Version and dependency decisions:
   `crypto.getRandomValues` fallback); the estimate uses BigInt. Initial JavaScript after F3:
   224.5 kB gzip (6 files; the +2.3 kB is the navigation badge's count hook); the buyer screens are
   lazy chunks of 1.5 to 4.5 kB gzip each.
+- **Prompt 4 (identity v2) added no dependency.** The registration, code and recovery screens are
+  lazy chunks (the sign in screen stays in the initial JavaScript).
 - **F4 added no dependency.** Tables and cards, dialogs, the payload view and the clipboard use
   React, `radix-ui` and the browser. Initial JavaScript after F4: 226.4 kB gzip (7 files; the
   +1.8 kB is the review count badge and its endpoint function); the admin screens are lazy chunks
@@ -106,8 +110,9 @@ src/
   screens/      auth/, farmer/, buyer/, admin/, shared/   one screen per file, default export, *Screen.jsx
   components/   ui/ (shadcn), layout/, feedback/, display/, listings/, orders/, buyer/, admin/   named exports
   api/          client.js, errors.js, endpoints/<area>.js, schema.d.ts (generated, do not edit)
-  auth/         session.js, guards.jsx, roles.js, paths.js, auth.js (signIn, signOut, sign in hold),
-                useAuth.js, redirects.js, revalidate.js
+  auth/         session.js, guards.jsx, roles.js, paths.js, auth.js (signIn, completeAuthResult,
+                code steps, signOut, sign in hold), flow.js (in memory flow store), useAuth.js,
+                redirects.js, revalidate.js
   api/queries/  TanStack Query hooks (useMarkets, useCurrentPrices, usePriceTrends, useForecast; listings.js:
                 useMyListings, useMyListing, useMyOrders, counts, useCreate/Update/RemoveListing; buyer.js:
                 useBrowseListings, useBuyerMarkets, useListing, useOrder, useMyBuyerOrders, useCreate/Pay/CancelOrder;
@@ -117,7 +122,8 @@ src/
   components/admin/  ResponsiveTable, FilterBar (useFilterParams), SearchInput, ConfirmDialog, PayloadView,
                 PaymentEventsDialog, RoleBadge, ListParts (RefreshButton, ShowingCount, LoadMore, pagesOf)
   components/auth/  AuthLayout, FormField, PasswordField, CodeInput, FormErrorSummary, CountdownButton,
-                PasswordRequirements, SignedInNotice, ResendCode, FormNotices, useServerProblem
+                PasswordRequirements, SignedInNotice, ResendCode, FormNotices, useServerProblem,
+                CodeEntryForm, ResendCodeButton (identity v2)
   lib/          env.js, format.js, queryClient.js, utils.js, validation.js, messages.js, formErrors.js,
                 connectivity.js, useCountdown.js, usePageTitle.js, useReducedMotion.js,
                 relativeTime.js, forecast.js, shapSchema.js, trends.js (F2a),
@@ -125,7 +131,9 @@ src/
                 constants.js, orderTotals.js, idempotency.js, orderView.js, polling.js, payErrors.js,
                 filterParams.js, buyerMessages.js (F3),
                 adminMessages.js, reconciliation.js, userActions.js, accuracyFormat.js, dateRange.js,
-                clipboard.js, useMediaQuery.js (F4)
+                clipboard.js, useMediaQuery.js (F4),
+                phone.js, waitTime.js, payKey.js, paymentView.js, useWaitUntil.js (payment phone),
+                codes.js, useRetryWait.js (identity v2)
   styles/       tokens.css (all colours), index.css
   dev/          DevRoleSwitcher.jsx (development only)
   test/         setup.js, msw/, fixtures/, helpers (render, axe, openapi, contrast, buyer, admin)
@@ -154,7 +162,7 @@ docs/           backend/, architecture.md, auth.md, design-system.md, forecast-d
 - Contract workflow: copy `openapi.json` and `frontend_contract.md` into `docs/backend/` (see
   `docs/backend/README.md`), run `npm run gen:types`, then `npm run check:contract` and `npm test`.
 - **isSuperAdmin comes from the backend user object and only controls UI visibility:** read it only
-  from `is_super_admin` in the login response (`TokenResponse`) and in `/auth/me` (`UserOut`); only
+  from `is_super_admin` in a `signed_in` `AuthResult` and in `/auth/me` (`UserOut`); only
   `true` counts. Never infer it from any other endpoint, and never probe the (rate limited) invite
   routes. The session also keeps the user `id` from `/auth/me` (`userId`).
 - The backend is the single authority for roles, prices, totals, stock and order state. Show `can_pay` /
@@ -230,11 +238,24 @@ docs/           backend/, architecture.md, auth.md, design-system.md, forecast-d
   `useMyBuyerOrders`.
 - `ApiError.extra` holds every field of the error object that is not a named property (for
   example `existing_order_id`); read the open order with `existingOrderId(error)`.
-- **Idempotency key:** only `payments.js` sets `Idempotency-Key`, only `lib/idempotency.js`
-  creates keys, and the pay request has no body. One new key per deliberate click; keep the same
-  key only after `network_error` or `timeout` (the button reads "Check payment request"); discard
-  it on a 202 or any error with an HTTP status. The key lives in a `useRef` only, never in storage,
-  a URL, router state, a query key or mutation variables (`usePayOrder(orderId, keyRef)`).
+- **Idempotency key:** only `payments.js` sets `Idempotency-Key` and builds the pay body, only
+  `lib/idempotency.js` creates keys, and `lib/payKey.js` (`createPayKey`) holds the key with its
+  number. One new key per deliberate attempt and per number; keep the same key (and number) only
+  after `network_error` or `timeout` (the field is disabled, the button reads "Check payment
+  request"); discard it on a 202 or any error with an HTTP status. A changed number always gets a
+  new key. The holder lives in a `useRef` only, never in storage, a URL, router state, a query key
+  or mutation variables (`usePayOrder(orderId, attemptRef)`).
+- **Payment phone (identity v2, prompt 2):** the pay request always sends
+  `{phone_number: <254 form>}` (`payOrder(orderId, key, { phoneNumber })`). The number lives only
+  in the order screen's component state: never prefilled from the profile, saved between
+  payments, stored, logged, or put in a URL, router state or query key. Only the field and
+  `ConfirmPhoneDialog` show it; every other display uses the server's `phone_masked` and
+  `stk_target_masked`. Validate with `phoneFieldError` (`lib/phone.js`, the F1 `normalizePhone`).
+- **Waits after a 429** (`too_many_payment_attempts`, `too_many_buyer_payment_attempts`,
+  `too_many_phone_numbers`): `waitSecondsFrom` (Retry-After, 60 without it) and `formatWait`
+  (`lib/waitTime.js`). Up to 120 seconds count down on `CountdownButton`; longer waits are shown
+  approximately and re-enabled by a stored end timestamp (`useWaitUntil`, checked every 15
+  seconds and on focus). Announce a wait once.
 - **Server clock:** `useOrder` exposes `offsetMs = Date.parse(server_time) - dataUpdatedAt`;
   every remaining time goes through `remainingSecondsUntil`/`deriveOrderView` with it. Never count
   down on the device clock alone.
@@ -292,10 +313,34 @@ docs/           backend/, architecture.md, auth.md, design-system.md, forecast-d
 - Any 401 outside the public auth routes logs out (handled in the client middleware).
 - The dev role switcher's fake session never carries a token and never ships in production.
 
-## 5a. Authentication conventions (F1, details in `docs/auth.md`)
+## 5a. Authentication conventions (F1 and identity v2 prompt 4, details in `docs/auth.md`)
 
-- Sign in through `signIn()` / `useAuth().login` (`src/auth/auth.js`): login, `setFromLogin`, then `getMe`
-  and `setProfile`. Sign out through `useAuth().logout` or `signOut()`; there is no logout endpoint.
+- Accounts are email only. **Phone numbers were removed from auth:** no phone on registration, login,
+  `/auth/me`, invitations or the admin users screen. `phone` appears only in the payment step and the
+  admin payments display (a source check lists the allowed files); `normalizePhone` lives in
+  `src/lib/phone.js` and is never imported by the auth screens, the admin screens (except payments)
+  or `endpoints/auth.js`.
+- Every endpoint that signs someone in returns `AuthResult`. Handle **both** `signed_in` and
+  `code_required` for every role through `completeAuthResult` (`src/auth/auth.js`): `signed_in` →
+  `setFromLogin`, `getMe` + `setProfile` (a failed profile keeps the session), `clearFlow`;
+  `code_required` → start the login flow and open `/login/code`.
+- **Never call `login` after a flow that already returned a token** (register verify, accept invite,
+  login verify): use the returned `AuthResult`.
+- **The in memory flow store** (`src/auth/flow.js`) holds the registration token or the challenge token
+  with the masked email, a `performance.now()` resend deadline and `codeSent`. Only `src/auth/auth.js`
+  reads the token (`getFlow`); screens use `useFlowView`/`getFlowView` (no token). It is cleared by
+  `session.clear()`, on success, on "Start again" and on `challenge_closed`; a reload loses it and the
+  code screens go back to their start screen (`flow_lost`, `registration_lost`).
+- **Secrets rule:** passwords, one time codes, the registration token and the challenge token are never
+  written to `sessionStorage` or `localStorage`, a URL, router state, `window.history.state`, a query
+  key, a log, console output or an error message. Router state carries only `{from}` (`fromState()`)
+  and, from forgot to reset password, the email. Codes are normalised (`normalizeCode`,
+  `src/lib/codes.js`) in the API layer; the code is never submitted automatically.
+- Waits after a 429 on the auth screens use `useServerProblem`'s `countdown` (`useRetryWait`): up to
+  120 seconds on the button, longer waits approximately and re-enabled by timestamp.
+- Sign in through `useAuth().login` (`signIn()` in `src/auth/auth.js`), then `verifyLogin` on the code
+  screen; registration through `startRegistration` and `useAuth().verifyRegistration`. Sign out through
+  `useAuth().logout` or `signOut()`; there is no logout endpoint.
 - **Credentials never go through TanStack Query.** Auth forms call the endpoint functions from their submit
   handlers; `useMutation` would keep the password in the mutation cache. A source check enforces this for
   `src/screens/auth/`. Never auto fill a password: `PasswordField` takes no `value` or `defaultValue`.

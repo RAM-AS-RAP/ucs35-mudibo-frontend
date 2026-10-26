@@ -67,13 +67,23 @@ describe('ForgotPasswordScreen', () => {
     expect(await screen.findByLabelText('Email')).toHaveValue('wanjiku@example.com');
   });
 
-  it('says accounts without an email cannot reset a password', async () => {
+  it('has no phone text and no "accounts without an email" sentence (every account has one)', async () => {
     renderApp('/forgot-password');
-    expect(
-      await screen.findByText(
-        'Accounts without an email address cannot reset a forgotten password.',
-      ),
-    ).toBeInTheDocument();
+    const main = await screen.findByRole('main');
+    await screen.findByLabelText('Email');
+    expect(main.textContent).not.toMatch(/phone/i);
+    expect(main.textContent).not.toContain(
+      'Accounts without an email address cannot reset a forgotten password.',
+    );
+  });
+
+  it('the reset screen has no phone text either and shows the role neutral minimum of 8', async () => {
+    renderApp('/reset-password');
+    await screen.findByLabelText('Code');
+    const main = screen.getByRole('main');
+    expect(main.textContent).not.toMatch(/phone/i);
+    expect(main.textContent).not.toMatch(/without an email/i);
+    expect(screen.getByText('8 to 128 characters')).toBeInTheDocument();
   });
 
   it('uses the countdown on 429', async () => {
@@ -126,7 +136,7 @@ describe('ResetPasswordScreen', () => {
     expect(await screen.findByText('Password updated. Please sign in.')).toBeInTheDocument();
     expect(body).toEqual({
       email: 'wanjiku@example.com',
-      code: 'ABCD-2345',
+      code: 'ABCD2345',
       new_password: NEW_PASSWORD,
     });
   });
@@ -171,7 +181,7 @@ describe('ResetPasswordScreen', () => {
     server.use(
       http.post(apiUrl('/api/v1/auth/password-reset/confirm'), () =>
         errorResponse(422, 'password_too_weak', {
-          extra: { reason: 'The password must not be your email, name or phone number.' },
+          extra: { reason: 'The password must not be your email or your name.' },
         }),
       ),
     );
@@ -180,7 +190,7 @@ describe('ResetPasswordScreen', () => {
     await fillReset(user);
     await screen.findByRole('alert');
     expect(document.getElementById('reset-password-error')).toHaveTextContent(
-      'The password must not be your email, name or phone number.',
+      'The password must not be your email or your name.',
     );
     expect(screen.getByLabelText('New password')).toHaveAttribute('aria-invalid', 'true');
   });

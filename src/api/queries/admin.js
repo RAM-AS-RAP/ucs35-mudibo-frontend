@@ -227,7 +227,7 @@ export function useEnableUser() {
 const invalidateInvites = (client) =>
   client.invalidateQueries({ queryKey: queryKeys.adminInvitesRoot() });
 
-/** POST /admin/invites. The variables (name, phone, email) are forgotten when it settles. */
+/** POST /admin/invites. The variables (name, email) are forgotten when it settles. */
 export function useCreateInvite() {
   const client = useQueryClient();
   return useMutation({

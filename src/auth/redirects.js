@@ -88,3 +88,17 @@ export function getPostLoginPath(session, fromState) {
   if (!insideTree(raw.pathname, home) || !insideTree(decoded.pathname, home)) return home;
   return `${raw.pathname}${raw.search}${raw.hash}`;
 }
+
+/**
+ * Only the intended path from router state, for passing it on between the sign in screens
+ * (/login to /login/code and back). It is a path, never a secret.
+ * @param {unknown} state
+ * @returns {{ from: string } | undefined}
+ */
+export function fromState(state) {
+  const from =
+    state && typeof state === 'object' && 'from' in state
+      ? /** @type {{ from: unknown }} */ (state).from
+      : null;
+  return typeof from === 'string' ? { from } : undefined;
+}

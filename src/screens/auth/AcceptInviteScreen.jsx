@@ -1,7 +1,8 @@
+import { useRef } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { acceptInvite, requestInviteCode } from '@/api/endpoints';
+import { requestInviteCode } from '@/api/endpoints';
 import { ApiError } from '@/api/errors';
 import { AuthLayout } from '@/components/auth/AuthLayout';
 import { FormField } from '@/components/auth/FormField';
@@ -14,9 +15,9 @@ import { OfflineFormNotice } from '@/components/auth/FormNotices';
 import { ResendCode } from '@/components/auth/ResendCode';
 import { SignedInNotice } from '@/components/auth/SignedInNotice';
 import { useServerProblem } from '@/components/auth/useServerProblem';
-import { signIn, usePublicRedirectHeld, useSignInHold } from '@/auth/auth';
+import { acceptInvitation, usePublicRedirectHeld, useSignInHold } from '@/auth/auth';
 import { getPostLoginPath } from '@/auth/redirects';
-import { setFlash, useSession } from '@/auth/session';
+import { useSession } from '@/auth/session';
 import { useIsOffline } from '@/lib/connectivity';
 import { MESSAGES } from '@/lib/messages';
 import { usePageTitle } from '@/lib/usePageTitle';
@@ -31,6 +32,7 @@ function AcceptInviteForm() {
   const navigate = useNavigate();
   const offline = useIsOffline();
   const holdRedirect = useSignInHold();
+  const busy = useRef(false);
 
   const {
     register,
@@ -54,27 +56,29 @@ function AcceptInviteForm() {
 
   /** @param {import('zod').infer<typeof acceptInviteSchema>} values */
   async function onSubmit(values) {
+    if (busy.current) return;
+    busy.current = true;
     clearProblem();
+    // The new admin is signed in with the returned AuthResult; `login` is never called (it would
+    // ask for a second code). The hold keeps PublicOnly and SignedInNotice back until we navigate.
+    const release = holdRedirect();
     try {
-      await acceptInvite({ email: values.email, code: values.code, password: values.password });
+      const result = await acceptInvitation({
+        email: values.email,
+        code: values.code,
+        password: values.password,
+      });
+      if (result.status === 'code_required') await navigate('/login/code', { replace: true });
+      else await navigate(getPostLoginPath(result.session, null), { replace: true });
     } catch (error) {
+      release();
       if (error instanceof ApiError && error.code === 'invalid_or_expired_code') {
         showError(error, { text: T.invalidCode, fieldId: 'invite-code' });
       } else {
         showError(error);
       }
-      return;
-    }
-
-    // Account created: sign in with the same email and password, then open the admin home.
-    // PublicOnly waits until this screen has navigated away (the hold ends when it unmounts).
-    holdRedirect();
-    try {
-      const session = await signIn(values.email.trim(), values.password);
-      await navigate(getPostLoginPath(session, null), { replace: true });
-    } catch {
-      setFlash(MESSAGES.flash.accountCreated);
-      await navigate('/login', { replace: true });
+    } finally {
+      busy.current = false;
     }
   }
 
@@ -102,7 +106,11 @@ function AcceptInviteForm() {
         )}
       </FormErrorSummary>
       <OfflineFormNotice offline={offline} />
-      <form noValidate onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
+      <form
+        noValidate
+        onSubmit={(event) => handleSubmit(onSubmit)(event)}
+        className="flex flex-col gap-4"
+      >
         <FormField
           id="invite-email"
           label={T.emailLabel}
@@ -146,7 +154,7 @@ function AcceptInviteForm() {
           pending={isSubmitting}
           pendingLabel={T.pending}
           remaining={countdown.remaining}
-          disabled={offline}
+          disabled={offline || countdown.longWait}
         >
           {T.submit}
         </SubmitButton>

@@ -1,6 +1,6 @@
 /**
  * Query keys of every TanStack Query hook. Keys hold only non sensitive request parameters
- * (market, crop, horizon, months, a status filter, a listing id): never a token, a phone number
+ * (market, crop, horizon, months, a status filter, a listing id): never a token, a payment number
  * or an email.
  */
 
@@ -9,7 +9,7 @@ const searchIds = new Map();
 
 /**
  * An opaque id for a search text, for query keys (F4). An administrator may search users by
- * phone number or email; the key holds `s1`, `s2`, ... instead of the text itself.
+ * name or email; the key holds `s1`, `s2`, ... instead of the text itself.
  * @param {string | null | undefined} text
  * @returns {string}
  */

@@ -21,8 +21,12 @@ export const UPLOAD_TIMEOUT_MS = 60_000;
  */
 export const PUBLIC_AUTH_PATHS = Object.freeze([
   '/api/v1/auth/login',
+  '/api/v1/auth/login/verify',
+  '/api/v1/auth/login/resend',
   '/api/v1/auth/register/farmer',
   '/api/v1/auth/register/buyer',
+  '/api/v1/auth/register/verify',
+  '/api/v1/auth/register/resend',
   '/api/v1/auth/accept-invite',
   '/api/v1/auth/invite/request-code',
   '/api/v1/auth/password-reset/request',

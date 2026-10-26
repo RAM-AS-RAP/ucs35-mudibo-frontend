@@ -39,13 +39,18 @@ is not included in production builds.
 
 ## Authentication
 
-Farmers and buyers create their own accounts (`/register`, an explicit farmer or buyer choice) and sign
-in with a phone number or email (`/login`). Administrators join through an emailed invitation code
-(`/accept-invite`). People with an email address can reset a forgotten password with an emailed code
-(`/forgot-password`, then `/reset-password`). A required password change (`/change-password`) blocks every
-other screen until it is done; a voluntary one is in the account menu. Any password change signs the user
-out, because the backend revokes older tokens. Sessions last 60 minutes, live only in this tab's
-`sessionStorage`, and are checked with `GET /auth/me` when the app reopens. Details, error messages and
+Accounts are identified only by a verified email address (identity v2). Farmers and buyers create their
+own accounts (`/register`: an explicit farmer or buyer choice, name, email and password) and confirm the
+email with an 8 character code (`/register/verify`). Signing in (`/login`) takes the email and password,
+and usually a code emailed after the password was checked (`/login/code`); the server may let some roles
+in without a code. Administrators join through an emailed invitation code (`/accept-invite`) and are
+signed in directly. Everyone can reset a forgotten password with an emailed code (`/forgot-password`,
+then `/reset-password`). A required password change (`/change-password`) blocks every other screen until
+it is done; a voluntary one is in the account menu. Any password change signs the user out, because the
+backend revokes older tokens. The registration and sign in tokens live only in memory, so a reload
+restarts the flow. Sessions last `expires_in` (8 hours by default), live only in this tab's
+`sessionStorage`, and are checked with `GET /auth/me` when the app reopens. Phone numbers are entered only
+on the buyer's pay screen, for that payment. There is no Google sign in yet. Details, error messages and
 redirect rules: [docs/auth.md](docs/auth.md).
 
 ## Farmer screens (F2a)
@@ -89,8 +94,9 @@ redirect rules: [docs/auth.md](docs/auth.md).
   (labelled as an estimate; the server's total is the one charged) and "Continue to checkout". The
   produce is held for about 5 minutes after checkout. Order creation is never retried automatically.
 - **Order and payment** (`/buyer/orders/:id`): the order with its reference, a countdown on the
-  server's clock, "Pay with M-Pesa" (an STK prompt to the registered phone in the Safaricom
-  sandbox), a waiting panel that checks the result every 3 seconds for up to 150 seconds, the
+  server's clock, an M-Pesa number field and "Pay with M-Pesa" (the buyer types the number for each
+  payment and confirms it in a dialog; an STK prompt in the Safaricom sandbox; the number is never
+  saved), a waiting panel that checks the result every 3 seconds for up to 150 seconds, the
   result (paid, cancelled, failed, timed out, expired, under review) and "Cancel order". AgriSence
   never asks for an M-Pesa PIN: it is entered only on the phone prompt.
 - **My orders** (`/buyer/orders`): the buyer's orders with status filters (All, Waiting for payment,

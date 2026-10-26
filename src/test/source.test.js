@@ -252,8 +252,8 @@ describe('source checks', () => {
       expect(offenders(/Idempotency-Key/i, (path) => path !== payments)).toEqual([]);
       const text = sources.find(({ path }) => path === payments)?.text ?? '';
       expect(text).toContain("header: { 'Idempotency-Key': idempotencyKey }");
-      // The pay request carries no body.
-      expect(text).not.toMatch(/\bbody\s*:/);
+      // The pay body is exactly the normalised number (identity v2, prompt 2; F3 sent none).
+      expect(text.match(/\bbody\s*:[^\n]*/g)).toEqual(['body: { phone_number: normalized },']);
     });
 
     it('creates random keys (crypto.randomUUID) only in src/lib/idempotency.js', () => {
@@ -400,5 +400,198 @@ describe('source checks', () => {
   it('index.html loads no third party scripts, fonts or stylesheets', () => {
     const html = readFileSync('index.html', 'utf8');
     expect(html).not.toMatch(/<(script|link)[^>]+(src|href)="(https?:)?\/\//);
+  });
+});
+
+describe('payment number source checks (identity v2, prompt 2)', () => {
+  const PAYMENTS = 'src/api/endpoints/payments.js';
+  const textOf = (/** @type {string} */ path) =>
+    sources.find((source) => source.path === path)?.text ?? '';
+
+  it('builds the pay request only in src/api/endpoints/payments.js', () => {
+    const payPath = /\/orders\/\{order_id\}\/pay/;
+    expect(offenders(payPath, (path) => path !== PAYMENTS)).toEqual([]);
+    expect(textOf(PAYMENTS)).toContain('body: { phone_number: normalized }');
+    expect(textOf(PAYMENTS)).toContain("'Idempotency-Key': idempotencyKey");
+  });
+
+  it('puts phone_number into a request body only in the pay request', () => {
+    // payments.js is the only request builder with a phone number (identity v2, prompt 4:
+    // registration and invitations have none); elsewhere it only names a server field.
+    const builders = new Set([PAYMENTS]);
+    expect(
+      offenders(/\bbody\s*:[^\n]*phone_number|phone_number\s*:\s*phone/, (p) => !builders.has(p)),
+    ).toEqual([]);
+    expect(offenders(/phone_number/, (p) => p.startsWith('src/screens/buyer/'))).toEqual([]);
+    expect(offenders(/phone_number/, (p) => p.startsWith('src/components/buyer/'))).toEqual([]);
+  });
+
+  it('never writes a phone value to sessionStorage or localStorage', () => {
+    expect(offenders(/(session|local)Storage\.setItem\([^)]*phone/i)).toEqual([]);
+    // Only the session store persists anything, and its Session type holds no phone number.
+    expect(offenders(/\.setItem\(/, (p) => p !== 'src/auth/session.js')).toEqual([]);
+    const session = textOf('src/auth/session.js');
+    const shape = /@typedef \{object\} Session[\s\S]*?\*\//.exec(session)?.[0] ?? '';
+    expect(shape).toContain('accessToken');
+    expect(shape).not.toMatch(/phone/i);
+  });
+
+  it('keeps the number out of query keys and the URL in the buyer screens', () => {
+    expect(offenders(/phone/i, (p) => p === 'src/api/queries/keys.js')).toEqual([]);
+    const buyer = (/** @type {string} */ p) =>
+      p.startsWith('src/screens/buyer/') || p.startsWith('src/components/buyer/');
+    expect(offenders(/setSearchParams|navigate\([^)]*phone|queryKey[^\n]*phone/i, buyer)).toEqual(
+      [],
+    );
+  });
+
+  it('keeps the auth screens, the admin screens (except payments) and auth.js off lib/phone.js', () => {
+    const forbidden = (/** @type {string} */ p) =>
+      p.startsWith('src/screens/auth/') ||
+      p === 'src/api/endpoints/auth.js' ||
+      (p.startsWith('src/screens/admin/') &&
+        ![
+          'src/screens/admin/PaymentsScreen.jsx',
+          'src/screens/admin/AdminOrderDetailScreen.jsx',
+        ].includes(p));
+    for (const { path, text } of sources.filter(({ path }) => forbidden(path))) {
+      expect(text, path).not.toMatch(/@\/lib\/(phone|payKey|payErrors|paymentView)'/);
+      expect(text, path).not.toMatch(/normalizePhone/);
+    }
+    // The auth screens share nothing with the buyer components.
+    for (const { path, text } of sources.filter(({ path }) =>
+      path.startsWith('src/screens/auth/'),
+    )) {
+      expect(text, path).not.toMatch(/components\/buyer\//);
+    }
+    // normalizePhone lives in lib/phone.js only.
+    expect(textOf('src/lib/validation.js')).not.toMatch(/normalizePhone/);
+    expect(textOf('src/lib/phone.js')).toMatch(/export function normalizePhone/);
+  });
+});
+
+describe('identity v2 source checks (prompt 4: email only accounts)', () => {
+  const textOf = (/** @type {string} */ path) =>
+    sources.find((source) => source.path === path)?.text ?? '';
+
+  /**
+   * Where "phone", "Phone" or "identifier" may still appear: the payment step and the admin
+   * payments display. Files that also hold other text list the line patterns allowed there.
+   * @type {Record<string, RegExp | true>}
+   */
+  const PHONE_ALLOWED = {
+    'src/api/endpoints/payments.js': true,
+    'src/api/endpoints/orders.js': /phone_masked|full phone/,
+    'src/api/queries/buyer.js': true,
+    'src/api/schema.d.ts': true,
+    'src/api/errors.js':
+      /payment_in_progress|too_many_payment_attempts|payment attempts for this phone|too_many_phone_numbers|different phone numbers|invalid_phone|phone_required/,
+    'src/lib/phone.js': true,
+    'src/lib/payKey.js': true,
+    'src/lib/waitTime.js': true,
+    'src/lib/payErrors.js': true,
+    'src/lib/paymentView.js': true,
+    'src/lib/orderView.js': true,
+    'src/lib/buyerMessages.js': true,
+    'src/lib/messages.js': /initiated: '(Waiting for your phone|Initiated, waiting for the phone)'/,
+    'src/lib/adminMessages.js':
+      /waited more than 10 minutes for the phone|target: 'Phone \(masked\)'/,
+    'src/api/queries/keys.js': false,
+    'src/components/display/StatusBadge.jsx': /Smartphone/,
+    'src/screens/buyer/OrderScreen.jsx': true,
+    'src/screens/buyer/MyOrdersScreen.jsx': /Smartphone/,
+    'src/screens/admin/PaymentsScreen.jsx': /phone_masked/,
+    'src/screens/admin/AdminOrderDetailScreen.jsx': /phone_masked/,
+  };
+
+  it('mentions phone or identifier only in the payment step and the admin payments display', () => {
+    const word = /phone|Phone|identifier/;
+    const found = sources.flatMap(({ path, text }) =>
+      text
+        .split('\n')
+        .map((line, i) => ({ line, i }))
+        .filter(({ line }) => word.test(line))
+        .filter(({ line }) => {
+          const rule = path.startsWith('src/components/buyer/') ? true : PHONE_ALLOWED[path];
+          if (rule === true) return false;
+          if (rule instanceof RegExp) return !rule.test(line);
+          return true;
+        })
+        .map(({ i, line }) => `${path}:${i + 1}: ${line.trim()}`),
+    );
+    expect(found).toEqual([]);
+  });
+
+  it('sends no phone_number, identifier or role from the auth endpoints', () => {
+    const auth = textOf('src/api/endpoints/auth.js');
+    expect(auth).not.toMatch(/phone|identifier/i);
+    expect(auth).not.toMatch(/\.\.\.\w+\s*[,}]/); // bodies are never spread from an object
+  });
+
+  it('has no console output in src/screens/auth', () => {
+    expect(
+      offenders(/console\.(log|info|debug|warn|error|table|dir)\b/, (p) =>
+        p.startsWith('src/screens/auth/'),
+      ),
+    ).toEqual([]);
+  });
+
+  it('never puts a token, a code or a password into navigation state', () => {
+    const where = (/** @type {string} */ p) =>
+      p.startsWith('src/screens/') || p.startsWith('src/auth/') || p.startsWith('src/components/');
+    expect(
+      // A state object never names a secret (state: {...}, state={{...}}, pushState, replaceState).
+      offenders(
+        /(state\s*[:=]\s*\{\{?|pushState\(|replaceState\()[^\n]*(token|code|password|challenge|registration)/i,
+        where,
+      ),
+    ).toEqual([]);
+    // The only state the sign in screens pass on is {from} (fromState) or the reset email.
+    expect(offenders(/state=\{(?!fromState\()/, (p) => p.startsWith('src/screens/auth/'))).toEqual(
+      [],
+    );
+  });
+
+  it('keeps the flow tokens in the in memory flow store only', () => {
+    const flow = textOf('src/auth/flow.js');
+    expect(
+      offenders(
+        /sessionStorage|localStorage|indexedDB|document\.cookie|history\./,
+        (p) => p === 'src/auth/flow.js',
+      ),
+    ).toEqual([]);
+    expect(flow).toContain('let flow = null;');
+    // Only src/auth/auth.js reads the token (getFlow); screens get the view without it.
+    expect(
+      offenders(/\bgetFlow\(/, (p) => !['src/auth/auth.js', 'src/auth/flow.js'].includes(p)),
+    ).toEqual([]);
+    expect(
+      offenders(/challenge_token|registration_token/, (p) => p.startsWith('src/screens/')),
+    ).toEqual([]);
+  });
+
+  it('never calls login after a flow that already returned a token', () => {
+    for (const path of [
+      'src/screens/auth/AcceptInviteScreen.jsx',
+      'src/screens/auth/RegisterVerifyScreen.jsx',
+      'src/screens/auth/LoginCodeScreen.jsx',
+    ]) {
+      expect(textOf(path), path).not.toMatch(/\bsignIn\(|\blogin\(|loginRequest/);
+    }
+  });
+
+  it('loads the registration, code and recovery screens lazily', () => {
+    const routes = textOf('src/routes.jsx');
+    for (const name of [
+      'RegisterScreen',
+      'RegisterVerifyScreen',
+      'LoginCodeScreen',
+      'ForgotPasswordScreen',
+      'ResetPasswordScreen',
+      'AcceptInviteScreen',
+    ]) {
+      expect(routes).toContain(`const ${name} = lazy(() => import('@/screens/auth/${name}'));`);
+      expect(routes).not.toContain(`import ${name} from`);
+    }
   });
 });

@@ -92,6 +92,12 @@ const PAYMENT_COLUMNS = [
     cell: (p) => <span data-testid="payment-amount">{formatKES(p.amount)}</span>,
   },
   {
+    key: 'entered',
+    header: T.entered,
+    cell: (p) =>
+      p.phone_masked ? <span className="font-mono">{p.phone_masked}</span> : T.notRecorded,
+  },
+  {
     key: 'target',
     header: T.target,
     cell: (p) => <span className="font-mono">{p.stk_target_masked}</span>,

@@ -1,37 +1,31 @@
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Info, ShoppingBasket, Sprout } from 'lucide-react';
-import { registerBuyer, registerFarmer } from '@/api/endpoints';
-import { ApiError } from '@/api/errors';
+import { Info, Mail, ShoppingBasket, Sprout } from 'lucide-react';
 import { AuthLayout } from '@/components/auth/AuthLayout';
 import { FieldError, FormField, errorId } from '@/components/auth/FormField';
 import { PasswordField } from '@/components/auth/PasswordField';
 import { PasswordRequirements } from '@/components/auth/PasswordRequirements';
 import { FormErrorSummary } from '@/components/auth/FormErrorSummary';
 import { SubmitButton } from '@/components/auth/CountdownButton';
-import { OfflineFormNotice } from '@/components/auth/FormNotices';
+import { InfoMessage, OfflineFormNotice } from '@/components/auth/FormNotices';
 import { useServerProblem } from '@/components/auth/useServerProblem';
-import { signIn, useSignInHold } from '@/auth/auth';
-import { getPostLoginPath } from '@/auth/redirects';
-import { setFlash } from '@/auth/session';
+import { startRegistration } from '@/auth/auth';
+import { consumeFlash, peekFlash } from '@/auth/session';
 import { useIsOffline } from '@/lib/connectivity';
 import { MESSAGES } from '@/lib/messages';
 import { usePageTitle } from '@/lib/usePageTitle';
 import { cn } from '@/lib/utils';
-import { normalizePhone, registerSchema } from '@/lib/validation';
+import { registerSchema } from '@/lib/validation';
 
 const T = MESSAGES.register;
 const ROLE_OPTIONS = [
   { value: 'farmer', label: T.farmer, hint: T.farmerHint, icon: Sprout },
   { value: 'buyer', label: T.buyer, hint: T.buyerHint, icon: ShoppingBasket },
 ];
-const SERVER_FIELDS = {
-  name: 'name',
-  phone_number: 'phone',
-  email: 'email',
-  password: 'password',
-};
+const SERVER_FIELDS = { name: 'name', email: 'email', password: 'password' };
+export const REGISTER_VERIFY_PATH = '/register/verify';
 const linkClass = 'inline-flex min-h-11 items-center text-primary underline underline-offset-2';
 
 /** @param {string | null} value */
@@ -39,27 +33,34 @@ const roleFromQuery = (value) => (value === 'farmer' || value === 'buyer' ? valu
 
 /**
  * Farmer or buyer registration. The choice is explicit (no default), and the role is never
- * sent in the body: it picks the endpoint (POST /auth/register/farmer or /buyer).
+ * sent in the body: it picks the endpoint (POST /auth/register/farmer or /buyer). The body is
+ * exactly {name, email, password}. The answer is always 202 with the same shape (also for an
+ * address that already has an account), so the next screen never says whether one exists.
  */
 export default function RegisterScreen() {
   const headingRef = usePageTitle(T.title);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const offline = useIsOffline();
-  const holdRedirect = useSignInHold();
+  const busy = useRef(false);
+  // A flash from the verify step (registration_lost), shown once.
+  const [flash] = useState(() => peekFlash() || null);
+  useEffect(() => {
+    consumeFlash();
+  }, []);
 
   const {
     register,
     handleSubmit,
     setError,
     control,
+    resetField,
     formState: { errors, isSubmitting },
   } = useForm({
     resolver: zodResolver(registerSchema),
     defaultValues: {
       role: roleFromQuery(searchParams.get('role')),
       name: '',
-      phone: '',
       email: '',
       password: '',
       confirmPassword: '',
@@ -71,39 +72,37 @@ export default function RegisterScreen() {
     fieldMap: SERVER_FIELDS,
     passwordField: 'password',
   });
-  const [role, name, phone, email, password] = useWatch({
+  const [role, name, email, password] = useWatch({
     control,
-    name: ['role', 'name', 'phone', 'email', 'password'],
+    name: ['role', 'name', 'email', 'password'],
   });
 
   /** @param {import('zod').infer<typeof registerSchema>} values */
   async function onSubmit(values) {
+    if (busy.current) return;
+    busy.current = true;
     clearProblem();
-    const phoneNumber = /** @type {string} */ (normalizePhone(values.phone));
-    const fields = {
-      name: values.name,
-      phoneNumber,
-      email: values.email,
-      password: values.password,
+    // The password is not kept in the form after the request (cleared before a server error
+    // is shown, so a password_too_weak reason stays on the field).
+    const clearPasswords = () => {
+      resetField('password');
+      resetField('confirmPassword');
     };
     try {
-      await (values.role === 'farmer' ? registerFarmer(fields) : registerBuyer(fields));
+      await startRegistration(values.role === 'farmer' ? 'farmer' : 'buyer', {
+        name: values.name,
+        email: values.email,
+        password: values.password,
+      });
     } catch (error) {
-      if (error instanceof ApiError && error.status === 409) showError(error, { text: T.exists });
-      else showError(error);
+      clearPasswords();
+      showError(error);
       return;
+    } finally {
+      busy.current = false;
     }
-
-    // Account created: sign in with the same credentials (the normalised phone number).
-    // PublicOnly waits until this screen has navigated away (the hold ends when it unmounts).
-    holdRedirect();
-    try {
-      const session = await signIn(phoneNumber, values.password);
-      await navigate(getPostLoginPath(session, null), { replace: true });
-    } catch {
-      setFlash(MESSAGES.flash.accountCreated);
-      await navigate('/login', { replace: true });
-    }
+    clearPasswords();
+    await navigate(REGISTER_VERIFY_PATH);
   }
 
   const roleError = errors.role?.message;
@@ -114,24 +113,22 @@ export default function RegisterScreen() {
         <Info aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-primary" />
         <span>{T.info}</span>
       </p>
+      <p className="flex items-start gap-2 rounded-lg border border-border bg-canvas px-4 py-3 text-sm text-text">
+        <Mail aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-primary" />
+        <span>{T.emailInfo}</span>
+      </p>
+      {flash && <InfoMessage>{flash}</InfoMessage>}
       <FormErrorSummary
         ref={summaryRef}
         problems={problem?.problems ?? []}
         reference={problem?.reference}
-      >
-        {problem?.code === 'conflict' || problem?.code === 'user_exists' ? (
-          <p className="flex flex-wrap gap-x-4 text-sm">
-            <Link className={linkClass} to="/login">
-              {T.signIn}
-            </Link>
-            <Link className={linkClass} to="/forgot-password">
-              {T.resetPassword}
-            </Link>
-          </p>
-        ) : null}
-      </FormErrorSummary>
+      />
       <OfflineFormNotice offline={offline} />
-      <form noValidate onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
+      <form
+        noValidate
+        onSubmit={(event) => handleSubmit(onSubmit)(event)}
+        className="flex flex-col gap-4"
+      >
         <fieldset
           className="flex flex-col gap-2"
           aria-describedby={roleError ? errorId('register-role') : undefined}
@@ -176,23 +173,14 @@ export default function RegisterScreen() {
           {...register('name')}
         />
         <FormField
-          id="register-phone"
-          label={T.phoneLabel}
-          type="tel"
-          inputMode="tel"
-          autoComplete="tel"
-          hint={T.phoneHint}
-          error={errors.phone?.message}
-          {...register('phone')}
-        />
-        <FormField
           id="register-email"
           label={T.emailLabel}
           type="email"
           inputMode="email"
           autoComplete="email"
           autoCapitalize="none"
-          hint={T.emailHint}
+          autoCorrect="off"
+          spellCheck={false}
           error={errors.email?.message}
           {...register('email')}
         />
@@ -207,7 +195,7 @@ export default function RegisterScreen() {
           <PasswordRequirements
             id="register-password-requirements"
             password={password}
-            context={{ role, name, phone, email, characterClasses: true }}
+            context={{ role, name, email, characterClasses: true }}
           />
         </PasswordField>
         <PasswordField
@@ -221,7 +209,7 @@ export default function RegisterScreen() {
           pending={isSubmitting}
           pendingLabel={T.pending}
           remaining={countdown.remaining}
-          disabled={offline}
+          disabled={offline || countdown.longWait}
         >
           {T.submit}
         </SubmitButton>

@@ -62,7 +62,6 @@ const COLUMNS = [
     ),
   },
   { key: 'role', header: USERS_TEXT.role, cell: (u) => <RoleBadge userRole={u.role} /> },
-  { key: 'phone', header: USERS_TEXT.phone, cell: (u) => u.phone_number },
   { key: 'email', header: USERS_TEXT.email, cell: (u) => u.email ?? USERS_TEXT.noEmail },
   {
     key: 'status',
@@ -102,8 +101,8 @@ const COLUMNS = [
 ];
 
 /**
- * Users (/admin/users): every account with role and status filters and a search by name, email
- * or phone (2 to 50 characters, 400 ms after typing). Disable or Enable appears only where
+ * Users (/admin/users): every account with role and status filters and a search by name or email
+ * (2 to 50 characters, 400 ms after typing). Disable or Enable appears only where
  * canToggleUser allows it, and always goes through a confirmation. The server stays the
  * authority: its 403 answers are shown in the dialog and the list is refreshed.
  */

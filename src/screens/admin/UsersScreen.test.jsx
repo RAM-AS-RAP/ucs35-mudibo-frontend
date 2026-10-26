@@ -51,8 +51,7 @@ describe('UsersScreen', () => {
     await openUsers();
     expect(screen.getByTestId('list-count')).toHaveTextContent('Showing 5 of 5');
     expect(rowOf(amina.id)).toHaveTextContent('Main admin');
-    expect(rowOf(wanjiku.id)).toHaveTextContent('254712345678');
-    expect(rowOf(wanjiku.id)).toHaveTextContent('No email');
+    expect(rowOf(wanjiku.id)).toHaveTextContent('wanjiku@example.com');
     expect(rowOf(wanjiku.id)).toHaveTextContent('3 listings');
     expect(rowOf(otieno.id)).toHaveTextContent('2 orders');
     expect(rowOf(otieno.id)).toHaveTextContent('Disabled');
@@ -119,7 +118,7 @@ describe('UsersScreen', () => {
   it('searches 400 ms after typing, never below 2 characters', async () => {
     const user = userEvent.setup();
     await openUsers();
-    const input = screen.getByLabelText('Search by name, email or phone');
+    const input = screen.getByLabelText('Search by name or email');
     await user.type(input, 'o');
     await new Promise((r) => setTimeout(r, 600));
     expect(listRequests().some((q) => 'q' in q)).toBe(false);
@@ -144,6 +143,34 @@ describe('UsersScreen', () => {
     expect(actionsOf(wanjiku.id)).toEqual(['Disable Wanjiku Kamau']);
     expect(actionsOf(otieno.id)).toEqual(['Enable Otieno Buyer']);
   });
+
+  it.each([
+    ['table', true],
+    ['stacked cards', false],
+  ])(
+    'never shows a phone column or line in the %s, even if the server sent one',
+    async (_, wide) => {
+      // An older server could still send phone_number: it must never be rendered.
+      const items = fixtures.adminUsersPage.items.map((u) => ({
+        ...u,
+        phone_number: '254799000111',
+      }));
+      server.use(
+        http.get(apiUrl('/api/v1/admin/users'), ({ request }) =>
+          HttpResponse.json(adminUsersResponse(items, new URL(request.url))),
+        ),
+      );
+      setWideScreen(wide);
+      await openUsers();
+      const main = screen.getByRole('main');
+      expect(main.textContent).not.toContain('254799000111');
+      expect(main.textContent).not.toMatch(/phone/i);
+      if (wide) {
+        const headers = screen.getAllByRole('columnheader').map((h) => h.textContent);
+        expect(headers).not.toContain('Phone');
+      }
+    },
+  );
 
   it('has the same actions in the table and in the stacked cards', async () => {
     setWideScreen(true);
