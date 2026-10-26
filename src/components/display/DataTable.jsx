@@ -22,7 +22,7 @@ import { cn } from '@/lib/utils';
 export function DataTable({ caption, columns, rows, className }) {
   const [first, ...rest] = columns;
   return (
-    // Smaller text and padding on phones so three columns of numbers fit without sideways scrolling.
+    // Smaller text and padding on small screens so three columns of numbers fit without sideways scrolling.
     <Table className={cn('caption-top text-sm sm:text-base', className)}>
       <TableCaption className="mt-0 mb-2 text-left">{caption}</TableCaption>
       <TableHeader>

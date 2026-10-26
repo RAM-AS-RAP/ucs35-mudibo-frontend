@@ -6,7 +6,7 @@
  * Backend month strings (YYYY-MM-DD) are only used to compute differences in months here.
  *
  * Month strings are parsed by splitting them into integers. Nothing in this file depends on the
- * device clock or its time zone, so a wrong phone clock can never produce a wrong label.
+ * device clock or its time zone, so a wrong device clock can never produce a wrong label.
  */
 
 const ISO_MONTH = /^(\d{4})-(\d{2})(?:-(\d{2}))?$/;

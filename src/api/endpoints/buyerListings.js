@@ -6,7 +6,7 @@ import { api, unwrap } from '../client';
 
 /**
  * A listing as a buyer sees it (PublicListingOut). openapi.json names the fields without types,
- * so they are described here. There is never a farmer id, phone number or email: only the
+ * so they are described here. There is never a farmer id or contact detail: only the
  * seller's name. Money and quantities are JSON numbers with 2 decimals.
  * @typedef {object} PublicListing
  * @property {string} id
