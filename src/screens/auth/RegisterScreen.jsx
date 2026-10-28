@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Info, Mail, ShoppingBasket, Sprout } from 'lucide-react';
+import { ShoppingBasket, Sprout } from 'lucide-react';
 import { AuthLayout } from '@/components/auth/AuthLayout';
 import { FieldError, FormField, errorId } from '@/components/auth/FormField';
 import { PasswordField } from '@/components/auth/PasswordField';
@@ -114,15 +114,7 @@ export default function RegisterScreen() {
   const roleError = errors.role?.message;
 
   return (
-    <AuthLayout title={T.title} subtitle={T.subtitle} headingRef={headingRef}>
-      <p className="flex items-start gap-2 rounded-lg border border-border bg-canvas px-4 py-3 text-sm text-text">
-        <Info aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-primary" />
-        <span>{T.info}</span>
-      </p>
-      <p className="flex items-start gap-2 rounded-lg border border-border bg-canvas px-4 py-3 text-sm text-text">
-        <Mail aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-primary" />
-        <span>{T.emailInfo}</span>
-      </p>
+    <AuthLayout title={T.title} headingRef={headingRef}>
       {flash && <InfoMessage>{flash}</InfoMessage>}
       <FormErrorSummary
         ref={summaryRef}
@@ -135,83 +127,89 @@ export default function RegisterScreen() {
         inert={googleBusy}
         aria-busy={googleBusy || undefined}
         onSubmit={(event) => handleSubmit(onSubmit)(event)}
-        className={cn('flex flex-col gap-4', googleBusy && BUSY_CLASS)}
+        className={cn('flex flex-col gap-4 lg:gap-3.5', googleBusy && BUSY_CLASS)}
       >
         <fieldset
           className="flex flex-col gap-2"
           aria-describedby={roleError ? errorId('register-role') : undefined}
         >
           <legend className="mb-2 text-sm font-medium text-text">{T.roleLegend}</legend>
-          {ROLE_OPTIONS.map((option) => {
-            const Icon = option.icon;
-            const checked = role === option.value;
-            return (
-              <label
-                key={option.value}
-                htmlFor={`register-role-${option.value}`}
-                className={cn(
-                  'flex min-h-11 cursor-pointer items-start gap-3 rounded-lg border px-4 py-3 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring has-[:focus-visible]:ring-offset-2',
-                  checked ? 'border-primary bg-canvas' : 'border-border bg-card',
-                )}
-              >
-                <input
-                  id={`register-role-${option.value}`}
-                  type="radio"
-                  value={option.value}
-                  className="mt-1 size-5 shrink-0 accent-primary"
-                  {...register('role')}
-                />
-                <Icon aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-primary" />
-                <span className="flex flex-col">
-                  <span className="font-medium text-text">{option.label}</span>
-                  <span className="text-sm text-text-secondary">{option.hint}</span>
-                </span>
-              </label>
-            );
-          })}
+          <div className="grid gap-2 sm:grid-cols-2">
+            {ROLE_OPTIONS.map((option) => {
+              const Icon = option.icon;
+              const checked = role === option.value;
+              return (
+                <label
+                  key={option.value}
+                  htmlFor={`register-role-${option.value}`}
+                  className={cn(
+                    'flex min-h-11 cursor-pointer items-start gap-3 rounded-lg border px-4 py-3 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring has-[:focus-visible]:ring-offset-2',
+                    checked ? 'border-primary bg-canvas' : 'border-border bg-card',
+                  )}
+                >
+                  <input
+                    id={`register-role-${option.value}`}
+                    type="radio"
+                    value={option.value}
+                    className="mt-1 size-5 shrink-0 accent-primary"
+                    {...register('role')}
+                  />
+                  <Icon aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-primary" />
+                  <span className="flex flex-col">
+                    <span className="font-medium text-text">{option.label}</span>
+                    <span className="text-sm text-text-secondary">{option.hint}</span>
+                  </span>
+                </label>
+              );
+            })}
+          </div>
           <FieldError id="register-role" message={roleError} />
         </fieldset>
 
-        <FormField
-          id="register-name"
-          label={T.nameLabel}
-          type="text"
-          autoComplete="name"
-          error={errors.name?.message}
-          {...register('name')}
-        />
-        <FormField
-          id="register-email"
-          label={T.emailLabel}
-          type="email"
-          inputMode="email"
-          autoComplete="email"
-          autoCapitalize="none"
-          autoCorrect="off"
-          spellCheck={false}
-          error={errors.email?.message}
-          {...register('email')}
-        />
-        <PasswordField
-          id="register-password"
-          label={T.passwordLabel}
-          autoComplete="new-password"
-          error={errors.password?.message}
-          describedByIds={['register-password-requirements']}
-          {...register('password')}
-        >
-          <PasswordRequirements
-            id="register-password-requirements"
-            password={password}
-            context={{ role, name, email, characterClasses: true }}
+        <div className="grid gap-4 sm:grid-cols-2 sm:items-start">
+          <FormField
+            id="register-name"
+            label={T.nameLabel}
+            type="text"
+            autoComplete="name"
+            error={errors.name?.message}
+            {...register('name')}
           />
-        </PasswordField>
-        <PasswordField
-          id="register-confirmPassword"
-          label={T.confirmLabel}
-          autoComplete="new-password"
-          error={errors.confirmPassword?.message}
-          {...register('confirmPassword')}
+          <FormField
+            id="register-email"
+            label={T.emailLabel}
+            type="email"
+            inputMode="email"
+            autoComplete="email"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            error={errors.email?.message}
+            {...register('email')}
+          />
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2 sm:items-start">
+          <PasswordField
+            id="register-password"
+            label={T.passwordLabel}
+            autoComplete="new-password"
+            error={errors.password?.message}
+            describedByIds={['register-password-requirements']}
+            {...register('password')}
+          />
+          <PasswordField
+            id="register-confirmPassword"
+            label={T.confirmLabel}
+            autoComplete="new-password"
+            error={errors.confirmPassword?.message}
+            {...register('confirmPassword')}
+          />
+        </div>
+        <PasswordRequirements
+          id="register-password-requirements"
+          password={password}
+          context={{ role, name, email, characterClasses: true }}
+          columns
         />
         <SubmitButton
           pending={isSubmitting}

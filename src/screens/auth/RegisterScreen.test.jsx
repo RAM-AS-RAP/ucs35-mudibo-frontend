@@ -128,16 +128,10 @@ describe('RegisterScreen', () => {
     expect(seen.register).toEqual([]);
   });
 
-  it('has no phone field and asks for an email address the person can open', async () => {
+  it('has no phone field', async () => {
     renderApp('/register');
     await screen.findByLabelText('Full name');
     expect(screen.queryByLabelText(/phone/i)).not.toBeInTheDocument();
-    expect(
-      screen.getByText(
-        'You need an email address you can open. We will send you a code to confirm it.',
-      ),
-    ).toBeInTheDocument();
-    expect(screen.getByText(/Payments run in the M-Pesa test environment/)).toBeInTheDocument();
   });
 
   it.each([

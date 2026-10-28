@@ -38,16 +38,16 @@ export function AuthLayout({ title, subtitle, headingRef, children, after }) {
     <main
       id="main-content"
       tabIndex={-1}
-      className="flex min-h-dvh bg-canvas outline-none lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-start"
+      className="flex min-h-dvh bg-canvas outline-none lg:grid lg:h-dvh lg:grid-cols-2 lg:overflow-hidden"
     >
-      <div className="flex w-full flex-col items-center px-4 py-8 sm:justify-center lg:order-2 lg:min-h-dvh lg:px-8">
-        <div className="flex w-full max-w-md flex-col gap-6">
+      <div className="flex w-full flex-col items-center px-4 py-8 lg:order-2 lg:overflow-y-auto lg:px-10 lg:py-6">
+        <div className="flex w-full max-w-md flex-col gap-6 sm:my-auto lg:max-w-lg lg:gap-4">
           <p className="flex justify-center lg:hidden">
             <BrandMark size="lg" />
           </p>
           <section
             aria-labelledby="auth-title"
-            className="flex flex-col gap-5 rounded-2xl border border-border bg-card px-5 py-6 shadow-raised sm:px-7 sm:py-8"
+            className="flex flex-col gap-5 rounded-2xl border border-border bg-card px-5 py-6 shadow-raised sm:px-7 sm:py-8 lg:gap-4 lg:py-6"
           >
             <div className="flex flex-col gap-1.5">
               <h1
@@ -69,9 +69,9 @@ export function AuthLayout({ title, subtitle, headingRef, children, after }) {
         </div>
       </div>
 
-      <div className="bg-brand relative hidden overflow-hidden text-on-primary lg:sticky lg:top-0 lg:order-1 lg:flex lg:h-dvh lg:items-center lg:px-12 xl:px-16">
+      <div className="bg-brand relative hidden overflow-hidden text-on-primary lg:order-1 lg:flex lg:items-center lg:px-12 xl:px-16">
         <div aria-hidden="true" className="bg-dot-grid pointer-events-none absolute inset-0" />
-        <div className="relative flex w-full max-w-lg flex-col gap-10">
+        <div className="relative flex w-full max-w-lg flex-col gap-8 xl:gap-10">
           <BrandMark size="lg" inverse />
 
           <div className="flex flex-col gap-4">
