@@ -215,7 +215,7 @@ function Explanation({ forecast }) {
           <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">
             <BookOpen aria-hidden="true" className="size-4" />
           </span>
-          <span>{FORECAST_TEXT.howToRead}</span>
+          {FORECAST_TEXT.howToRead}
           <ChevronDown
             aria-hidden="true"
             className="ml-auto size-5 text-text-secondary transition-transform group-open:rotate-180"
@@ -241,7 +241,7 @@ function Explanation({ forecast }) {
           <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">
             <Table2 aria-hidden="true" className="size-4" />
           </span>
-          <span>{FORECAST_TEXT.seeNumbers}</span>
+          {FORECAST_TEXT.seeNumbers}
           <ChevronDown
             aria-hidden="true"
             className="ml-auto size-5 text-text-secondary transition-transform group-open:rotate-180"
