@@ -1,10 +1,11 @@
-# Authentication (F1, identity v2 prompt 4)
+# Authentication (F1, identity v2 prompts 4 and 6)
 
 Accounts are identified only by a verified email address. Farmers and buyers register with name,
 email and password and confirm the email with a one time code. A password sign in may need a second
 step (a code emailed after the password was checked). Administrators are invited by email only.
 Phone numbers no longer exist on accounts or invitations: a phone number is entered only on the
-buyer's pay screen, for that payment (see `docs/buyer-checkout.md`). There is no Google sign in yet.
+buyer's pay screen, for that payment (see `docs/buyer-checkout.md`). Farmers and buyers can also
+"Continue with Google" (prompt 6, details in `docs/google-sign-in.md`): no password and no code.
 
 ## Flows
 
@@ -17,7 +18,10 @@ buyer's pay screen, for that payment (see `docs/buyer-checkout.md`). There is no
 | Forgot and reset password                         | `/forgot-password` → `/reset-password` → `/login`     | `POST /auth/password-reset/request` (always 202), `POST /auth/password-reset/confirm` (204). The next sign in asks for a code                                                                           |
 | Change password                                   | `/change-password` → `/login`                         | `POST /auth/change-password` (200, `login_required: true`). The session is cleared with the `password_changed` flash                                                                                    |
 | Expiry                                            | any → `/login`                                        | The session ends after `expires_in` seconds (8 hours by default) with the `expired` flash. No refresh token                                                                                             |
-| Logout                                            | any → `/login`                                        | No backend call: `session.clear('logout')`, which also clears the query cache and the flow store                                                                                                        |
+| Logout                                            | any → `/login`                                        | No backend call: `session.clear('logout')`, which also clears the query cache and the flow store; `disableAutoSelect()` when Google's library was loaded                                                |
+| Google, existing or linked account                | `/login` or `/register` → intended path or role home  | `POST /auth/google/nonce`, Google's button and popup, `POST /auth/google` `{credential, nonce}` (200 `signed_in`), `GET /auth/me`. An account with the same verified email is linked automatically      |
+| Google, new account                               | `/login` or `/register` → `/google/role` → role home  | as above, but `POST /auth/google` answers `role_required`; then `POST /auth/google/complete` `{signup_token, role}` (201 `signed_in`), `GET /auth/me`. The role is chosen once                          |
+| Set a first password (Google accounts)            | `/account/security` → `/account/password` → `/login`  | `POST /auth/password-reset/request` (email from `GET /auth/me`, 202), `POST /auth/password-reset/confirm` (204). The session ends (`password_changed` plus the Google hint)                             |
 
 Every response that signs someone in is an `AuthResult`. `status` is `signed_in` (with
 `access_token`, `expires_in`, `role`, `must_change_password`, `is_super_admin`) or `code_required`
@@ -38,7 +42,11 @@ restored session ──> /auth/me ──200──> render | ──401──> cle
 
 The registration token and the sign in challenge token are secrets for one flow. They live only in
 the module memory of `src/auth/flow.js`:
-`{kind: 'login' | 'register', token, emailMasked, resendDeadline, expiresDeadline, codeSent}`.
+`{kind: 'login' | 'register', token, emailMasked, resendDeadline, expiresDeadline, codeSent}`, or for
+Google (prompt 6) `{kind: 'google', token, email, name, preferredRole}` (the signup token, the person's
+own Google email and name for display, and the role card chosen on `/register`). One flow exists at a
+time. The Google flow keeps no deadline (the server owns its expiry) and is read with `getGoogleFlow()`
+(only `src/auth/auth.js`), `getGoogleFlowView()` and `useGoogleFlowView()` (no token).
 
 - `startFlow(kind, {token, emailMasked, resendAvailableInSeconds, codeSent})`, `updateResend(seconds)`,
   `getFlow(kind)` (with the token, used only by `src/auth/auth.js`), `getFlowView(kind)` and
@@ -47,7 +55,7 @@ the module memory of `src/auth/flow.js`:
   device clock or a remounted screen cannot break the countdown. The countdown starts from the
   server's `resend_available_in`, and from `Retry-After` after a 429 `resend_cooldown`.
 - The store is cleared by `session.clear()` (logout and expiry), after a successful sign in, on "Start
-  again" and on `challenge_closed`. Nothing persists it, so a reload loses the flow: the code screens
+  again", on `challenge_closed`, and for Google on Cancel, `invalid_or_expired_ticket` and `google_retry`. Nothing persists it, so a reload loses the flow: the code screens
   then go back to their start screen with the `flow_lost` or `registration_lost` message. That is
   intended: a token in storage or a URL could be read by anyone with access to the device or the
   browser history.
@@ -68,14 +76,15 @@ the module memory of `src/auth/flow.js`:
   password but use the same style. A source check enforces this.
 - Public auth routes (`PUBLIC_AUTH_PATHS` in `src/api/client.js`: login and its verify and resend,
   both registrations and their verify and resend, password reset request and confirm, accept invite,
-  invite request code) never carry an `Authorization` header, and a 401 from them never clears a
+  invite request code, and the three Google routes) never carry an `Authorization` header, and a 401 from them never clears a
   session. `GET /auth/me` and `POST /auth/change-password` need the token.
 - **Flash messages:** `clear(reason)` leaves a one time, in memory message for the login screen
   (`expired`, `password_changed`, `unauthorized`); `setFlash()` sets one without a session
   (`challenge_closed`, `flow_lost`, `registration_lost`, "Password updated. Please sign in."). A sign
   out leaves an empty, silent flash. The login and register screens read the flash once and consume it.
-- **The profile** in the session holds `name`, `role`, `mustChangePassword`, `isSuperAdmin` and the
-  user `id` (`userId`). `setFromLogin()` takes the role, `is_super_admin`, `must_change_password` and
+- **The profile** in the session holds `name`, `role`, `mustChangePassword`, `isSuperAdmin`, the
+  user `id` (`userId`), `passwordSet` and `googleLinked` (from `password_set` and `google_linked`;
+  `true` and `false` until the profile loaded or when the fields are absent). `setFromLogin()` takes the role, `is_super_admin`, `must_change_password` and
   `expires_in` from the `signed_in` `AuthResult`; `setProfile()` takes the rest from `GET /auth/me`.
   Only `is_super_admin: true` counts, and it only controls what the UI shows.
 - While a screen signs someone in, `PublicOnly` does not redirect (`useSignInHold`), so the screen
@@ -118,23 +127,25 @@ flow is missing.
 
 Screen texts live in `src/lib/messages.js`, backend codes in `src/api/errors.js`.
 
-| Situation                                                       | Code                                  | Message shown                                                                                                  | Where                                    |
-| --------------------------------------------------------------- | ------------------------------------- | -------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
-| Wrong sign in (unknown email, wrong password, disabled account) | 401 `invalid_credentials`             | "Incorrect email or password." Only the password is cleared                                                    | Summary                                  |
-| Too many sign in codes requested                                | 429 `too_many_login_codes`            | "Too many sign in codes were requested. Try again in <wait>."                                                  | Summary and button                       |
-| Rate limited                                                    | 429 `rate_limited` (or any other 429) | "Too many attempts. Try again in <wait>."                                                                      | Summary and button                       |
-| Wrong or expired sign in code                                   | 400 `invalid_or_expired_code`         | "That code is incorrect or has expired." The field is cleared and focused                                      | On the code field                        |
-| Wrong or expired registration code                              | 400 `invalid_or_expired_code`         | "That code is incorrect or has expired. Request a new code or start again."                                    | On the code field                        |
-| Sign in challenge closed                                        | 400 `challenge_closed`                | The flow is cleared; `/login` shows "Your sign in session ended. Please sign in again."                        | Flash                                    |
-| Resend too soon                                                 | 429 `resend_cooldown`                 | "Please wait before asking for another code." The countdown restarts from `Retry-After`                        | Status message                           |
-| All resends used                                                | 409 `send_limit_reached`              | "You have used all the code resends. Please start again." The resend control is hidden                         | Summary                                  |
-| Reload or direct visit of a code screen                         | (no flow)                             | "Your sign in was interrupted. Please start again." / "Your registration was interrupted. Please start again." | Flash                                    |
-| Server validation                                               | 422 `validation_error`                | Each field's message                                                                                           | On the field and in the summary          |
-| Weak password                                                   | 422 `password_too_weak`               | "Choose a stronger password." plus the `reason`                                                                | On the password field and in the summary |
-| Wrong current password                                          | 400 `wrong_current_password`          | "Your current password is incorrect."                                                                          | On the current password field            |
-| Bad reset or invitation code                                    | 400 `invalid_or_expired_code`         | "That code is incorrect or has expired." plus "Send me a new code" / "Request a new code" (60 second cooldown) | Summary                                  |
-| Network failure, timeout, offline                               | `network_error`, `timeout`            | The F0 texts; offline disables submission                                                                      | Summary or above the form                |
-| Anything else                                                   | any                                   | `getUserMessage(error)`, plus "Reference: <request id>" for 5xx only                                           | Summary                                  |
+| Situation                                                       | Code                                    | Message shown                                                                                                  | Where                                    |
+| --------------------------------------------------------------- | --------------------------------------- | -------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| Wrong sign in (unknown email, wrong password, disabled account) | 401 `invalid_credentials`               | "Incorrect email or password." Only the password is cleared                                                    | Summary                                  |
+| Too many sign in codes requested                                | 429 `too_many_login_codes`              | "Too many sign in codes were requested. Try again in <wait>."                                                  | Summary and button                       |
+| Rate limited                                                    | 429 `rate_limited` (or any other 429)   | "Too many attempts. Try again in <wait>."                                                                      | Summary and button                       |
+| Wrong or expired sign in code                                   | 400 `invalid_or_expired_code`           | "That code is incorrect or has expired." The field is cleared and focused                                      | On the code field                        |
+| Wrong or expired registration code                              | 400 `invalid_or_expired_code`           | "That code is incorrect or has expired. Request a new code or start again."                                    | On the code field                        |
+| Sign in challenge closed                                        | 400 `challenge_closed`                  | The flow is cleared; `/login` shows "Your sign in session ended. Please sign in again."                        | Flash                                    |
+| Resend too soon                                                 | 429 `resend_cooldown`                   | "Please wait before asking for another code." The countdown restarts from `Retry-After`                        | Status message                           |
+| All resends used                                                | 409 `send_limit_reached`                | "You have used all the code resends. Please start again." The resend control is hidden                         | Summary                                  |
+| Reload or direct visit of a code screen                         | (no flow)                               | "Your sign in was interrupted. Please start again." / "Your registration was interrupted. Please start again." | Flash                                    |
+| Server validation                                               | 422 `validation_error`                  | Each field's message                                                                                           | On the field and in the summary          |
+| Weak password                                                   | 422 `password_too_weak`                 | "Choose a stronger password." plus the `reason`                                                                | On the password field and in the summary |
+| Wrong current password                                          | 400 `wrong_current_password`            | "Your current password is incorrect."                                                                          | On the current password field            |
+| Bad reset or invitation code                                    | 400 `invalid_or_expired_code`           | "That code is incorrect or has expired." plus "Send me a new code" / "Request a new code" (60 second cooldown) | Summary                                  |
+| Network failure, timeout, offline                               | `network_error`, `timeout`              | The F0 texts; offline disables submission                                                                      | Summary or above the form                |
+| Google errors (prompt 6)                                        | `google_*`, `invalid_or_expired_ticket` | See the table in `docs/google-sign-in.md`                                                                      | Under the Google button, or flash        |
+| Change password without a password                              | 409 `password_not_set`                  | "You have not set a password yet. Set one from Sign-in methods." with a link to `/account/password`            | Summary (also instead of the form)       |
+| Anything else                                                   | any                                     | `getUserMessage(error)`, plus "Reference: <request id>" for 5xx only                                           | Summary                                  |
 
 **Waits** (`<wait>` is `formatWait`): up to 120 seconds count down on the button ("Try again in N s");
 longer waits read approximately ("about 10 minutes", "about 2 hours") and the button is re-enabled by a
@@ -178,8 +189,22 @@ failure shows the same text.
 - Resend limits (cooldown, 3 sends per sign in, 5 codes per registration) are enforced by the server;
   the screen only shows them.
 - The sign in and registration screens never reveal whether an account exists.
-- No Google sign in yet, no "remember this device", no refresh tokens.
+- Google sign in depends on Google's script and popup (blocked by some content blockers and browsers);
+  the email sign in is the fallback. There is no Google disconnect, and the role chosen with Google is
+  permanent. Accounts created with Google have no password until "Set a password".
+- No "remember this device", no refresh tokens.
 - Whoever controls the mailbox can reset the password and receive sign in codes: a mailbox compromise
   gives access to the account.
 - A password change signs the user out (the backend revokes every older token); the next sign in asks
   for a code.
+
+## Screens and routes added by Google sign in (prompt 6)
+
+| Route               | Guard                             | Screen                  | Purpose                                                              |
+| ------------------- | --------------------------------- | ----------------------- | -------------------------------------------------------------------- |
+| `/google/role`      | `PublicOnly` (lazy)               | `GoogleRoleScreen`      | the one time farmer or buyer choice of a new Google account          |
+| `/account/security` | `RequireAuth`, farmers and buyers | `AccountSecurityScreen` | Sign-in methods: email, password set or not, Google connected or not |
+| `/account/password` | `RequireAuth`, farmers and buyers | `SetPasswordScreen`     | set a first password on an account created with Google               |
+
+Administrators get the Forbidden screen on the two account routes; their account menu keeps "Change
+password" only. The accept invite, reset, forgot and code screens have no Google button.

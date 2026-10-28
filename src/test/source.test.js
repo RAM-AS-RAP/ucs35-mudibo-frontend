@@ -64,6 +64,10 @@ describe('source checks', () => {
     for (const route of ['register/farmer', 'register/buyer']) {
       expect(text).toContain(`'/api/v1/auth/${route}', { body: buildRegisterBody(fields) }`);
     }
+    // The only body with a role is the one time Google role choice (prompt 6).
+    expect(text.match(/body: \{[^}\n]*\brole\b/g)).toEqual([
+      'body: { signup_token: signupToken, role',
+    ]);
   });
 
   it('keeps credentials out of TanStack mutations and query keys in the auth screens', () => {
@@ -542,7 +546,7 @@ describe('identity v2 source checks (prompt 4: email only accounts)', () => {
     expect(
       // A state object never names a secret (state: {...}, state={{...}}, pushState, replaceState).
       offenders(
-        /(state\s*[:=]\s*\{\{?|pushState\(|replaceState\()[^\n]*(token|code|password|challenge|registration)/i,
+        /(state\s*[:=]\s*\{\{?|pushState\(|replaceState\()[^\n]*(token|code|password|challenge|registration|credential|nonce|signup)/i,
         where,
       ),
     ).toEqual([]);
@@ -593,5 +597,74 @@ describe('identity v2 source checks (prompt 4: email only accounts)', () => {
       expect(routes).toContain(`const ${name} = lazy(() => import('@/screens/auth/${name}'));`);
       expect(routes).not.toContain(`import ${name} from`);
     }
+  });
+});
+
+describe('Google sign in source checks (identity v2, prompt 6)', () => {
+  const LOADER = 'src/lib/google/loadGsi.js';
+  const textOf = (/** @type {string} */ path) =>
+    sources.find((source) => source.path === path)?.text ?? '';
+  const isGoogleLib = (/** @type {string} */ p) => p.startsWith('src/lib/google/');
+
+  it('names the Google script address only in src/lib/google/loadGsi.js', () => {
+    // Comments included: the address is written in one file only.
+    const withHost = sources.filter(({ text }) => text.includes('accounts.google.com'));
+    expect(withHost.map(({ path }) => path)).toEqual([LOADER]);
+    expect(textOf(LOADER)).toContain("const GSI_SRC = 'https://accounts.google.com/gsi/client';");
+  });
+
+  it('has no Google script tag in index.html', () => {
+    expect(readFileSync('index.html', 'utf8')).not.toMatch(/google/i);
+  });
+
+  it('touches the global Google object only inside src/lib/google/', () => {
+    const globalGoogle = /(window|globalThis|self)\??\.google\b|\bgoogle\.accounts\b/;
+    expect(offenders(globalGoogle, (p) => !isGoogleLib(p))).toEqual([]);
+  });
+
+  it('never calls prompt() (no One Tap)', () => {
+    expect(offenders(/\bprompt\(/)).toEqual([]);
+  });
+
+  it('has no console output in src/lib/google', () => {
+    expect(offenders(/console\.(log|info|debug|warn|error|table|dir)\b/, isGoogleLib)).toEqual([]);
+  });
+
+  it('uses no TanStack mutation or query in the Google and password screens', () => {
+    const list = [
+      'src/auth/useGoogleSignIn.js',
+      'src/components/auth/GoogleSignInButton.jsx',
+      'src/components/auth/GoogleSignInSlot.jsx',
+      'src/screens/auth/GoogleRoleScreen.jsx',
+      'src/screens/account/SetPasswordScreen.jsx',
+    ];
+    for (const path of list) expect(textOf(path), path).not.toBe('');
+    expect(offenders(/useMutation|queryKey|useQuery\(/, (p) => list.includes(p))).toEqual([]);
+  });
+
+  it('keeps the signup token in the flow store and the nonce out of React state', () => {
+    const readers = ['src/auth/auth.js', 'src/auth/flow.js'];
+    expect(offenders(/\bgetGoogleFlow\(/, (p) => !readers.includes(p))).toEqual([]);
+    expect(offenders(/signup_token|signupToken/, (p) => p.startsWith('src/screens/'))).toEqual([]);
+    expect(offenders(/useState\([^)]*nonce|setNonce/i)).toEqual([]);
+    // The ID token and the nonce never go into storage, the URL or a query key.
+    expect(
+      offenders(/(credential|nonce)[^\n]*(setItem|searchParams|setSearchParams|queryKey)/i),
+    ).toEqual([]);
+  });
+
+  it('reads the client ID only in src/lib/google/config.js', () => {
+    expect(offenders(/VITE_GOOGLE_CLIENT_ID/, (p) => p !== 'src/lib/google/config.js')).toEqual([]);
+  });
+
+  it('loads the Google button lazily, and the role and account screens from the route table', () => {
+    expect(offenders(/^\s*import .*GoogleSignInButton/)).toEqual([]);
+    expect(textOf('src/components/auth/GoogleSignInSlot.jsx')).toContain(
+      "lazy(() => import('./GoogleSignInButton'))",
+    );
+    const routes = textOf('src/routes.jsx');
+    expect(routes).toContain("lazy(() => import('@/screens/auth/GoogleRoleScreen'))");
+    expect(routes).toContain("lazy(() => import('@/screens/account/AccountSecurityScreen'))");
+    expect(routes).toContain("lazy(() => import('@/screens/account/SetPasswordScreen'))");
   });
 });

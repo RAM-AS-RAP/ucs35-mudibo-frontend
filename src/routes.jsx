@@ -9,7 +9,7 @@ import { PublicOnly, RequireAuth, RequireRole, RequireSuperAdmin } from '@/auth/
 import { PUBLIC_HOME, ROLES } from '@/auth/roles';
 import { AppShell } from '@/components/layout/AppShell';
 import { RouteErrorBoundary, RouteErrorElement } from '@/components/feedback/ErrorBoundary';
-import { LoadingState } from '@/components/feedback/LoadingState';
+import { LoadingState, PageLoadingState } from '@/components/feedback/LoadingState';
 import LoginScreen from '@/screens/auth/LoginScreen';
 import ChangePasswordScreen from '@/screens/auth/ChangePasswordScreen';
 import NotFoundScreen from '@/screens/shared/NotFoundScreen';
@@ -22,6 +22,10 @@ const LoginCodeScreen = lazy(() => import('@/screens/auth/LoginCodeScreen'));
 const ForgotPasswordScreen = lazy(() => import('@/screens/auth/ForgotPasswordScreen'));
 const ResetPasswordScreen = lazy(() => import('@/screens/auth/ResetPasswordScreen'));
 const AcceptInviteScreen = lazy(() => import('@/screens/auth/AcceptInviteScreen'));
+// Google sign in (prompt 6): the one time role choice, and the farmer and buyer account screens.
+const GoogleRoleScreen = lazy(() => import('@/screens/auth/GoogleRoleScreen'));
+const AccountSecurityScreen = lazy(() => import('@/screens/account/AccountSecurityScreen'));
+const SetPasswordScreen = lazy(() => import('@/screens/account/SetPasswordScreen'));
 
 // Farmer screens: each lazily loaded. The trend chart loads Recharts lazily on top of that, and
 // the listing form loads the photo helper (lib/image.js) lazily when a photo is chosen.
@@ -68,14 +72,14 @@ function RootLayout() {
   );
 }
 
-/** @param {{ role: string }} props */
-function RoleLayout({ role }) {
+/** @param {{ roles: string[] }} props */
+function RoleLayout({ roles }) {
   return (
     <RequireAuth>
-      <RequireRole roles={[role]}>
+      <RequireRole roles={roles}>
         <AppShell>
           <RouteErrorBoundary>
-            <Suspense fallback={<LoadingState label="Loading page…" />}>
+            <Suspense fallback={<PageLoadingState />}>
               <Outlet />
             </Suspense>
           </RouteErrorBoundary>
@@ -123,6 +127,8 @@ export const routes = [
           { path: '/register', element: lazyAuth(<RegisterScreen />) },
           { path: '/register/verify', element: lazyAuth(<RegisterVerifyScreen />) },
           { path: '/forgot-password', element: lazyAuth(<ForgotPasswordScreen />) },
+          // Redirects to /login (flow_lost) when the in memory Google flow is missing.
+          { path: '/google/role', element: lazyAuth(<GoogleRoleScreen />) },
         ],
       },
       // Reachable with or without a session: they show SignedInNotice when signed in.
@@ -137,8 +143,19 @@ export const routes = [
         ),
       },
       {
+        // Farmers and buyers only; administrators see the Forbidden screen.
+        path: '/account',
+        element: <RoleLayout roles={[ROLES.FARMER, ROLES.BUYER]} />,
+        children: [
+          { index: true, element: <Navigate to="/account/security" replace /> },
+          { path: 'security', element: <AccountSecurityScreen /> },
+          { path: 'password', element: <SetPasswordScreen /> },
+          { path: '*', element: <NotFoundScreen embedded /> },
+        ],
+      },
+      {
         path: '/farmer',
-        element: <RoleLayout role={ROLES.FARMER} />,
+        element: <RoleLayout roles={[ROLES.FARMER]} />,
         children: [
           { index: true, element: <DashboardScreen /> },
           { path: 'prices', element: <PricesScreen /> },
@@ -152,7 +169,7 @@ export const routes = [
       },
       {
         path: '/buyer',
-        element: <RoleLayout role={ROLES.BUYER} />,
+        element: <RoleLayout roles={[ROLES.BUYER]} />,
         children: [
           // The buyer home (ROLE_HOME) opens the browse screen.
           { index: true, element: <Navigate to="/buyer/browse" replace /> },
@@ -165,7 +182,7 @@ export const routes = [
       },
       {
         path: '/admin',
-        element: <RoleLayout role={ROLES.ADMIN} />,
+        element: <RoleLayout roles={[ROLES.ADMIN]} />,
         children: [
           { index: true, element: <AdminDashboardScreen /> },
           { path: 'users', element: <UsersScreen /> },

@@ -53,6 +53,13 @@ export function tokenFor({
   };
 }
 
+let googleNonceCount = 0;
+/** A distinct nonce per call (at least 20 characters, as in GoogleNonceOut). */
+export function nextGoogleNonce() {
+  googleNonceCount += 1;
+  return `test-nonce-${String(googleNonceCount).padStart(4, '0')}-not-a-secret-value`;
+}
+
 /** Markets with price data in the fixtures. Others answer 404 market_not_available. */
 const TRENDS = {
   'Nairobi:maize': fixtures.trendNairobiMaize,
@@ -539,5 +546,14 @@ export const handlers = [
   ),
   http.post(apiUrl('/api/v1/auth/invite/request-code'), () =>
     HttpResponse.json(fixtures.codeRequested, { status: 202 }),
+  ),
+
+  // Google sign in (prompt 6): a new nonce for every call, a signed_in answer, and the role step.
+  http.post(apiUrl('/api/v1/auth/google/nonce'), () =>
+    HttpResponse.json({ ...fixtures.googleNonce, nonce: nextGoogleNonce() }),
+  ),
+  http.post(apiUrl('/api/v1/auth/google'), () => HttpResponse.json(fixtures.googleSignedIn)),
+  http.post(apiUrl('/api/v1/auth/google/complete'), () =>
+    HttpResponse.json(fixtures.googleSignedIn, { status: 201 }),
   ),
 ];

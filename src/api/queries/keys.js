@@ -24,6 +24,8 @@ export function searchKey(text) {
 }
 
 export const queryKeys = Object.freeze({
+  /** The signed in user's own profile (GET /auth/me). The key holds no email or token. */
+  me: () => /** @type {const} */ (['auth', 'me']),
   markets: () => /** @type {const} */ (['markets']),
   /** @param {string} crop */
   currentPrices: (crop) => /** @type {const} */ (['prices', 'current', { crop }]),

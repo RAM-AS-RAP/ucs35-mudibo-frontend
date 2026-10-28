@@ -107,7 +107,9 @@ export function resendRegistrationCode({ registrationToken }) {
 }
 
 /**
- * GET /api/v1/auth/me (token). `{id, name, email, role, must_change_password, is_super_admin, created_at}`.
+ * GET /api/v1/auth/me (token). `{id, name, email, role, is_super_admin, must_change_password,
+ * password_set, google_linked, created_at}`. `password_set` is false only for an account created
+ * with Google that has no password yet.
  * @returns {Promise<UserOut>}
  */
 export function getMe() {
@@ -171,4 +173,44 @@ export function acceptInvite({ email, code, password }) {
  */
 export function requestInviteCode({ email }) {
   return unwrap(api.POST('/api/v1/auth/invite/request-code', { body: { email: email.trim() } }));
+}
+
+/*
+ * Google sign in (identity v2, prompt 6). All three routes are public: no Authorization header,
+ * and a 401 from them never clears a session (PUBLIC_AUTH_PATHS in src/api/client.js). The ID
+ * token (credential), the nonce and the signup token exist only in the arguments and the body.
+ */
+
+/** @typedef {Schemas['GoogleNonceOut']} GoogleNonceOut */
+/** @typedef {Schemas['GoogleAuthResult']} GoogleAuthResult */
+
+/**
+ * POST /api/v1/auth/google/nonce (public, no body). 200 `{nonce, expires_in}`; single use.
+ * 503 google_unavailable when Google sign in is not configured on the server.
+ * @returns {Promise<GoogleNonceOut>}
+ */
+export function getGoogleNonce() {
+  return unwrap(api.POST('/api/v1/auth/google/nonce'));
+}
+
+/**
+ * POST /api/v1/auth/google (public) with exactly `{credential, nonce}`. 200 GoogleAuthResult:
+ * `signed_in` (the AuthResult fields) or `role_required` (signup_token, email, name).
+ * @param {{ credential: string, nonce: string }} params
+ * @returns {Promise<GoogleAuthResult>}
+ */
+export function googleSignIn({ credential, nonce }) {
+  return unwrap(api.POST('/api/v1/auth/google', { body: { credential, nonce } }));
+}
+
+/**
+ * POST /api/v1/auth/google/complete (public) with exactly `{signup_token, role}`, where the
+ * role is the person's one time choice (farmer or buyer). 201 AuthResult (`signed_in`).
+ * @param {{ signupToken: string, role: 'farmer' | 'buyer' }} params
+ * @returns {Promise<AuthResult>}
+ */
+export function googleComplete({ signupToken, role }) {
+  return unwrap(
+    api.POST('/api/v1/auth/google/complete', { body: { signup_token: signupToken, role } }),
+  );
 }

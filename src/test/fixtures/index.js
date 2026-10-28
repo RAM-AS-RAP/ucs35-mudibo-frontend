@@ -43,6 +43,10 @@ import adminOrderResolved from './adminOrderResolved.json';
 import adminPaymentsPage from './adminPaymentsPage.json';
 import paymentEvents from './paymentEvents.json';
 import forecastAccuracy from './forecastAccuracy.json';
+import googleNonce from './googleNonce.json';
+import googleSignedIn from './googleSignedIn.json';
+import googleRoleRequired from './googleRoleRequired.json';
+import userMeGoogle from './userMeGoogle.json';
 
 export const fixtures = {
   health,
@@ -88,6 +92,10 @@ export const fixtures = {
   adminPaymentsPage,
   paymentEvents,
   forecastAccuracy,
+  googleNonce,
+  googleSignedIn,
+  googleRoleRequired,
+  userMeGoogle,
 };
 
 /** Fixture name to the OpenAPI response it must match. */
@@ -159,4 +167,10 @@ export const FIXTURE_CONTRACT = {
     status: '200',
   },
   forecastAccuracy: { path: '/api/v1/admin/forecast-accuracy', method: 'get', status: '200' },
+  // Google sign in (prompt 6). GoogleAuthResult in both statuses, fields that do not apply omitted.
+  googleNonce: { path: '/api/v1/auth/google/nonce', method: 'post', status: '200' },
+  googleSignedIn: { path: '/api/v1/auth/google', method: 'post', status: '200' },
+  googleRoleRequired: { path: '/api/v1/auth/google', method: 'post', status: '200' },
+  // An account created with Google: no password yet, Google connected.
+  userMeGoogle: { path: '/api/v1/auth/me', method: 'get', status: '200' },
 };

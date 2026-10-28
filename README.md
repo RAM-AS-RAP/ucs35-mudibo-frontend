@@ -17,7 +17,7 @@ talks to the AgriSence backend API (a separate repository). Payments use the M-P
 
 Current state: modules F0 (foundation), F1 (authentication), F2a (farmer decision support), F2b
 (farmer listings and orders), F3 (buyer browse, checkout and M-Pesa payment) and F4 (administrator
-console) are done. F5 (end to end tests and polish) is next. See [CLAUDE.md](CLAUDE.md) for the
+console) are done, as are the identity v2 prompts (email only accounts, the payment phone, Google sign in). F5 (end to end tests and polish) is next. See [CLAUDE.md](CLAUDE.md) for the
 roadmap and status.
 
 ## Requirements
@@ -50,8 +50,27 @@ it is done; a voluntary one is in the account menu. Any password change signs th
 backend revokes older tokens. The registration and sign in tokens live only in memory, so a reload
 restarts the flow. Sessions last `expires_in` (8 hours by default), live only in this tab's
 `sessionStorage`, and are checked with `GET /auth/me` when the app reopens. Phone numbers are entered only
-on the buyer's pay screen, for that payment. There is no Google sign in yet. Details, error messages and
-redirect rules: [docs/auth.md](docs/auth.md).
+on the buyer's pay screen, for that payment. Details, error messages and redirect rules:
+[docs/auth.md](docs/auth.md).
+
+### Google sign in
+
+When `VITE_GOOGLE_CLIENT_ID` is set, farmers and buyers can "Continue with Google" on `/login` and
+`/register` (no password and no code). A new Google account chooses farmer or buyer once
+(`/google/role`); an existing account with the same verified email is connected automatically and keeps
+its role. Administrators cannot use Google. **Sign-in methods** (`/account/security`, in the account menu)
+shows the email, whether a password is set and whether Google is connected; accounts created with Google
+can add a password there (`/account/password`). Google cannot be disconnected. Google's script
+(`https://accounts.google.com/gsi/client`) is the only third party script, loaded only on those two
+screens and only when configured. Google Cloud setup (OAuth client, authorised JavaScript origins): the
+backend repository's `docs/google-setup.md`. Details: [docs/google-sign-in.md](docs/google-sign-in.md).
+
+Manual checks with a real Google account (the automated tests use a stub): sign in with a Google account
+that has no AgriSence account (role screen, then the role home); sign in again (straight to the role
+home); sign in with Google using the email of an existing password account (linked, role kept); try an
+administrator's Google account (refused); block `accounts.google.com` in the browser (fallback message);
+set a password from Sign-in methods and sign in with it; sign out and check Google does not choose the
+account by itself.
 
 ## Farmer screens (F2a)
 
@@ -144,10 +163,11 @@ redirect rules: [docs/auth.md](docs/auth.md).
 
 Only public values; this repository holds no secrets.
 
-| Variable               | Example                 | Meaning                                                                                                                     |
-| ---------------------- | ----------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| `VITE_API_BASE_URL`    | `http://localhost:8000` | The API **origin**, without `/api/v1` and without a trailing slash. Must be https except for `localhost` and `127.0.0.1`.   |
-| `VITE_SHOW_API_STATUS` | `false`                 | `true` shows the API and database health indicator on the login screen in a production build (always shown in development). |
+| Variable                | Example                 | Meaning                                                                                                                                                                                                  |
+| ----------------------- | ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `VITE_API_BASE_URL`     | `http://localhost:8000` | The API **origin**, without `/api/v1` and without a trailing slash. Must be https except for `localhost` and `127.0.0.1`.                                                                                |
+| `VITE_SHOW_API_STATUS`  | `false`                 | `true` shows the API and database health indicator on the login screen in a production build (always shown in development).                                                                              |
+| `VITE_GOOGLE_CLIENT_ID` | (empty)                 | Optional. The Google OAuth client ID (ending in `.apps.googleusercontent.com`), the same value as the backend's `GOOGLE_CLIENT_ID`. A public value, not a secret. Empty or invalid hides Google sign in. |
 
 **API prefix decision:** the paths in `docs/backend/openapi.json` already start with `/api/v1`
 (for example `/api/v1/health`), so the base URL is the origin only and the final URL is
@@ -196,7 +216,8 @@ from the server; offline, the app only shows a message that a connection is need
 - [docs/listings-orders.md](docs/listings-orders.md): the listing and order screens, quantity and price rules, the photo pipeline, uncertain writes and limitations
 - [docs/buyer-checkout.md](docs/buyer-checkout.md): the buyer screens, order and payment states, polling, the countdown, the idempotency key, the payment sequence, error messages and limitations
 - [docs/admin-console.md](docs/admin-console.md): the administrator screens and endpoints, the role model, the reconciliation workflow, privacy, invitations and the email check, accessibility and limitations
-- [docs/security-headers.md](docs/security-headers.md): headers for the later deployment
+- [docs/google-sign-in.md](docs/google-sign-in.md): Google sign in flow, nonce rule, errors, linking, accessibility and limitations
+- [docs/security-headers.md](docs/security-headers.md): headers for the later deployment (including the Google CSP additions)
 - [docs/backend/](docs/backend/): the backend contract and how to refresh it
 
 ## Open items

@@ -1,0 +1,11 @@
+{
+  "id": "5b2e7c1a-3d4f-4a6b-9c8d-0e1f2a3b4c5d",
+  "name": "Achieng Otieno",
+  "email": "achieng.google@example.com",
+  "role": "buyer",
+  "is_super_admin": false,
+  "must_change_password": false,
+  "password_set": false,
+  "google_linked": true,
+  "created_at": "2026-10-27T09:00:00Z"
+}

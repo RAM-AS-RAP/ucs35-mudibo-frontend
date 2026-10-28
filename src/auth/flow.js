@@ -11,10 +11,17 @@
  *
  * The store is cleared by session.clear() (logout and expiry), after a successful sign in, on
  * "Start again" and on challenge_closed.
+ *
+ * Google sign in (prompt 6) adds the kind "google": the signup token of a new Google account
+ * that still has to choose farmer or buyer, with the person's own Google email and name (for
+ * display) and an optional preferred role. The server owns its expiry (signup_expires_at), so no
+ * deadline is kept: an expired ticket is reported by the server (invalid_or_expired_ticket).
+ * It is cleared like the others, and also on invalid_or_expired_ticket and google_retry.
  */
 import { useEffect, useState, useSyncExternalStore } from 'react';
 
 /** @typedef {'login' | 'register'} FlowKind */
+/** @typedef {'farmer' | 'buyer'} SignupRole */
 
 /**
  * @typedef {object} Flow
@@ -34,9 +41,23 @@ import { useEffect, useState, useSyncExternalStore } from 'react';
 /** How long a code is valid (the server's documented values). */
 export const CODE_VALIDITY_SECONDS = Object.freeze({ login: 10 * 60, register: 15 * 60 });
 
-/** @type {Flow | null} */
+/**
+ * @typedef {object} GoogleFlow
+ * @property {'google'} kind
+ * @property {string} token  the signup_token (secret)
+ * @property {string} email  the person's own Google email (display only)
+ * @property {string} name  the name from Google (display only)
+ * @property {SignupRole | null} preferredRole  the role card chosen on /register, if any
+ */
+
+/**
+ * What screens may read of a Google flow: everything except the token.
+ * @typedef {Omit<GoogleFlow, 'token'>} GoogleFlowView
+ */
+
+/** @type {Flow | GoogleFlow | null} */
 let flow = null;
-/** @type {FlowView | null} */
+/** @type {FlowView | GoogleFlowView | null} */
 let view = null;
 /** @type {Set<() => void>} */
 const listeners = new Set();
@@ -47,10 +68,20 @@ const now = () => performance.now();
 const safeSeconds = (seconds) =>
   typeof seconds === 'number' && Number.isFinite(seconds) && seconds > 0 ? seconds : 0;
 
-/** @param {Flow | null} next */
+/** @param {Flow | GoogleFlow | null} next */
 function set(next) {
   flow = next;
   // The token is left out of what screens read.
+  if (next && next.kind === 'google') {
+    view = Object.freeze({
+      kind: next.kind,
+      email: next.email,
+      name: next.name,
+      preferredRole: next.preferredRole,
+    });
+    for (const listener of listeners) listener();
+    return;
+  }
   view = next
     ? Object.freeze({
         kind: next.kind,
@@ -88,7 +119,7 @@ export function startFlow(kind, { token, emailMasked, resendAvailableInSeconds, 
  * @param {{ codeSent?: boolean, newCode?: boolean }} [options]
  */
 export function updateResend(seconds, { codeSent, newCode = false } = {}) {
-  if (!flow) return;
+  if (!flow || flow.kind === 'google') return;
   const start = now();
   set({
     ...flow,
@@ -104,7 +135,7 @@ export function updateResend(seconds, { codeSent, newCode = false } = {}) {
  * @returns {Flow | null}
  */
 export function getFlow(kind) {
-  return flow && flow.kind === kind ? flow : null;
+  return flow && flow.kind === kind ? /** @type {Flow} */ (flow) : null;
 }
 
 /**
@@ -113,7 +144,7 @@ export function getFlow(kind) {
  * @returns {FlowView | null}
  */
 export function getFlowView(kind) {
-  return view && view.kind === kind ? view : null;
+  return view && view.kind === kind ? /** @type {FlowView} */ (view) : null;
 }
 
 /** Forget the flow and its token. */
@@ -123,7 +154,7 @@ export function clearFlow() {
 
 /** Seconds left before Resend is available (0 when there is no flow). */
 export function resendRemainingSeconds() {
-  if (!flow) return 0;
+  if (!flow || flow.kind === 'google') return 0;
   return Math.max(0, Math.ceil((flow.resendDeadline - now()) / 1000));
 }
 
@@ -153,7 +184,54 @@ export function useFlowView(kind) {
     () => view,
     () => null,
   );
-  return current && current.kind === kind ? current : null;
+  return current && current.kind === kind ? /** @type {FlowView} */ (current) : null;
+}
+
+/** @param {unknown} role @returns {SignupRole | null} */
+const signupRole = (role) => (role === 'farmer' || role === 'buyer' ? role : null);
+
+/**
+ * Start (or replace) the Google role step after a role_required answer. A newer Google sign in
+ * replaces it, as on the server (the older signup token stops working).
+ * @param {{ signupToken: string, email?: string | null, name?: string | null, preferredRole?: unknown }} init
+ */
+export function startGoogleFlow({ signupToken, email, name, preferredRole }) {
+  set({
+    kind: 'google',
+    token: signupToken,
+    email: typeof email === 'string' ? email : '',
+    name: typeof name === 'string' ? name.trim() : '',
+    preferredRole: signupRole(preferredRole),
+  });
+}
+
+/**
+ * The Google flow with its signup token, or null. Used only by src/auth/auth.js.
+ * @returns {GoogleFlow | null}
+ */
+export function getGoogleFlow() {
+  return flow && flow.kind === 'google' ? flow : null;
+}
+
+/**
+ * The Google flow without its token, or null (for screens).
+ * @returns {GoogleFlowView | null}
+ */
+export function getGoogleFlowView() {
+  return view && view.kind === 'google' ? /** @type {GoogleFlowView} */ (view) : null;
+}
+
+/**
+ * React hook: the Google flow without its token, or null.
+ * @returns {GoogleFlowView | null}
+ */
+export function useGoogleFlowView() {
+  const current = useSyncExternalStore(
+    subscribeFlow,
+    () => view,
+    () => null,
+  );
+  return current && current.kind === 'google' ? /** @type {GoogleFlowView} */ (current) : null;
 }
 
 /** How often the resend countdown re-reads the monotonic clock while it runs. */

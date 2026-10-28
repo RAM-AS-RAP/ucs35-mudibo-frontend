@@ -314,6 +314,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/google": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Google Sign In */
+        post: operations["google_sign_in_api_v1_auth_google_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/google/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Google Complete */
+        post: operations["google_complete_api_v1_auth_google_complete_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/google/nonce": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Google Nonce */
+        post: operations["google_nonce_api_v1_auth_google_nonce_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/invite/request-code": {
         parameters: {
             query?: never;
@@ -1310,6 +1361,71 @@ export interface components {
          * @enum {string}
          */
         ForecastHorizon: "one_month" | "two_month";
+        /**
+         * GoogleAuthResult
+         * @description The answer of ``POST /auth/google``: ``signed_in`` (the ``AuthResult`` fields) or ``role_required``.
+         *
+         *     ``role_required`` means the Google account has no AgriSence account yet: the client asks farmer or
+         *     buyer once and sends the ``signup_token`` to ``POST /auth/google/complete``. Fields that do not
+         *     apply are omitted from the JSON.
+         */
+        GoogleAuthResult: {
+            /** Access Token */
+            access_token?: string | null;
+            /** Email */
+            email?: string | null;
+            /** Expires In */
+            expires_in?: number | null;
+            /** Is Super Admin */
+            is_super_admin?: boolean | null;
+            /** Must Change Password */
+            must_change_password?: boolean | null;
+            /** Name */
+            name?: string | null;
+            /** Role */
+            role?: string | null;
+            /** Signup Expires At */
+            signup_expires_at?: string | null;
+            /** Signup Token */
+            signup_token?: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "signed_in" | "role_required";
+            /** Token Type */
+            token_type?: string | null;
+        };
+        /**
+         * GoogleNonceOut
+         * @description A single use nonce for Google's sign in initialisation; only its hash is stored.
+         */
+        GoogleNonceOut: {
+            /** Expires In */
+            expires_in: number;
+            /** Nonce */
+            nonce: string;
+        };
+        /** GoogleSignInRequest */
+        GoogleSignInRequest: {
+            /** Credential */
+            credential: string;
+            /** Nonce */
+            nonce: string;
+        };
+        /**
+         * GoogleSignupRequest
+         * @description The one time role choice of a new Google account; administrators can never be created here.
+         */
+        GoogleSignupRequest: {
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "farmer" | "buyer";
+            /** Signup Token */
+            signup_token: string;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -1991,7 +2107,10 @@ export interface components {
             /** Farmers */
             farmers: number;
         };
-        /** UserOut */
+        /**
+         * UserOut
+         * @description ``GET /auth/me``, the only response that uses this schema.
+         */
         UserOut: {
             /**
              * Created At
@@ -2000,6 +2119,8 @@ export interface components {
             created_at: string;
             /** Email */
             email: string;
+            /** Google Linked */
+            google_linked: boolean;
             /**
              * Id
              * Format: uuid
@@ -2011,6 +2132,8 @@ export interface components {
             must_change_password: boolean;
             /** Name */
             name: string;
+            /** Password Set */
+            password_set: boolean;
             /** Role */
             role: string;
         };
@@ -2637,6 +2760,92 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    google_sign_in_api_v1_auth_google_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GoogleSignInRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GoogleAuthResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    google_complete_api_v1_auth_google_complete_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GoogleSignupRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    google_nonce_api_v1_auth_google_nonce_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GoogleNonceOut"];
                 };
             };
         };

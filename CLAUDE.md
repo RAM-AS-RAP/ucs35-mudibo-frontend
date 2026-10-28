@@ -21,6 +21,7 @@ Roles: `farmer` (prices, forecasts, listings, orders on their listings), `buyer`
 | F4     | Admin: dashboard, users, invites, moderation, orders, payments, reconciliation, accuracy                  | Done        |
 | P2     | Identity v2, prompt 2 (payment phone): the buyer enters the M-Pesa number for each payment                | Done        |
 | P4     | Identity v2, prompt 4: email only accounts, registration and sign in codes, phone removed from auth       | Done        |
+| P6     | Identity v2, prompt 6 (Google sign in): Google button, role choice, sign-in methods, set password         | Done        |
 | F5     | Polish: end to end tests (Playwright), performance, accessibility review                                  | Not started |
 
 Update this table at the end of every module.
@@ -84,6 +85,9 @@ Version and dependency decisions:
   lazy chunks of 1.5 to 4.5 kB gzip each.
 - **Prompt 4 (identity v2) added no dependency.** The registration, code and recovery screens are
   lazy chunks (the sign in screen stays in the initial JavaScript).
+- **Prompt 6 (Google sign in) added no npm dependency.** It loads Google Identity Services at run time
+  (the one third party script, see section 5). The button, its hook and the loader are a lazy chunk;
+  the role and account screens are lazy routes.
 - **F4 added no dependency.** Tables and cards, dialogs, the payload view and the clipboard use
   React, `radix-ui` and the browser. Initial JavaScript after F4: 226.4 kB gzip (7 files; the
   +1.8 kB is the review count badge and its endpoint function); the admin screens are lazy chunks
@@ -100,30 +104,32 @@ npm test                  # Vitest, run mode
 npm run gen:types         # docs/backend/openapi.json -> src/api/schema.d.ts
 npm run gen:icons         # public/favicon.svg -> PWA icons in public/
 npm run check:contract    # schema.d.ts current, endpoint paths and methods exist in openapi.json
-npm run check:build       # after build: manifest, no runtime caching, no dev code, JS budgets, lazy Recharts, photo helper, buyer and admin screens
+npm run check:build       # after build: manifest, no runtime caching, no dev code, JS budgets, lazy Recharts, photo helper, buyer, admin, Google and account screens
 ```
 
 ## 3. Structure and conventions
 
 ```
 src/
-  screens/      auth/, farmer/, buyer/, admin/, shared/   one screen per file, default export, *Screen.jsx
+  screens/      auth/, account/, farmer/, buyer/, admin/, shared/   one screen per file, default export, *Screen.jsx
   components/   ui/ (shadcn), layout/, feedback/, display/, listings/, orders/, buyer/, admin/   named exports
   api/          client.js, errors.js, endpoints/<area>.js, schema.d.ts (generated, do not edit)
   auth/         session.js, guards.jsx, roles.js, paths.js, auth.js (signIn, completeAuthResult,
-                code steps, signOut, sign in hold), flow.js (in memory flow store), useAuth.js,
+                code steps, signInWithGoogle, completeGoogleSignup, isSignedIn, signOut, sign in hold),
+                flow.js (in memory flow store, also the Google flow), useAuth.js, useGoogleSignIn.js,
                 redirects.js, revalidate.js
   api/queries/  TanStack Query hooks (useMarkets, useCurrentPrices, usePriceTrends, useForecast; listings.js:
                 useMyListings, useMyListing, useMyOrders, counts, useCreate/Update/RemoveListing; buyer.js:
                 useBrowseListings, useBuyerMarkets, useListing, useOrder, useMyBuyerOrders, useCreate/Pay/CancelOrder;
                 waitingCount.js: useWaitingOrdersCount; admin.js: useAdminStats, useAdminUsers, useAdminInvites,
                 useAdminListings, useAdminOrders, useAdminOrder, useAdminPayments, usePaymentEvents,
-                useForecastAccuracy and one mutation per write; reviewCount.js: useReviewCount), keys.js, policy.js
+                useForecastAccuracy and one mutation per write; reviewCount.js: useReviewCount;
+                account.js: useMe), keys.js, policy.js
   components/admin/  ResponsiveTable, FilterBar (useFilterParams), SearchInput, ConfirmDialog, PayloadView,
                 PaymentEventsDialog, RoleBadge, ListParts (RefreshButton, ShowingCount, LoadMore, pagesOf)
   components/auth/  AuthLayout, FormField, PasswordField, CodeInput, FormErrorSummary, CountdownButton,
                 PasswordRequirements, SignedInNotice, ResendCode, FormNotices, useServerProblem,
-                CodeEntryForm, ResendCodeButton (identity v2)
+                CodeEntryForm, ResendCodeButton (identity v2), GoogleSignInSlot, GoogleSignInButton (prompt 6)
   lib/          env.js, format.js, queryClient.js, utils.js, validation.js, messages.js, formErrors.js,
                 connectivity.js, useCountdown.js, usePageTitle.js, useReducedMotion.js,
                 relativeTime.js, forecast.js, shapSchema.js, trends.js (F2a),
@@ -133,13 +139,13 @@ src/
                 adminMessages.js, reconciliation.js, userActions.js, accuracyFormat.js, dateRange.js,
                 clipboard.js, useMediaQuery.js (F4),
                 phone.js, waitTime.js, payKey.js, paymentView.js, useWaitUntil.js (payment phone),
-                codes.js, useRetryWait.js (identity v2)
+                codes.js, useRetryWait.js (identity v2), google/ (config, loadGsi, googleClient; prompt 6)
   styles/       tokens.css (all colours), index.css
   dev/          DevRoleSwitcher.jsx (development only)
   test/         setup.js, msw/, fixtures/, helpers (render, axe, openapi, contrast, buyer, admin)
   App.jsx, main.jsx, routes.jsx (the single route table)
 scripts/        check-contract.mjs, check-build.mjs, tokens.mjs
-docs/           backend/, architecture.md, auth.md, design-system.md, forecast-display.md,
+docs/           backend/, architecture.md, auth.md, google-sign-in.md, design-system.md, forecast-display.md,
                 listings-orders.md, buyer-checkout.md, admin-console.md, security-headers.md
 ```
 
@@ -309,7 +315,13 @@ docs/           backend/, architecture.md, auth.md, design-system.md, forecast-d
 - The token lives only in the session store (`src/auth/session.js`, persisted to `sessionStorage`).
   Never put it in `localStorage`, a URL, a log line or a query key.
 - Never render raw HTML (`dangerouslySetInnerHTML` is a lint error and a test failure). No `eval`.
-- No third party scripts, fonts, CDNs or analytics. No secrets in this repository (only the public API address).
+- No third party scripts, fonts, CDNs or analytics. No secrets in this repository (only the public API address
+  and the public Google client ID).
+- **The one exception (prompt 6):** Google Identity Services, `https://accounts.google.com/gsi/client`, because
+  Google sign in needs Google's own button, popup and signed ID token. Scope: loaded dynamically by
+  `src/lib/google/loadGsi.js` only (the only file that names the address), only on `/login` and `/register`,
+  only when `VITE_GOOGLE_CLIENT_ID` is valid, never from `index.html`, never One Tap. CSP and COOP
+  additions: `docs/security-headers.md`.
 - Any 401 outside the public auth routes logs out (handled in the client middleware).
 - The dev role switcher's fake session never carries a token and never ships in production.
 
@@ -356,6 +368,32 @@ docs/           backend/, architecture.md, auth.md, design-system.md, forecast-d
 - A session restored from `sessionStorage` is revalidated with `GET /auth/me` before protected routes
   render (`src/auth/revalidate.js`); a fresh login is not.
 - Public auth routes (`PUBLIC_AUTH_PATHS` in `src/api/client.js`) never send `Authorization`.
+
+## 5b. Google sign in conventions (prompt 6, details in `docs/google-sign-in.md`)
+
+- **Wrapper only:** only `src/lib/google/` touches the global Google object (`googleClient.js`:
+  `initializeGoogle`, `renderGoogleButton`, `disableGoogleAutoSelect`; `loadGsi.js`; `config.js` reads
+  `VITE_GOOGLE_CLIENT_ID`, `isGoogleConfigured()`). Without a valid client ID nothing renders, loads or
+  is requested. The button is `GoogleSignInSlot` → lazy `GoogleSignInButton` → `useGoogleSignIn`.
+- **Never `prompt()`** (no One Tap): only the rendered button. `auto_select: false`; sign out calls
+  `disableGoogleAutoSelect()` (in `signOut()`) and no other Google function.
+- **Tokens only in memory:** the nonce in a ref, the ID token in a local variable passed straight to
+  `POST /auth/google` (`{credential, nonce}` only), the signup token in the flow store
+  (`startGoogleFlow`; `getGoogleFlow()` only in `src/auth/auth.js`; `useGoogleFlowView()` for screens).
+  Never in storage, a URL, router or history state, a query key, a log or an error. No `useMutation`.
+- **Nonce before initialise, and refreshed:** fetch a nonce for every initialisation; replace it after
+  `expires_in - 60` s (min 30) and on becoming visible after that deadline (`performance.now()`); fetch a
+  new one after every callback and failure. Never reuse one. Generation numbers keep one initialisation
+  active (StrictMode, unmount). Never retry a Google request automatically.
+- **The role is chosen once** on `/google/role` (no default; preselected only from the registration
+  card; `POST /auth/google/complete` with exactly `{signup_token, role}`). No way to change it, no
+  disconnect, link or unlink control, no admin Google option.
+- `isSignedIn()` (`src/auth/auth.js`) narrows every `AuthResult` and `GoogleAuthResult`; the session
+  keeps `passwordSet` and `googleLinked` from `/auth/me` (defaults `true`, `false`).
+- Account screens (`src/screens/account/`, farmers and buyers, `useMe`): `/account/security` and
+  `/account/password` (email from `/auth/me`, never typed).
+- Tests use `src/test/googleStub.js` (`installGoogleStub`, `configureGoogle` with `vi.stubEnv`); the
+  test config sets `VITE_GOOGLE_CLIENT_ID` to empty.
 
 ## 6. UI rules
 

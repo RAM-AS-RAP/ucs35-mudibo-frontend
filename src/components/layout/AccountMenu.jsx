@@ -1,5 +1,5 @@
 import { Link } from 'react-router';
-import { ChevronDown, KeyRound, LogOut, ShieldCheck, UserCircle } from 'lucide-react';
+import { ChevronDown, Fingerprint, KeyRound, LogOut, ShieldCheck, UserCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -14,9 +14,14 @@ import { useAuth } from '@/auth/useAuth';
 import { CHANGE_PASSWORD_PATH } from '@/auth/paths';
 import { MESSAGES } from '@/lib/messages';
 
+export const SECURITY_PATH = '/account/security';
+
 export const ROLE_LABEL = { farmer: 'Farmer', buyer: 'Buyer', admin: 'Administrator' };
 
-/** The top bar's account menu: name, role (and "Super admin"), change password, sign out. */
+/**
+ * The top bar's account menu: name, role (and "Super admin"), sign-in methods (farmers and
+ * buyers only; administrators keep Change password only), change password, sign out.
+ */
 export function AccountMenu() {
   const { session, name, role, isSuperAdmin, logout } = useAuth();
   if (!session) return null;
@@ -45,6 +50,14 @@ export function AccountMenu() {
           )}
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
+        {(role === 'farmer' || role === 'buyer') && (
+          <DropdownMenuItem asChild>
+            <Link to={SECURITY_PATH}>
+              <Fingerprint aria-hidden="true" />
+              {MESSAGES.account.signInMethods}
+            </Link>
+          </DropdownMenuItem>
+        )}
         <DropdownMenuItem asChild>
           <Link to={CHANGE_PASSWORD_PATH}>
             <KeyRound aria-hidden="true" />

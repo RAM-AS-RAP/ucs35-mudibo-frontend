@@ -161,6 +161,17 @@ export const ERROR_MESSAGES = Object.freeze({
   listing_has_open_payments:
     'A buyer is paying for this listing right now. Try again in a few minutes.',
   payment_not_found: 'Payment not found.',
+  // Google sign in (identity v2, prompt 6). The wording of the prompt 6 task, which names the
+  // next step in this app (the contract's password_not_set text points to Forgot password).
+  google_unavailable: 'Google sign in is not available right now. Use your email and password.',
+  google_sign_in_failed:
+    'Google sign in did not work. Please try again or use your email and password.',
+  google_not_allowed: 'Administrator accounts sign in with email and password.',
+  google_conflict:
+    'A different Google account is already connected to this email. Use that Google account, or sign in with your email and password.',
+  google_retry: 'Please try signing in with Google again.',
+  invalid_or_expired_ticket: 'Your Google sign in expired. Please try again.',
+  password_not_set: 'You have not set a password yet. Set one from Sign-in methods.',
   // Client side codes (no HTTP response).
   network_error: "Can't reach AgriSence. Check your internet connection and try again.",
   timeout: 'The request took too long. Check your connection and try again.',

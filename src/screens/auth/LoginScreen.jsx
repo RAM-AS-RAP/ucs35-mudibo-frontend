@@ -11,6 +11,7 @@ import { PasswordField } from '@/components/auth/PasswordField';
 import { FormErrorSummary } from '@/components/auth/FormErrorSummary';
 import { SubmitButton } from '@/components/auth/CountdownButton';
 import { InfoMessage, OfflineFormNotice } from '@/components/auth/FormNotices';
+import { GoogleSignInSlot } from '@/components/auth/GoogleSignInSlot';
 import { useServerProblem } from '@/components/auth/useServerProblem';
 import { useSignInHold } from '@/auth/auth';
 import { hasActiveFlow, useFlowView } from '@/auth/flow';
@@ -20,11 +21,16 @@ import { consumeFlash, peekFlash } from '@/auth/session';
 import { useIsOffline } from '@/lib/connectivity';
 import { MESSAGES } from '@/lib/messages';
 import { usePageTitle } from '@/lib/usePageTitle';
+import { cn } from '@/lib/utils';
 import { loginSchema } from '@/lib/validation';
 
 const T = MESSAGES.login;
 const linkClass = 'flex min-h-11 items-center text-primary underline underline-offset-2';
 export const LOGIN_CODE_PATH = '/login/code';
+
+/** While Google sign in runs, the screen's own controls are greyed out and cannot be used. */
+const BUSY_CLASS =
+  'pointer-events-none opacity-50 transition-opacity motion-reduce:transition-none';
 
 /**
  * Sign in with an email and a password (POST /auth/login). The answer is an AuthResult:
@@ -41,6 +47,7 @@ export default function LoginScreen() {
   const busy = useRef(false);
   const flow = useFlowView('login');
   const [flowActive] = useState(() => hasActiveFlow('login'));
+  const [googleBusy, setGoogleBusy] = useState(false);
 
   // The one time message (session expired, password changed, sign in interrupted...), read
   // once. Without one, a visitor sent here by the guard is told why. A sign out leaves an
@@ -109,7 +116,13 @@ export default function LoginScreen() {
     <AuthLayout title={T.title} subtitle={T.subtitle} headingRef={headingRef} after={<ApiStatus />}>
       {flash && <InfoMessage>{flash}</InfoMessage>}
       {flow && flowActive && (
-        <div className="flex flex-col gap-2 rounded-lg border border-border bg-canvas px-4 py-3 text-text">
+        <div
+          inert={googleBusy}
+          className={cn(
+            'flex flex-col gap-2 rounded-lg border border-border bg-canvas px-4 py-3 text-text',
+            googleBusy && BUSY_CLASS,
+          )}
+        >
           <p className="flex items-start gap-2">
             <Mail aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-primary" />
             <span>{T.existingFlow(flow.emailMasked)}</span>
@@ -132,8 +145,10 @@ export default function LoginScreen() {
       <OfflineFormNotice offline={offline} />
       <form
         noValidate
+        inert={googleBusy}
+        aria-busy={googleBusy || undefined}
         onSubmit={(event) => handleSubmit(onSubmit)(event)}
-        className="flex flex-col gap-4"
+        className={cn('flex flex-col gap-4', googleBusy && BUSY_CLASS)}
       >
         <FormField
           id="login-email"
@@ -151,7 +166,6 @@ export default function LoginScreen() {
           id="login-password"
           label={T.passwordLabel}
           autoComplete="current-password"
-          hint={T.help}
           error={errors.password?.message}
           {...register('password')}
         />
@@ -164,7 +178,12 @@ export default function LoginScreen() {
           {T.submit}
         </SubmitButton>
       </form>
-      <nav aria-label="Account pages" className="flex flex-col">
+      <GoogleSignInSlot context="login" from={location.state} onBusyChange={setGoogleBusy} />
+      <nav
+        aria-label="Account pages"
+        inert={googleBusy}
+        className={cn('flex flex-col', googleBusy && BUSY_CLASS)}
+      >
         <Link className={linkClass} to="/register">
           {T.createAccount}
         </Link>

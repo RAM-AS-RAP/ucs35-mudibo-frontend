@@ -63,7 +63,7 @@ Order of `onRequest`: error handling, timeout, authorization (responses and erro
    `requestId` from the body or `X-Request-ID`, `retryAfter` from `Retry-After`, plus `fields`/`details`).
    Network failures become `network_error`, timeouts `timeout` (status 0). Bodies are never logged.
 4. **401** from any route except the public auth routes (login, register, accept invite, invite request
-   code, password reset request and confirm): clear the session with reason `expired`, navigate to `/login`.
+   code, password reset request and confirm, the three Google routes): clear the session with reason `expired`, navigate to `/login`.
 5. **403 `password_change_required`:** mark the session and navigate to `/change-password`.
 
 Navigation from the client goes through `setNavigator()`, wired to the router in `RootLayout` (`src/routes.jsx`).
@@ -78,7 +78,8 @@ POST /auth/login -> session.setFromLogin(tokenResponse) -> sessionStorage["agris
      useSession() (useSyncExternalStore) -> RequireAuth / RequireRole / PublicOnly -> screens
 ```
 
-- `src/auth/session.js` holds `{accessToken, role, mustChangePassword, isSuperAdmin, expiresAt, name, userId}`.
+- `src/auth/session.js` holds `{accessToken, role, mustChangePassword, isSuperAdmin, expiresAt, name, userId,
+passwordSet, googleLinked}`.
   It persists in `sessionStorage` (this tab only), never `localStorage`, a URL, a log line or a query key.
   An expired stored session is discarded on load. `clear()` also clears the TanStack Query cache.
 - `isSuperAdmin` comes from `is_super_admin` in the login response (`setFromLogin()`) and in

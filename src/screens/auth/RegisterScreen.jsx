@@ -10,6 +10,7 @@ import { PasswordRequirements } from '@/components/auth/PasswordRequirements';
 import { FormErrorSummary } from '@/components/auth/FormErrorSummary';
 import { SubmitButton } from '@/components/auth/CountdownButton';
 import { InfoMessage, OfflineFormNotice } from '@/components/auth/FormNotices';
+import { GoogleSignInSlot } from '@/components/auth/GoogleSignInSlot';
 import { useServerProblem } from '@/components/auth/useServerProblem';
 import { startRegistration } from '@/auth/auth';
 import { consumeFlash, peekFlash } from '@/auth/session';
@@ -28,6 +29,10 @@ const SERVER_FIELDS = { name: 'name', email: 'email', password: 'password' };
 export const REGISTER_VERIFY_PATH = '/register/verify';
 const linkClass = 'inline-flex min-h-11 items-center text-primary underline underline-offset-2';
 
+/** While Google sign in runs, the screen's own controls are greyed out and cannot be used. */
+const BUSY_CLASS =
+  'pointer-events-none opacity-50 transition-opacity motion-reduce:transition-none';
+
 /** @param {string | null} value */
 const roleFromQuery = (value) => (value === 'farmer' || value === 'buyer' ? value : '');
 
@@ -42,6 +47,7 @@ export default function RegisterScreen() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const offline = useIsOffline();
+  const [googleBusy, setGoogleBusy] = useState(false);
   const busy = useRef(false);
   // A flash from the verify step (registration_lost), shown once.
   const [flash] = useState(() => peekFlash() || null);
@@ -126,8 +132,10 @@ export default function RegisterScreen() {
       <OfflineFormNotice offline={offline} />
       <form
         noValidate
+        inert={googleBusy}
+        aria-busy={googleBusy || undefined}
         onSubmit={(event) => handleSubmit(onSubmit)(event)}
-        className="flex flex-col gap-4"
+        className={cn('flex flex-col gap-4', googleBusy && BUSY_CLASS)}
       >
         <fieldset
           className="flex flex-col gap-2"
@@ -214,7 +222,18 @@ export default function RegisterScreen() {
           {T.submit}
         </SubmitButton>
       </form>
-      <p className="flex flex-wrap items-center gap-x-2 text-text-secondary">
+      <GoogleSignInSlot
+        context="register"
+        preferredRole={role === 'farmer' || role === 'buyer' ? role : null}
+        onBusyChange={setGoogleBusy}
+      />
+      <p
+        inert={googleBusy}
+        className={cn(
+          'flex flex-wrap items-center gap-x-2 text-text-secondary',
+          googleBusy && BUSY_CLASS,
+        )}
+      >
         <span>{T.haveAccount}</span>
         <Link className={linkClass} to="/login">
           {T.signIn}

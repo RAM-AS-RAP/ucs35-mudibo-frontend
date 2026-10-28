@@ -1,0 +1,9 @@
+{
+  "status": "signed_in",
+  "access_token": "test-google-access-token-not-a-secret",
+  "token_type": "bearer",
+  "expires_in": 28800,
+  "role": "farmer",
+  "must_change_password": false,
+  "is_super_admin": false
+}

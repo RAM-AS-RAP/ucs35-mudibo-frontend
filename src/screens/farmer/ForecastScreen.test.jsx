@@ -13,6 +13,7 @@ import { logout } from '@/test/render';
 import { recordRequests, renderFarmer } from '@/test/farmer';
 import { expectNoAbsoluteTime } from '@/test/userFacing';
 import { getSession } from '@/auth/session';
+import { formatKES } from '@/lib/format';
 import { queryClient } from '@/lib/queryClient';
 
 afterEach(() => {
@@ -337,6 +338,35 @@ describe('ForecastScreen: kept across tabs', () => {
     const nav = screen.getByRole('navigation', { name: 'Main navigation' });
     await userEvent.setup().click(within(nav).getByRole('link', { name }));
   }
+
+  it('draws the explanation from the newly selected market after a change', async () => {
+    // Kisumu gets different prices, so a leftover Nairobi explanation would show.
+    server.use(
+      http.get(apiUrl('/api/v1/forecasts'), ({ request }) => {
+        const market = new URL(request.url).searchParams.get('market') ?? 'Nairobi';
+        const forecast = forecastFor({ market });
+        if (market === 'Kisumu') {
+          forecast.origin_price = 80;
+          forecast.predicted_price = 84.98;
+          forecast.shap_values.origin_price = 80;
+          forecast.shap_values.predicted_price = 84.98;
+        }
+        return HttpResponse.json(forecast);
+      }),
+    );
+    await openExplanation();
+    expect(screen.getByRole('figure')).toHaveTextContent(formatKES(42.49));
+    const user = userEvent.setup();
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Market' }), 'Kisumu');
+    expect(screen.queryByRole('figure')).not.toBeInTheDocument();
+    await user.click(requestButton());
+    await screen.findByRole('heading', { name: 'Maize in Kisumu, in 1 month' });
+    await screen.findByText(/Expected in/);
+    await user.click(whyButton());
+    const figure = screen.getByRole('figure');
+    expect(figure).toHaveTextContent(formatKES(84.98));
+    expect(figure).not.toHaveTextContent(formatKES(42.49));
+  });
 
   it('shows the requested forecast and its explanation again after another tab', async () => {
     const recorder = recordRequests();
