@@ -2,17 +2,18 @@ import { useEffect, useId, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import {
   AlertCircle,
-  ArrowDown,
+  ArrowDownRight,
   ArrowRight,
-  ArrowUp,
+  ArrowUpRight,
+  BookOpen,
   CalendarClock,
   ChartLine,
   ChevronDown,
   Lightbulb,
   MapPin,
-  Minus,
   PackagePlus,
   SlidersHorizontal,
+  Table2,
   TrendingUp,
 } from 'lucide-react';
 import { useCurrentPrices, useForecast, useMarkets } from '@/api/queries';
@@ -21,7 +22,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DataTable } from '@/components/display/DataTable';
 import { DeltaTag } from '@/components/display/DeltaTag';
 import { ExplainabilityBars } from '@/components/display/ExplainabilityBars';
-import { heroButton, PageHero } from '@/components/display/DashboardHero';
+import { PageHero } from '@/components/display/DashboardHero';
 import { PriceCard } from '@/components/display/PriceCard';
 import { Segmented } from '@/components/display/Segmented';
 import { EmptyState } from '@/components/feedback/EmptyState';
@@ -40,7 +41,6 @@ import { horizonMonths, inLabel, inLabelCap } from '@/lib/relativeTime';
 import { isForecastUsable, parseShap } from '@/lib/shapSchema';
 import { monthsOlderByMarket } from '@/lib/trends';
 import { usePageTitle } from '@/lib/usePageTitle';
-import { cn } from '@/lib/utils';
 import {
   clearForecastRequest,
   getForecastRequest,
@@ -126,20 +126,23 @@ function Headline({ forecast }) {
   const months = horizonMonths(forecast.horizon);
   const bag = bagPriceText(forecast.predicted_price);
   return (
-    <div className="flex flex-col gap-3" data-testid="forecast-headline">
-      <p className="flex flex-wrap items-baseline gap-x-2">
-        <span className="text-5xl font-extrabold tracking-tight tabular-nums sm:text-6xl">
-          {formatKES(forecast.predicted_price)}
-        </span>
-        <span className="text-lg text-on-primary-muted">{PRICE_TEXT.perKg}</span>
-      </p>
-      {bag && <p className="text-on-primary-muted">{bag}</p>}
-      <DeltaTag
-        value={forecast.expected_change_pct}
-        direction={directionOf(forecast.expected_change_pct)}
-        className="px-3 py-1 text-base shadow-card"
-      />
-      <p className="max-w-md text-on-primary-muted">
+    <div className="flex flex-col gap-1.5" data-testid="forecast-headline">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+        <p className="flex items-baseline gap-x-1.5">
+          <span className="text-4xl font-extrabold tracking-tight tabular-nums">
+            {formatKES(forecast.predicted_price)}
+          </span>
+          <span className="text-on-primary-muted">{PRICE_TEXT.perKg}</span>
+        </p>
+        <DeltaTag
+          value={forecast.expected_change_pct}
+          direction={directionOf(forecast.expected_change_pct)}
+          tone="inverse"
+          className="rounded-full px-2.5"
+        />
+      </div>
+      {bag && <p className="text-sm text-on-primary-muted">{bag}</p>}
+      <p className="max-w-md text-sm text-on-primary-muted">
         {FORECAST_TEXT.caption(formatKES(forecast.origin_price), inLabel(months))}
       </p>
     </div>
@@ -147,7 +150,7 @@ function Headline({ forecast }) {
 }
 
 /** Arrow between the latest price and the forecast, by the forecast's direction. */
-const DIRECTION_ARROW = { rise: ArrowUp, fall: ArrowDown, flat: Minus };
+const DIRECTION_ARROW = { rise: ArrowUpRight, fall: ArrowDownRight, flat: ArrowRight };
 
 /**
  * The latest price and what the model expects, one above the other (display only: both are the
@@ -155,23 +158,22 @@ const DIRECTION_ARROW = { rise: ArrowUp, fall: ArrowDown, flat: Minus };
  * @param {{ forecast: Forecast }} props
  */
 function FromTo({ forecast }) {
-  const Arrow = DIRECTION_ARROW[directionOf(forecast.expected_change_pct)] ?? Minus;
+  const Arrow = DIRECTION_ARROW[directionOf(forecast.expected_change_pct)] ?? ArrowRight;
   const months = horizonMonths(forecast.horizon);
   return (
-    <dl className="flex flex-col gap-3 rounded-2xl bg-card/10 p-4 ring-1 ring-card/20 md:w-64">
+    <dl className="flex w-fit items-center gap-4 rounded-xl bg-card/10 px-4 py-3 ring-1 ring-card/20">
       <div className="flex flex-col">
-        <dt className="text-sm font-medium text-on-primary-muted">Latest</dt>
-        <dd className="text-2xl font-bold tabular-nums">{formatKES(forecast.origin_price)}</dd>
+        <dt className="text-xs font-medium tracking-wide text-on-primary-muted uppercase">
+          Latest
+        </dt>
+        <dd className="text-lg font-bold tabular-nums">{formatKES(forecast.origin_price)}</dd>
       </div>
-      <span
-        aria-hidden="true"
-        className="flex size-8 items-center justify-center rounded-full bg-card text-primary"
-      >
-        <Arrow className="size-4" />
-      </span>
+      <Arrow aria-hidden="true" className="size-5 shrink-0 text-on-primary-muted" />
       <div className="flex flex-col">
-        <dt className="text-sm font-medium text-on-primary-muted">{inLabelCap(months)}</dt>
-        <dd className="text-2xl font-bold tabular-nums">{formatKES(forecast.predicted_price)}</dd>
+        <dt className="text-xs font-medium tracking-wide text-on-primary-muted uppercase">
+          {inLabelCap(months)}
+        </dt>
+        <dd className="text-lg font-bold tabular-nums">{formatKES(forecast.predicted_price)}</dd>
       </div>
     </dl>
   );
@@ -201,15 +203,23 @@ function Explanation({ forecast }) {
     after: formatKES(step.to),
   }));
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-3">
       <ExplainabilityBars
+        className="mb-2"
         chart={chart}
         when={inLabel(horizonMonths(forecast.horizon))}
         summary={summaryText(forecast, chart.steps)}
       />
-      <details className="rounded-xl border border-border bg-canvas">
-        <summary className="flex min-h-11 cursor-pointer items-center px-4 font-semibold text-text">
-          {FORECAST_TEXT.howToRead}
+      <details className="group rounded-xl border border-border bg-card open:bg-canvas">
+        <summary className="flex min-h-12 cursor-pointer list-none items-center gap-3 px-4 font-semibold text-text [&::-webkit-details-marker]:hidden">
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">
+            <BookOpen aria-hidden="true" className="size-4" />
+          </span>
+          <span>{FORECAST_TEXT.howToRead}</span>
+          <ChevronDown
+            aria-hidden="true"
+            className="ml-auto size-5 text-text-secondary transition-transform group-open:rotate-180"
+          />
         </summary>
         <div className="flex flex-col gap-2 px-4 pb-4 text-text">
           {FORECAST_TEXT.howToReadText.map((sentence) => (
@@ -226,9 +236,16 @@ function Explanation({ forecast }) {
           </dl>
         </div>
       </details>
-      <details className="rounded-xl border border-border bg-canvas">
-        <summary className="flex min-h-11 cursor-pointer items-center px-4 font-semibold text-text">
-          {FORECAST_TEXT.seeNumbers}
+      <details className="group rounded-xl border border-border bg-card open:bg-canvas">
+        <summary className="flex min-h-12 cursor-pointer list-none items-center gap-3 px-4 font-semibold text-text [&::-webkit-details-marker]:hidden">
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">
+            <Table2 aria-hidden="true" className="size-4" />
+          </span>
+          <span>{FORECAST_TEXT.seeNumbers}</span>
+          <ChevronDown
+            aria-hidden="true"
+            className="ml-auto size-5 text-text-secondary transition-transform group-open:rotate-180"
+          />
         </summary>
         <div className="px-4 pb-4">
           <DataTable
@@ -341,33 +358,39 @@ function ForecastBody({ market, markets, crop, update }) {
       {state && forecast && (
         <section
           aria-labelledby="forecast-headline-title"
-          className="bg-brand relative overflow-hidden rounded-2xl px-5 py-6 text-on-primary shadow-raised sm:px-8 sm:py-8"
+          className="bg-brand relative overflow-hidden rounded-2xl text-on-primary shadow-raised"
         >
           <div aria-hidden="true" className="bg-dot-grid pointer-events-none absolute inset-0" />
-          <div className="relative flex flex-col gap-6">
+          <div className="relative flex flex-col gap-4 p-5 sm:p-6">
             <h2
               id="forecast-headline-title"
-              className="flex w-fit items-center gap-2 rounded-full bg-card/10 px-3 py-1 text-base font-semibold ring-1 ring-card/20"
+              className="flex items-center gap-2 text-sm font-semibold text-on-primary-muted"
             >
               <MapPin aria-hidden="true" className="size-4 shrink-0" />
               {`${cropLabel(crop)} in ${market}, ${inLabel(horizonMonths(HORIZON))}`}
             </h2>
-            <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <Headline forecast={forecast} />
               <FromTo forecast={forecast} />
             </div>
+          </div>
+          <div className="relative border-t border-card/15 px-3 py-2 sm:px-4">
             <Button
               type="button"
-              className={cn('min-h-11 w-full sm:w-fit', heroButton)}
+              variant="ghost"
+              className="min-h-11 w-full justify-between text-on-primary hover:bg-card/10 hover:text-on-primary focus-visible:ring-card sm:w-fit sm:justify-start"
               aria-expanded={whyOpen}
               aria-controls={whyOpen ? explanationId : undefined}
               onClick={() => setWhyOpen(!whyOpen)}
             >
+              <span className="flex items-center gap-2">
+                <Lightbulb aria-hidden="true" />
+                <span>{FORECAST_TEXT.whyTitle}</span>
+              </span>
               <ChevronDown
                 aria-hidden="true"
                 className={whyOpen ? 'rotate-180 transition-transform' : 'transition-transform'}
               />
-              <span>{FORECAST_TEXT.whyTitle}</span>
             </Button>
           </div>
         </section>

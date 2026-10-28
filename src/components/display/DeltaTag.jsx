@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 const POSITIVE = 'bg-card text-positive-text border-positive';
 const NEGATIVE = 'bg-card text-negative-text border-negative';
 const NEUTRAL = 'bg-neutral-bg text-neutral-text border-transparent';
+const INVERSE = 'bg-card/10 text-on-primary border-card/30';
 
 const STYLES = {
   positive: {
@@ -52,13 +53,16 @@ const DIRECTION_STYLES = {
  *   label?: string,
  *   suffix?: string,
  *   direction?: 'rise' | 'fall' | 'flat',
+ *   tone?: 'default' | 'inverse',
  *   className?: string,
  * }} props
+ *   `tone="inverse"` is for the green brand surface: a frosted pill with white text and icon (the
+ *   icon, sign and word still carry the meaning).
  *   `label` replaces the default word.
  *   `suffix` follows the number ("+4.5% vs 1 month ago").
  *   `direction` (from directionOf) picks the style, icon and word instead of the sign of the value.
  */
-export function DeltaTag({ value, label, suffix, direction, className }) {
+export function DeltaTag({ value, label, suffix, direction, tone = 'default', className }) {
   const n = typeof value === 'string' ? Number(value) : value;
   const text = formatPct(value);
   // Use the rounded display value so "+0.0%" never shows as positive.
@@ -75,11 +79,14 @@ export function DeltaTag({ value, label, suffix, direction, className }) {
       data-direction={direction ?? sign}
       className={cn(
         'inline-flex w-fit flex-wrap items-center gap-x-1 rounded-md border px-2 py-0.5 text-sm font-medium',
-        style.className,
+        tone === 'inverse' ? INVERSE : style.className,
         className,
       )}
     >
-      <Icon aria-hidden="true" className={cn('size-4 shrink-0', style.iconClass)} />
+      <Icon
+        aria-hidden="true"
+        className={cn('size-4 shrink-0', tone === 'inverse' ? 'text-on-primary' : style.iconClass)}
+      />
       <span className="whitespace-nowrap tabular-nums">{suffix ? `${text} ${suffix}` : text}</span>
       <span className="whitespace-nowrap">{label ?? style.word}</span>
     </span>

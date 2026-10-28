@@ -1,5 +1,5 @@
 import { useId } from 'react';
-import { Triangle } from 'lucide-react';
+import { Sparkles, Triangle } from 'lucide-react';
 import { axisPercent, stepAmountText } from '@/lib/forecast';
 import { formatAxisNumber, formatKES } from '@/lib/format';
 import { FORECAST_TEXT } from '@/lib/messages';
@@ -13,7 +13,7 @@ import { cn } from '@/lib/utils';
  * the track sits underneath at full width; from `sm` the name, track and amount are side by side.
  */
 const ROW =
-  'grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 py-1.5 sm:grid-cols-[10rem_minmax(0,1fr)_7rem] md:grid-cols-[13rem_minmax(0,1fr)_7.5rem]';
+  'grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 rounded-lg px-2 py-1.5 sm:grid-cols-[10rem_minmax(0,1fr)_7rem] md:grid-cols-[13rem_minmax(0,1fr)_7.5rem]';
 const NAME = 'order-1 min-w-0';
 const AMOUNT = 'order-2 whitespace-nowrap text-right tabular-nums sm:order-3';
 const TRACK =
@@ -65,7 +65,7 @@ function Dot({ percent }) {
   return (
     <span
       data-dot=""
-      className="absolute top-1/2 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-text"
+      className="absolute top-1/2 size-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-text ring-2 ring-card"
       style={at(percent)}
     />
   );
@@ -131,82 +131,104 @@ export function ExplainabilityBars({ chart, when, summary, className }) {
 
   return (
     <figure aria-labelledby={captionId} className={cn('m-0 flex flex-col gap-2', className)}>
-      <figcaption id={captionId} className="sr-only">
-        {summary}
+      <figcaption
+        id={captionId}
+        className="flex items-start gap-3 rounded-xl bg-primary-soft p-4 text-text"
+      >
+        <Sparkles aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-primary" />
+        <span>{summary}</span>
       </figcaption>
-      <p className="text-sm text-text-secondary">{FORECAST_TEXT.chartIntro}</p>
-      <Scale axis={axis} />
-      <ul className="flex flex-col">
-        <li data-row="start" className={ROW}>
-          <span className={cn(NAME, 'font-medium text-text')}>{FORECAST_TEXT.startLabel}</span>
-          <span className={cn(AMOUNT, 'font-medium text-text')}>{formatKES(start)}</span>
-          <div aria-hidden="true" className={TRACK}>
-            <GridLines ticks={axis.ticks} axis={axis} />
-            <Connector percent={startAt} half="bottom" />
-            <Dot percent={startAt} />
-          </div>
-        </li>
-
-        {steps.map((step) => {
-          const style = step.up ? DIRECTION.up : DIRECTION.down;
-          const fromAt = axisPercent(axis, step.from);
-          const toAt = axisPercent(axis, step.to);
-          return (
-            <li
-              key={step.id}
-              data-row="step"
-              data-kind={step.kind}
-              data-direction={step.up ? 'up' : 'down'}
-              className={ROW}
-            >
-              <span className={cn(NAME, 'flex items-start gap-1.5')}>
-                <Triangle
-                  aria-hidden="true"
-                  className={cn('mt-1.5 size-3 shrink-0 fill-current', style.text, style.icon)}
-                />
-                <span className="font-medium text-text">{step.label}</span>
-              </span>
-              <span className={cn(AMOUNT, 'font-medium', style.text)}>{stepAmountText(step)}</span>
-              <div aria-hidden="true" className={TRACK}>
-                <GridLines ticks={axis.ticks} axis={axis} />
-                <Connector percent={fromAt} half="top" />
-                <Connector percent={toAt} half="bottom" />
-                <span
-                  data-bar=""
-                  className={cn(
-                    'absolute top-1/2 h-4 min-w-2 -translate-y-1/2 rounded-sm border',
-                    style.bar,
-                  )}
-                  style={{
-                    left: `${Math.min(fromAt, toAt)}%`,
-                    width: `${Math.abs(toAt - fromAt)}%`,
-                  }}
-                />
-              </div>
-            </li>
-          );
-        })}
-
-        <li data-row="end" className={cn(ROW, 'mt-1 border-t border-border pt-2.5')}>
-          <span className={cn(NAME, 'font-semibold text-text')}>
-            {FORECAST_TEXT.forecastLabel(when)}
-          </span>
-          <span className={cn(AMOUNT, 'font-semibold text-text')}>{formatKES(end)}</span>
-          <div aria-hidden="true" className={TRACK}>
-            <GridLines ticks={axis.ticks} axis={axis} />
-            <Connector percent={axisPercent(axis, lastTo)} half="top" />
+      <p className="mt-2 text-sm text-text-secondary">{FORECAST_TEXT.chartIntro}</p>
+      <div className="rounded-xl border border-border bg-canvas p-2 sm:p-3">
+        <Scale axis={axis} />
+        <ul className="flex flex-col">
+          <li data-row="start" className={ROW}>
+            <span className={cn(NAME, 'font-medium text-text')}>{FORECAST_TEXT.startLabel}</span>
             <span
-              data-line=""
-              className="absolute top-1/2 h-0.5 -translate-y-1/2 bg-text"
-              style={{
-                left: `${Math.min(startAt, endAt)}%`,
-                width: `${Math.abs(endAt - startAt)}%`,
-              }}
-            />
-            <Dot percent={endAt} />
-          </div>
-        </li>
-      </ul>
+              className={cn(
+                AMOUNT,
+                'justify-self-end rounded-full bg-neutral-bg px-2.5 py-0.5 font-semibold text-neutral-text',
+              )}
+            >
+              {formatKES(start)}
+            </span>
+            <div aria-hidden="true" className={TRACK}>
+              <GridLines ticks={axis.ticks} axis={axis} />
+              <Connector percent={startAt} half="bottom" />
+              <Dot percent={startAt} />
+            </div>
+          </li>
+
+          {steps.map((step) => {
+            const style = step.up ? DIRECTION.up : DIRECTION.down;
+            const fromAt = axisPercent(axis, step.from);
+            const toAt = axisPercent(axis, step.to);
+            return (
+              <li
+                key={step.id}
+                data-row="step"
+                data-kind={step.kind}
+                data-direction={step.up ? 'up' : 'down'}
+                className={ROW}
+              >
+                <span className={cn(NAME, 'flex items-start gap-1.5')}>
+                  <Triangle
+                    aria-hidden="true"
+                    className={cn('mt-1.5 size-3 shrink-0 fill-current', style.text, style.icon)}
+                  />
+                  <span className="font-medium text-text">{step.label}</span>
+                </span>
+                <span className={cn(AMOUNT, 'font-medium', style.text)}>
+                  {stepAmountText(step)}
+                </span>
+                <div aria-hidden="true" className={TRACK}>
+                  <GridLines ticks={axis.ticks} axis={axis} />
+                  <Connector percent={fromAt} half="top" />
+                  <Connector percent={toAt} half="bottom" />
+                  <span
+                    data-bar=""
+                    className={cn(
+                      'absolute top-1/2 h-5 min-w-2 -translate-y-1/2 rounded-md border',
+                      style.bar,
+                    )}
+                    style={{
+                      left: `${Math.min(fromAt, toAt)}%`,
+                      width: `${Math.abs(toAt - fromAt)}%`,
+                    }}
+                  />
+                </div>
+              </li>
+            );
+          })}
+
+          <li data-row="end" className={cn(ROW, 'mt-1 border-t border-border pt-2.5')}>
+            <span className={cn(NAME, 'font-bold text-text')}>
+              {FORECAST_TEXT.forecastLabel(when)}
+            </span>
+            <span
+              className={cn(
+                AMOUNT,
+                'justify-self-end rounded-full bg-primary px-2.5 py-0.5 font-bold text-on-primary',
+              )}
+            >
+              {formatKES(end)}
+            </span>
+            <div aria-hidden="true" className={TRACK}>
+              <GridLines ticks={axis.ticks} axis={axis} />
+              <Connector percent={axisPercent(axis, lastTo)} half="top" />
+              <span
+                data-line=""
+                className="absolute top-1/2 h-1 -translate-y-1/2 rounded-full bg-primary"
+                style={{
+                  left: `${Math.min(startAt, endAt)}%`,
+                  width: `${Math.abs(endAt - startAt)}%`,
+                }}
+              />
+              <Dot percent={endAt} />
+            </div>
+          </li>
+        </ul>
+      </div>
     </figure>
   );
 }
