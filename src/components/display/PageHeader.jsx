@@ -14,7 +14,7 @@ export function PageHeader({ title, description, actions, className, headingRef 
         <h1
           ref={headingRef}
           tabIndex={headingRef ? -1 : undefined}
-          className="text-2xl font-bold text-text outline-none"
+          className="text-2xl font-extrabold tracking-tight text-text outline-none sm:text-3xl"
         >
           {title}
         </h1>

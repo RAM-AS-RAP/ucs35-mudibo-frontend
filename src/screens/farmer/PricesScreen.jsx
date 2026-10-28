@@ -1,10 +1,11 @@
+import { LineChart } from 'lucide-react';
 import { useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router';
 import { useCurrentPrices, useMarkets, usePriceTrends } from '@/api/queries';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DataTable } from '@/components/display/DataTable';
 import { MarketChips } from '@/components/display/MarketChips';
-import { PageHeader } from '@/components/display/PageHeader';
+import { PageHero } from '@/components/display/DashboardHero';
 import { PriceCard } from '@/components/display/PriceCard';
 import { Segmented } from '@/components/display/Segmented';
 import { TrendChart } from '@/components/display/TrendChart';
@@ -219,9 +220,10 @@ export default function PricesScreen() {
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader
+      <PageHero
         title="Prices"
-        description="Monthly wholesale prices per kg."
+        description="Latest prices per kg."
+        icon={LineChart}
         headingRef={headingRef}
       />
       <Segmented

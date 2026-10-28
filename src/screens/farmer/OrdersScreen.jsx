@@ -1,9 +1,9 @@
 import { useEffect } from 'react';
 import { useSearchParams } from 'react-router';
-import { Handshake, Info, Loader2, RefreshCw, X } from 'lucide-react';
+import { ClipboardList, Info, Loader2, RefreshCw, X } from 'lucide-react';
 import { useMyOrders } from '@/api/queries';
 import { Button } from '@/components/ui/button';
-import { PageHeader } from '@/components/display/PageHeader';
+import { PageHero, heroOutlineButton } from '@/components/display/DashboardHero';
 import { Segmented } from '@/components/display/Segmented';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { ErrorState } from '@/components/feedback/ErrorState';
@@ -64,9 +64,6 @@ export default function OrdersScreen() {
   const loaded = pages.flatMap((page) => page.items);
   const total = pages.length ? pages[pages.length - 1].total : 0;
   const items = notPaid ? filterNotPaid(loaded) : loaded;
-  const serverNote = pages[0]?.note;
-  const note =
-    typeof serverNote === 'string' && serverNote.trim() ? serverNote : ORDER_TEXT.noteFallback;
 
   let body;
   if (query.isPending) {
@@ -142,13 +139,16 @@ export default function OrdersScreen() {
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader
+      <PageHero
         title={ORDER_TEXT.title}
+        description="Orders buyers placed on your listings."
+        icon={ClipboardList}
         headingRef={headingRef}
         actions={
           <Button
             type="button"
             variant="outline"
+            className={heroOutlineButton}
             disabled={query.isPending || refreshing}
             onClick={() => query.refetch()}
           >
@@ -157,16 +157,6 @@ export default function OrdersScreen() {
           </Button>
         }
       />
-      <div className="flex flex-col gap-3 rounded-xl border border-border bg-neutral-bg p-4 text-neutral-text">
-        <p className="flex items-start gap-2" data-testid="orders-note">
-          <Info aria-hidden="true" className="mt-0.5 size-5 shrink-0" />
-          <span>{note}</span>
-        </p>
-        <p className="flex items-start gap-2">
-          <Handshake aria-hidden="true" className="mt-0.5 size-5 shrink-0" />
-          <span>{ORDER_TEXT.delivery}</span>
-        </p>
-      </div>
       <Segmented
         legend={ORDER_TEXT.filterLegend}
         name="order-status"

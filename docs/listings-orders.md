@@ -78,8 +78,7 @@ date) and stays quiet when prices or the forecast cannot be loaded.
    1280 px until it fits the 5 MiB upload limit, otherwise fail with `still_too_large`. The bitmap is
    closed and every object URL revoked.
 3. **Metadata:** re-encoding through a canvas drops all metadata, including the GPS location phone
-   cameras write into photos. The screen says "Photos are resized automatically. Location data in
-   photos is removed."
+   cameras write into photos.
 4. **Upload:** the JPEG goes as the `image` part named `photo.jpg` with a 60 second upload timeout.
 5. **Server:** re-encodes every image as JPEG without metadata, downscales to 1600 px, and answers 422
    `invalid_image` or 413 `image_too_large` (shown next to the photo).

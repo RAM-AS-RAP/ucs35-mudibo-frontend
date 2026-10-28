@@ -17,6 +17,12 @@
   --color-primary-hover: var(--primary-hover);
   --color-primary-foreground: var(--primary-foreground);
   --color-on-primary: var(--on-primary);
+  --color-primary-soft: var(--primary-soft);
+  --color-primary-deep: var(--primary-deep);
+  --color-on-primary-muted: var(--on-primary-muted);
+  --color-accent-gold: var(--accent-gold);
+  --color-accent-gold-soft: var(--accent-gold-soft);
+  --color-accent-gold-text: var(--accent-gold-text);
 
   --color-canvas: var(--canvas);
   --color-sidebar: var(--sidebar);
@@ -59,6 +65,9 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
+
+  --shadow-card: var(--elevation-card);
+  --shadow-raised: var(--elevation-raised);
 
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -131,6 +140,27 @@
 }
 
 @layer components {
+  /* Brand surface: the green gradient behind hero banners and the sign in panel. */
+  .bg-brand {
+    background-color: var(--primary);
+    background-image:
+      radial-gradient(circle at 100% 0%, rgb(255 255 255 / 0.12), transparent 45%),
+      linear-gradient(135deg, var(--primary) 0%, var(--primary-deep) 100%);
+  }
+
+  /* The navigation surface: deep green, a touch lighter at the top. */
+  .bg-sidebar-brand {
+    background-color: var(--sidebar);
+    background-image: linear-gradient(180deg, var(--primary) 0%, var(--sidebar) 55%);
+  }
+
+  /* A faint dot grid over the brand surface, fading out towards the bottom. Decorative. */
+  .bg-dot-grid {
+    background-image: radial-gradient(rgb(255 255 255 / 0.1) 1px, transparent 1px);
+    background-size: 22px 22px;
+    mask-image: linear-gradient(to bottom, black 0%, transparent 75%);
+  }
+
   /* Steps that pulled a forecast down: hatched, so the direction never depends on colour alone. */
   .bar-hatch-down {
     background-color: var(--negative-soft);

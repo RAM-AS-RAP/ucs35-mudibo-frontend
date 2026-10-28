@@ -54,7 +54,7 @@ export function PriceCard({
   return (
     <article
       className={cn(
-        'flex flex-col gap-2 rounded-xl border border-border bg-card p-4 shadow-sm',
+        'flex flex-col gap-2 rounded-2xl border border-border border-t-4 border-t-primary bg-card p-4 shadow-card',
         className,
       )}
     >
@@ -67,9 +67,13 @@ export function PriceCard({
           </Badge>
         )}
       </div>
-      <p className="text-sm font-medium text-text-secondary">{LABEL_LATEST_PRICE}</p>
+      <p className="text-sm font-semibold tracking-wide text-text-secondary uppercase">
+        {LABEL_LATEST_PRICE}
+      </p>
       <p className="flex flex-wrap items-baseline gap-x-2 text-text">
-        <span className="text-3xl font-bold tabular-nums">{formatKES(pricePerKg)}</span>
+        <span className="text-3xl font-extrabold tracking-tight tabular-nums">
+          {formatKES(pricePerKg)}
+        </span>
         <span className="text-text-secondary">{PRICE_TEXT.perKg}</span>
       </p>
       {bag && <p className="text-sm text-text-secondary">{bag}</p>}

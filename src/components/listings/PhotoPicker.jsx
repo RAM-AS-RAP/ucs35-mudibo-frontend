@@ -152,10 +152,9 @@ export function PhotoPicker({
   const showCurrent = Boolean(safeCurrent) && !value.removeCurrent && value.status !== 'ready';
   const errorText = value.status === 'error' ? imageErrorMessage(value.errorCode) : serverError;
   const errorId = `${id}-error`;
-  const noteId = `${id}-note`;
 
   return (
-    <fieldset className="flex min-w-0 flex-col gap-3" aria-describedby={noteId}>
+    <fieldset className="flex min-w-0 flex-col gap-3">
       <legend className="mb-1.5 text-sm font-medium text-text">{PHOTO_TEXT.legend}</legend>
 
       {hasNew && (
@@ -264,9 +263,6 @@ export function PhotoPicker({
           <span data-testid="photo-error">{errorText}</span>
         </p>
       )}
-      <p id={noteId} className="text-sm text-text-secondary">
-        {PHOTO_TEXT.sizeNote}
-      </p>
     </fieldset>
   );
 }

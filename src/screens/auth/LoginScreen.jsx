@@ -25,7 +25,8 @@ import { cn } from '@/lib/utils';
 import { loginSchema } from '@/lib/validation';
 
 const T = MESSAGES.login;
-const linkClass = 'flex min-h-11 items-center text-primary underline underline-offset-2';
+const linkClass =
+  'flex min-h-11 items-center font-semibold text-primary underline underline-offset-2';
 export const LOGIN_CODE_PATH = '/login/code';
 
 /** While Google sign in runs, the screen's own controls are greyed out and cannot be used. */
@@ -113,7 +114,7 @@ export default function LoginScreen() {
   }
 
   return (
-    <AuthLayout title={T.title} subtitle={T.subtitle} headingRef={headingRef} after={<ApiStatus />}>
+    <AuthLayout title={T.title} headingRef={headingRef} after={<ApiStatus />}>
       {flash && <InfoMessage>{flash}</InfoMessage>}
       {flow && flowActive && (
         <div
@@ -167,6 +168,14 @@ export default function LoginScreen() {
           label={T.passwordLabel}
           autoComplete="current-password"
           error={errors.password?.message}
+          labelAction={
+            <Link
+              className="flex min-h-11 items-center text-sm font-medium text-primary underline underline-offset-2"
+              to="/forgot-password"
+            >
+              {T.forgotPassword}
+            </Link>
+          }
           {...register('password')}
         />
         <SubmitButton
@@ -182,13 +191,14 @@ export default function LoginScreen() {
       <nav
         aria-label="Account pages"
         inert={googleBusy}
-        className={cn('flex flex-col', googleBusy && BUSY_CLASS)}
+        className={cn(
+          'flex flex-wrap items-center justify-center gap-x-2 text-text-secondary',
+          googleBusy && BUSY_CLASS,
+        )}
       >
+        <span>New here?</span>
         <Link className={linkClass} to="/register">
           {T.createAccount}
-        </Link>
-        <Link className={linkClass} to="/forgot-password">
-          {T.forgotPassword}
         </Link>
       </nav>
     </AuthLayout>

@@ -21,19 +21,21 @@ export function BuyerListingCard({ listing }) {
     <Link
       to={`/buyer/listings/${encodeURIComponent(listing.id)}`}
       aria-label={`${crop} in ${listing.market}, ${price}, ${BROWSE_TEXT.soldBy(seller)}`}
-      className="flex h-full flex-col gap-3 rounded-xl border border-border bg-card p-4 text-text shadow-sm transition-colors outline-none hover:border-primary focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+      className="group flex h-full flex-col gap-3 rounded-2xl border border-border bg-card p-3 text-text shadow-card transition-[border-color,box-shadow,transform] duration-200 outline-none hover:border-primary hover:shadow-raised focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 motion-safe:hover:-translate-y-0.5"
       data-listing-id={listing.id}
     >
       <ProducePhoto imageUrl={listing.image_url} alt={BROWSE_TEXT.photoAlt(crop.toLowerCase())} />
-      <p className="text-lg font-semibold">
+      <p className="px-1 text-lg font-bold">
         {crop} <span className="font-normal text-text-secondary">in</span> {listing.market}
       </p>
-      <p className="text-lg font-semibold tabular-nums">{price}</p>
-      <p className="flex items-center gap-1.5 text-text-secondary">
+      <p className="px-1 text-xl font-extrabold tracking-tight text-primary tabular-nums">
+        {price}
+      </p>
+      <p className="flex items-center gap-1.5 px-1 text-text-secondary">
         <Package aria-hidden="true" className="size-4 shrink-0" />
         <span>{BROWSE_TEXT.available(formatQuantity(listing.quantity_available))}</span>
       </p>
-      <p className="flex items-center gap-1.5 break-words text-text-secondary">
+      <p className="flex items-center gap-1.5 px-1 pb-1 break-words text-text-secondary">
         <User aria-hidden="true" className="size-4 shrink-0" />
         <span className="min-w-0">{BROWSE_TEXT.soldBy(seller)}</span>
       </p>

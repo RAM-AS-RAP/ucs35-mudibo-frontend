@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { toast } from 'sonner';
-import { Loader2, PackagePlus, Plus, TrendingUp } from 'lucide-react';
+import { Loader2, Package, PackagePlus, Plus, TrendingUp } from 'lucide-react';
 import { ApiError, getUserMessageDetails } from '@/api/errors';
 import { invalidateListingData, useMyListings, useRemoveListing } from '@/api/queries';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
-import { PageHeader } from '@/components/display/PageHeader';
+import { PageHero, heroButton } from '@/components/display/DashboardHero';
 import { Segmented } from '@/components/display/Segmented';
 import { ConfirmDialog } from '@/components/feedback/ConfirmDialog';
 import { EmptyState } from '@/components/feedback/EmptyState';
@@ -210,11 +210,13 @@ export default function MyListingsScreen() {
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader
+      <PageHero
         title={LISTING_TEXT.myListingsTitle}
+        description="Your produce for sale. Edit or remove a listing, or see its orders."
+        icon={Package}
         headingRef={headingRef}
         actions={
-          <Button asChild>
+          <Button asChild className={heroButton}>
             <Link to="/farmer/listings/new">
               <Plus aria-hidden="true" />
               {LISTING_TEXT.newListing}

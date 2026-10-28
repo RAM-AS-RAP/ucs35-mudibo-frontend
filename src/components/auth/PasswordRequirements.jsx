@@ -10,9 +10,18 @@ import { cn } from '@/lib/utils';
  *   id: string,
  *   password: string,
  *   context: Parameters<typeof passwordProblems>[1],
- * }} props
+ *   columns?: boolean,
+ *   hideUntilTyped?: boolean,
+ * }} props  columns: two columns from the `sm` breakpoint (a wide form); hideUntilTyped: hidden
+ *   (but still the field's description) until the password has a character
  */
-export function PasswordRequirements({ id, password, context = {} }) {
+export function PasswordRequirements({
+  id,
+  password,
+  context = {},
+  columns = false,
+  hideUntilTyped = false,
+}) {
   const requirements = passwordRequirements({
     role: context?.role,
     characterClasses: context?.characterClasses,
@@ -21,9 +30,15 @@ export function PasswordRequirements({ id, password, context = {} }) {
   const P = MESSAGES.password;
 
   return (
-    <div id={id} className="rounded-md bg-neutral-bg px-3 py-2 text-sm">
+    <div
+      id={id}
+      hidden={hideUntilTyped && !password}
+      className="rounded-md bg-neutral-bg px-3 py-2 text-sm"
+    >
       <p className="font-medium text-neutral-text">{P.heading}</p>
-      <ul className="mt-1 flex flex-col gap-1">
+      <ul
+        className={cn('mt-1 flex flex-col gap-1', columns && 'sm:grid sm:grid-cols-2 sm:gap-x-4')}
+      >
         {requirements.map((req) => {
           const met = Boolean(password) && !unmet.has(req.id);
           const Icon = met ? Check : Circle;
