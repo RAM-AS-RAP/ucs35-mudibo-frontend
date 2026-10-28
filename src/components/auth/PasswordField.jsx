@@ -17,7 +17,9 @@ import { describedBy, FieldError, FieldHint } from './FormField';
  *   error?: string | null,
  *   describedByIds?: string[],
  *   children?: import('react').ReactNode,
- * }} props  children render under the field (for example PasswordRequirements)
+ *   labelAction?: import('react').ReactNode,
+ * }} props  children render under the field (for example PasswordRequirements);
+ *   labelAction sits on the label's line, at the right (for example a "Forgot your password?" link)
  */
 export function PasswordField({
   id,
@@ -28,6 +30,7 @@ export function PasswordField({
   describedByIds = [],
   className,
   children,
+  labelAction,
   ...inputProps
 }) {
   const [visible, setVisible] = useState(false);
@@ -40,7 +43,14 @@ export function PasswordField({
 
   return (
     <div className={cn('flex flex-col gap-1.5', className)}>
-      <Label htmlFor={id}>{label}</Label>
+      {labelAction ? (
+        <div className="flex flex-wrap items-center justify-between gap-x-3">
+          <Label htmlFor={id}>{label}</Label>
+          {labelAction}
+        </div>
+      ) : (
+        <Label htmlFor={id}>{label}</Label>
+      )}
       <div className="relative">
         <Input
           id={id}

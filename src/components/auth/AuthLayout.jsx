@@ -1,4 +1,4 @@
-import { LineChart, ShieldCheck, ShoppingBasket, TrendingUp } from 'lucide-react';
+import { LineChart, ShoppingBasket, TrendingUp } from 'lucide-react';
 import { BrandMark } from '@/components/layout/BrandMark';
 
 /** The brand panel's short list of what the app offers (wide screens only). */
@@ -67,25 +67,15 @@ export function AuthLayout({ title, subtitle, headingRef, children, after }) {
 
       <div className="bg-brand relative hidden overflow-hidden text-on-primary lg:order-1 lg:flex lg:items-center lg:px-12 xl:px-16">
         <div aria-hidden="true" className="bg-dot-grid pointer-events-none absolute inset-0" />
-        <div className="relative flex w-full max-w-lg flex-col gap-8 xl:gap-10">
+        <div className="relative flex w-full max-w-md flex-col gap-10">
           <BrandMark size="lg" inverse />
-
-          <div className="flex flex-col gap-4">
-            <p className="w-fit rounded-full bg-card/10 px-3 py-1 text-sm font-medium ring-1 ring-card/20">
-              For farmers and buyers in Kenya
-            </p>
-            <p className="text-4xl leading-[1.1] font-extrabold tracking-tight xl:text-5xl">
-              Know the market before you sell.
-            </p>
-            <p className="max-w-md text-lg text-on-primary-muted">
-              Prices, forecasts and a marketplace in one app, made for smallholder farming.
-            </p>
-          </div>
-
-          <ul className="flex flex-col divide-y divide-card/10 rounded-2xl bg-card/[0.06] ring-1 ring-card/15 backdrop-blur-sm">
+          <p className="text-4xl leading-[1.1] font-extrabold tracking-tight xl:text-5xl">
+            Know the market before you sell.
+          </p>
+          <ul className="flex flex-col gap-5">
             {HIGHLIGHTS.map(({ icon: Icon, title, text }) => (
-              <li key={title} className="flex items-start gap-4 p-5">
-                <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-card text-primary shadow-card">
+              <li key={title} className="flex items-start gap-4">
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-card/15 ring-1 ring-card/20">
                   <Icon aria-hidden="true" className="size-5" />
                 </span>
                 <span className="flex flex-col gap-0.5">
@@ -95,11 +85,6 @@ export function AuthLayout({ title, subtitle, headingRef, children, after }) {
               </li>
             ))}
           </ul>
-
-          <p className="flex items-center gap-2 text-sm text-on-primary-muted">
-            <ShieldCheck aria-hidden="true" className="size-4 shrink-0" />
-            <span>Test mode: payments run in the M-Pesa sandbox. No real money moves.</span>
-          </p>
         </div>
       </div>
     </main>

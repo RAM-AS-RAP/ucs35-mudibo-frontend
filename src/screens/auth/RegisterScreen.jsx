@@ -210,6 +210,7 @@ export default function RegisterScreen() {
           password={password}
           context={{ role, name, email, characterClasses: true }}
           columns
+          hideUntilTyped
         />
         <SubmitButton
           pending={isSubmitting}
