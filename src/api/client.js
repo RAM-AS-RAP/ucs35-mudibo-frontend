@@ -31,6 +31,10 @@ export const PUBLIC_AUTH_PATHS = Object.freeze([
   '/api/v1/auth/invite/request-code',
   '/api/v1/auth/password-reset/request',
   '/api/v1/auth/password-reset/confirm',
+  // Google sign in (prompt 6): a 401 google_sign_in_failed is a failed attempt, not an ended session.
+  '/api/v1/auth/google/nonce',
+  '/api/v1/auth/google',
+  '/api/v1/auth/google/complete',
 ]);
 
 /** @type {(path: string) => void} */

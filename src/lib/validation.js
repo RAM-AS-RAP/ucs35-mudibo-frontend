@@ -226,3 +226,18 @@ export const inviteSchema = z.object({
   name: z.string().trim().min(1, M.nameRequired).min(2, M.nameShort).max(100, M.nameLong),
   email: requiredEmail,
 });
+
+/**
+ * Set a first password on an account created with Google (/account/password): the emailed
+ * code and the new password. The email comes from GET /auth/me, never from a field.
+ * @param {string | null | undefined} email  for the "not your email" rule
+ */
+export function setPasswordSchema(email) {
+  return z.object({ code, password: z.string(), confirmPassword: z.string() }).superRefine(
+    refinePassword({
+      passwordKey: 'password',
+      confirmKey: 'confirmPassword',
+      contextOf: () => ({ role: null, email: email ?? null }),
+    }),
+  );
+}

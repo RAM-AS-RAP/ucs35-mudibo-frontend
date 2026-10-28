@@ -2,9 +2,9 @@ import { useMemo } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { LogOut } from 'lucide-react';
+import { KeyRound, LogOut } from 'lucide-react';
 import { changePassword } from '@/api/endpoints';
-import { ApiError } from '@/api/errors';
+import { ApiError, ERROR_MESSAGES } from '@/api/errors';
 import { Button } from '@/components/ui/button';
 import { AuthLayout } from '@/components/auth/AuthLayout';
 import { PasswordField } from '@/components/auth/PasswordField';
@@ -23,6 +23,24 @@ import { usePageTitle } from '@/lib/usePageTitle';
 import { changePasswordSchema } from '@/lib/validation';
 
 const T = MESSAGES.change;
+const SET_PASSWORD_PATH = '/account/password';
+const linkClass =
+  'inline-flex min-h-11 items-center font-medium text-primary underline underline-offset-2';
+
+/** An account created with Google has no password yet: it sets one from Sign-in methods. */
+function PasswordNotSet() {
+  return (
+    <div className="flex flex-col gap-2 rounded-lg border border-border bg-canvas px-4 py-3">
+      <p className="flex items-start gap-2 text-text">
+        <KeyRound aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-primary" />
+        <span>{ERROR_MESSAGES.password_not_set}</span>
+      </p>
+      <Link className={linkClass} to={SET_PASSWORD_PATH}>
+        {T.setPasswordLink}
+      </Link>
+    </div>
+  );
+}
 const SERVER_FIELDS = {
   current_password: 'currentPassword',
   new_password: 'newPassword',
@@ -38,6 +56,8 @@ const SERVER_FIELDS = {
 export default function ChangePasswordScreen() {
   const { session, logout } = useAuth();
   const forced = Boolean(session?.mustChangePassword);
+  // Only farmers and buyers can have an account without a password (created with Google).
+  const noPassword = session?.passwordSet === false && !forced;
   const title = forced ? T.forcedTitle : T.voluntaryTitle;
   const headingRef = usePageTitle(title);
   const navigate = useNavigate();
@@ -95,50 +115,59 @@ export default function ChangePasswordScreen() {
       subtitle={forced ? T.forcedText : T.voluntaryText}
       headingRef={headingRef}
     >
+      {noPassword && <PasswordNotSet />}
       <FormErrorSummary
         ref={summaryRef}
         problems={problem?.problems ?? []}
         reference={problem?.reference}
-      />
+      >
+        {problem?.code === 'password_not_set' && (
+          <Link className={linkClass} to={SET_PASSWORD_PATH}>
+            {T.setPasswordLink}
+          </Link>
+        )}
+      </FormErrorSummary>
       <OfflineFormNotice offline={offline} />
-      <form noValidate onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
-        <PasswordField
-          id="change-currentPassword"
-          label={T.currentLabel}
-          autoComplete="current-password"
-          error={errors.currentPassword?.message}
-          {...register('currentPassword')}
-        />
-        <PasswordField
-          id="change-newPassword"
-          label={T.newLabel}
-          autoComplete="new-password"
-          error={errors.newPassword?.message}
-          describedByIds={['change-newPassword-requirements']}
-          {...register('newPassword')}
-        >
-          <PasswordRequirements
-            id="change-newPassword-requirements"
-            password={newPassword}
-            context={{ role, name, characterClasses: true }}
+      {!noPassword && (
+        <form noValidate onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
+          <PasswordField
+            id="change-currentPassword"
+            label={T.currentLabel}
+            autoComplete="current-password"
+            error={errors.currentPassword?.message}
+            {...register('currentPassword')}
           />
-        </PasswordField>
-        <PasswordField
-          id="change-confirmPassword"
-          label={T.confirmLabel}
-          autoComplete="new-password"
-          error={errors.confirmPassword?.message}
-          {...register('confirmPassword')}
-        />
-        <SubmitButton
-          pending={isSubmitting}
-          pendingLabel={T.pending}
-          remaining={countdown.remaining}
-          disabled={offline || countdown.longWait}
-        >
-          {T.submit}
-        </SubmitButton>
-      </form>
+          <PasswordField
+            id="change-newPassword"
+            label={T.newLabel}
+            autoComplete="new-password"
+            error={errors.newPassword?.message}
+            describedByIds={['change-newPassword-requirements']}
+            {...register('newPassword')}
+          >
+            <PasswordRequirements
+              id="change-newPassword-requirements"
+              password={newPassword}
+              context={{ role, name, characterClasses: true }}
+            />
+          </PasswordField>
+          <PasswordField
+            id="change-confirmPassword"
+            label={T.confirmLabel}
+            autoComplete="new-password"
+            error={errors.confirmPassword?.message}
+            {...register('confirmPassword')}
+          />
+          <SubmitButton
+            pending={isSubmitting}
+            pendingLabel={T.pending}
+            remaining={countdown.remaining}
+            disabled={offline || countdown.longWait}
+          >
+            {T.submit}
+          </SubmitButton>
+        </form>
+      )}
       <div className="flex flex-wrap gap-2">
         {!forced && (
           <Button asChild variant="outline">

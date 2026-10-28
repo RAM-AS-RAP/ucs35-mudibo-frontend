@@ -6,7 +6,9 @@
 // - no source maps or .env content are emitted;
 // - the initial JavaScript stays within the performance budget;
 // - no lazy chunk is over its own budget, and Recharts, the photo helper, the buyer screens and
-//   the admin screens are only in lazy chunks; the admin screens never include Recharts.
+//   the admin screens are only in lazy chunks; the admin screens never include Recharts;
+// - Google's script address (the only third party script) is only in a lazy chunk and never in
+//   index.html (identity v2, prompt 6).
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 import { gzipSync } from 'node:zlib';
@@ -38,6 +40,16 @@ const AUTH_LAZY_MARKERS = Object.freeze({
   registration: 'register-role-',
   'password reset': 'reset-confirmPassword',
   'accept invitation': 'invite-confirmPassword',
+});
+
+// Google Identity Services (prompt 6): its host may appear only in the lazy Google button chunk.
+const GOOGLE_HOST = 'accounts.google.com';
+const GOOGLE_SCRIPT_MARKER = 'accounts.google.com/gsi/client';
+// The Google role screen and the account screens are lazily loaded routes.
+const GOOGLE_LAZY_MARKERS = Object.freeze({
+  'Google role screen': 'google-role-warning',
+  'sign-in methods screen': 'security-how',
+  'set password screen': 'set-password-confirmPassword',
 });
 
 const DIST = 'dist';
@@ -145,6 +157,9 @@ for (const envFile of envFiles) {
   for (const line of readFileSync(envFile, 'utf8').split(/\r?\n/)) {
     const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/);
     if (!m || m[1].startsWith('VITE_')) continue;
+    // The Google client ID is public (VITE_GOOGLE_CLIENT_ID carries the same value into the page).
+    if (m[1] === 'GOOGLE_CLIENT_ID' && m[2].trim() === (env.VITE_GOOGLE_CLIENT_ID ?? '').trim())
+      continue;
     const value = m[2].replace(/^['"]|['"]$/g, '');
     if (value.length < 6) continue;
     for (const file of files.filter(isText)) {
@@ -247,6 +262,32 @@ for (const [name, marker] of Object.entries(AUTH_LAZY_MARKERS)) {
   }
   if (found.length === 0) fail(`The ${name} were not found in the build.`);
   else console.log(`  Account ${name}: lazy chunk(s) ${found.map((c) => c.file).join(', ')}`);
+}
+
+// 7. Google's script: never in index.html, and only in a lazy chunk.
+if (html.includes(GOOGLE_HOST)) fail('dist/index.html references accounts.google.com.');
+for (const file of files.filter((f) => f.endsWith('.html'))) {
+  if (read(file).includes(GOOGLE_HOST)) fail(`${file} references accounts.google.com.`);
+}
+const googleChunks = chunks.filter((chunk) => read(chunk.file).includes(GOOGLE_HOST));
+for (const chunk of googleChunks) {
+  if (initial.has(chunk.file))
+    fail(`Google's script address is in the initial JavaScript (${chunk.file}); load it lazily.`);
+}
+for (const file of files.filter((f) => isText(f) && !f.startsWith('assets/'))) {
+  if (read(file).includes(GOOGLE_HOST)) fail(`${file} references accounts.google.com.`);
+}
+if (!chunks.some((chunk) => read(chunk.file).includes(GOOGLE_SCRIPT_MARKER)))
+  fail('The Google sign in loader (src/lib/google/loadGsi.js) was not found in the build.');
+else console.log(`  Google sign in: lazy chunk(s) ${googleChunks.map((c) => c.file).join(', ')}`);
+for (const [name, marker] of Object.entries(GOOGLE_LAZY_MARKERS)) {
+  const found = chunks.filter((chunk) => read(chunk.file).includes(marker));
+  for (const chunk of found) {
+    if (initial.has(chunk.file))
+      fail(`The ${name} is in the initial JavaScript (${chunk.file}); load it lazily.`);
+  }
+  if (found.length === 0) fail(`The ${name} was not found in the build.`);
+  else console.log(`  ${name}: lazy chunk(s) ${found.map((c) => c.file).join(', ')}`);
 }
 
 if (failures.length) {

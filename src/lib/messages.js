@@ -18,6 +18,9 @@ export const MESSAGES = Object.freeze({
     challengeClosed: 'Your sign in session ended. Please sign in again.',
     flowLost: 'Your sign in was interrupted. Please start again.',
     registrationLost: 'Your registration was interrupted. Please start again.',
+    // After a password was set from Sign-in methods (added to passwordChanged).
+    passwordSetAfterGoogle:
+      'You can now sign in with your email, password and a code, or continue with Google.',
   },
 
   // Shared form messages.
@@ -75,7 +78,6 @@ export const MESSAGES = Object.freeze({
     subtitle: 'Use the email address of your AgriSence account.',
     emailLabel: 'Email',
     passwordLabel: 'Password',
-    help: 'After you enter your password we may email you a code to confirm it is you.',
     submit: 'Sign in',
     pending: 'Signing in…',
     invalid: 'Incorrect email or password.',
@@ -206,6 +208,7 @@ export const MESSAGES = Object.freeze({
     pending: 'Saving…',
     cancel: 'Cancel',
     signOut: 'Sign out',
+    setPasswordLink: 'Set a password',
   },
 
   signedIn: {
@@ -215,9 +218,96 @@ export const MESSAGES = Object.freeze({
     signOut: 'Sign out',
   },
 
+  // Google sign in (identity v2, prompt 6). Error codes keep their texts in src/api/errors.js.
+  google: {
+    heading: 'Or continue with Google',
+    loading: 'Loading Google sign in…',
+    signingIn: 'Signing you in with Google…',
+    /** @param {string | null} name  the account's name from Google sign in */
+    openingAccount: (name) =>
+      name ? `Welcome back, ${name}. Opening your account…` : 'Signed in. Opening your account…',
+    openingRole: 'Almost done. Opening the last step…',
+    slow: 'Still working. Your connection seems slow, so this is taking a little longer.',
+    loadFailed:
+      'Google sign in could not be loaded. Check your connection or ad blocker, or use your email and password.',
+    unavailable: 'Google sign in is not available right now. Use your email and password.',
+    tryAgain: 'Try again',
+  },
+
+  googleRole: {
+    pageTitle: 'Choose your account type',
+    /** @param {string} name */
+    welcome: (name) => (name ? `Welcome, ${name}` : 'Welcome'),
+    /** @param {string} email  the person's own Google email */
+    signingUpWith: (email) => `You are signing up with ${email}.`,
+    legend: 'I am signing up as',
+    farmer: 'I am a farmer',
+    farmerHint: 'Check market prices and forecasts, and sell your produce.',
+    buyer: 'I am a buyer',
+    buyerHint: 'Browse produce from farmers and pay with M-Pesa.',
+    warning:
+      'You cannot change this later. If you need both, use a second account with a different email.',
+    submit: 'Create my account',
+    pending: 'Creating your account…',
+    cancel: 'Cancel',
+  },
+
+  security: {
+    title: 'Sign-in methods',
+    subtitle: 'The ways you can sign in to your AgriSence account.',
+    emailRow: 'Email',
+    verified: 'Verified',
+    passwordRow: 'Password',
+    passwordSet: 'Set',
+    passwordNotSet: 'Not set',
+    changePassword: 'Change password',
+    setPassword: 'Set a password',
+    googleRow: 'Google',
+    connected: 'Connected',
+    notConnected: 'Not connected',
+    connectedText: 'You can continue with Google on the sign in screen.',
+    notConnectedText:
+      'To use Google, sign in once with Google using this same email address. It connects automatically.',
+    noDisconnect: 'Google cannot be disconnected from here.',
+    howTitle: 'How each method works',
+    howEmail: 'Email sign in: your email address and password, then a code we email to you.',
+    howGoogle:
+      'Google sign in: continue with Google on the sign in screen. No password and no code are needed.',
+    loading: 'Loading your sign-in methods…',
+    errorTitle: 'Your sign-in methods could not be loaded',
+  },
+
+  setPassword: {
+    title: 'Set a password',
+    /** @param {string} email */
+    intro: (email) =>
+      `Set a password to also sign in with your email. We will email a code to ${email}.`,
+    request: 'Email me a code',
+    requestPending: 'Sending…',
+    /** @param {string} email */
+    sent: (email) =>
+      `If a code can be sent, it is on its way to ${email}. It is valid for 15 minutes.`,
+    codeLabel: 'Code',
+    codeHint: '8 letters and numbers, for example ABCD-2345. Valid for 15 minutes.',
+    passwordLabel: 'New password',
+    confirmLabel: 'Confirm new password',
+    submit: 'Set password',
+    pending: 'Saving…',
+    invalidCode: 'That code is incorrect or has expired.',
+    resend: 'Send a new code',
+    resent: 'A new code is on its way.',
+    alreadyTitle: 'You already have a password',
+    alreadyText: 'You can change it at any time.',
+    changeLink: 'Change password',
+    back: 'Back to sign-in methods',
+    loading: 'Loading your account…',
+    errorTitle: 'Your account could not be loaded',
+  },
+
   account: {
     menu: 'Account menu',
     superAdmin: 'Super admin',
+    signInMethods: 'Sign-in methods',
     changePassword: 'Change password',
     signOut: 'Sign out',
     /** @param {string} name */

@@ -1,5 +1,5 @@
 /**
- * Sign in and sign out, shared by the login, code, registration and invite screens.
+ * Sign in and sign out, shared by the login, code, registration, invite and Google screens.
  * Passwords and codes exist only in the arguments and the request body; the registration and
  * challenge tokens only in the in memory flow store (./flow.js). None of them is ever stored,
  * logged, put in a URL, router state or a query key.
@@ -8,6 +8,8 @@ import { useCallback, useEffect, useRef, useSyncExternalStore } from 'react';
 import {
   acceptInvite as acceptInviteRequest,
   getMe,
+  googleComplete,
+  googleSignIn,
   login as loginRequest,
   registerBuyer,
   registerFarmer,
@@ -19,7 +21,16 @@ import {
 import { ApiError } from '@/api/errors';
 import { markReachable } from '@/lib/connectivity';
 import { waitSecondsFrom } from '@/lib/waitTime';
-import { clearFlow, getFlow, startFlow, updateResend } from './flow';
+import { disableGoogleAutoSelect } from '@/lib/google/googleClient';
+import {
+  clearFlow,
+  getFlow,
+  getGoogleFlow,
+  startFlow,
+  startGoogleFlow,
+  updateResend,
+} from './flow';
+import { preloadHome } from './preloadHome';
 import { clear, getSession, setFromLogin, setProfile } from './session';
 
 // While a screen signs someone in, PublicOnly must not redirect: the screen itself decides
@@ -88,11 +99,14 @@ export function usePublicRedirectHeld() {
  *   | { status: 'code_required' }} SignInOutcome
  */
 
+/** @typedef {import('@/api/schema').components['schemas']['GoogleAuthResult']} GoogleAuthResult */
+
 /**
- * Narrow an AuthResult to `signed_in`: an access token and a role are present.
- * @param {AuthResult | null | undefined} result
+ * Narrow an AuthResult or a GoogleAuthResult to `signed_in`: an access token and a role are
+ * present. The one place that decides it, for every sign in endpoint.
+ * @param {AuthResult | GoogleAuthResult | null | undefined} result
  */
-function isSignedIn(result) {
+export function isSignedIn(result) {
   return (
     result?.status === 'signed_in' &&
     typeof result.access_token === 'string' &&
@@ -115,8 +129,8 @@ function isCodeRequired(result) {
 
 /**
  * Handle any AuthResult, for every role and every endpoint that returns one.
- * - `signed_in`: store the session, load the profile (a failed GET /auth/me keeps the session),
- *   then forget the flow.
+ * - `signed_in`: store the session, start downloading the role's home screen, load the profile
+ *   (a failed GET /auth/me keeps the session), then forget the flow.
  * - `code_required`: start (or replace) the login flow; the screen opens /login/code.
  * Anything else is an unexpected response.
  * @param {AuthResult} result
@@ -126,6 +140,8 @@ export async function completeAuthResult(result) {
   if (isSignedIn(result)) {
     setFromLogin(result);
     markReachable();
+    // The home screen's code downloads while the profile loads, so the dashboard opens sooner.
+    if (!result.must_change_password) preloadHome(result.role);
     try {
       setProfile(await getMe());
     } catch {
@@ -261,10 +277,85 @@ export async function acceptInvitation({ email, code, password }) {
 }
 
 /**
+ * Narrow a GoogleAuthResult to `role_required`: a signup token is present.
+ * @param {GoogleAuthResult | null | undefined} result
+ */
+export function isRoleRequired(result) {
+  return (
+    result?.status === 'role_required' &&
+    typeof result.signup_token === 'string' &&
+    result.signup_token !== ''
+  );
+}
+
+/**
+ * @typedef {SignInOutcome | { status: 'role_required' }} GoogleOutcome
+ */
+
+/**
+ * POST /auth/google with the ID token and the nonce straight from Google's callback (they are
+ * not kept anywhere). `signed_in` is handled as every other sign in (completeAuthResult);
+ * `role_required` starts the Google flow for the one time role choice (/google/role).
+ * `onProgress` tells the screen as soon as Google's answer is accepted, before the profile
+ * loads: `{ step: 'signed_in', name }` (the account's name, or null) or `{ step: 'role_required' }`.
+ * It never receives a token.
+ * @param {{
+ *   credential: string,
+ *   nonce: string,
+ *   preferredRole?: unknown,
+ *   onProgress?: (progress: { step: 'signed_in', name: string | null } | { step: 'role_required' }) => void,
+ * }} params
+ * @returns {Promise<GoogleOutcome>}
+ */
+export async function signInWithGoogle({ credential, nonce, preferredRole, onProgress }) {
+  const result = await googleSignIn({ credential, nonce });
+  if (isSignedIn(result)) {
+    const name = typeof result.name === 'string' && result.name.trim() ? result.name.trim() : null;
+    onProgress?.({ step: 'signed_in', name });
+    return completeAuthResult(/** @type {AuthResult} */ (result));
+  }
+  if (isRoleRequired(result)) {
+    onProgress?.({ step: 'role_required' });
+    startGoogleFlow({
+      signupToken: /** @type {string} */ (result.signup_token),
+      email: result.email,
+      name: result.name,
+      preferredRole,
+    });
+    return { status: 'role_required' };
+  }
+  throw new ApiError({ status: 200, code: 'unexpected_response' });
+}
+
+/** Codes after which the signup token is useless: the person starts again from /login. */
+export const GOOGLE_RESTART_CODES = Object.freeze(['invalid_or_expired_ticket', 'google_retry']);
+
+/**
+ * POST /auth/google/complete with the flow's signup token and the chosen role (201 AuthResult).
+ * invalid_or_expired_ticket and google_retry end the flow.
+ * @param {'farmer' | 'buyer'} role
+ * @returns {Promise<SignInOutcome>}
+ */
+export async function completeGoogleSignup(role) {
+  const flow = getGoogleFlow();
+  if (!flow) throw flowLost();
+  let result;
+  try {
+    result = await googleComplete({ signupToken: flow.token, role });
+  } catch (error) {
+    if (error instanceof ApiError && GOOGLE_RESTART_CODES.includes(error.code)) clearFlow();
+    throw error;
+  }
+  return completeAuthResult(result);
+}
+
+/**
  * End the session and clear the TanStack Query cache. There is no backend logout call:
  * the token simply stops being sent and expires on the server (expires_in, 8 hours by default).
- * The flow store is cleared too (session.clear).
+ * The flow store is cleared too (session.clear). When Google's library was loaded in this page,
+ * automatic account selection is switched off (the only Google call on sign out).
  */
 export function signOut() {
   clear('logout');
+  disableGoogleAutoSelect();
 }

@@ -77,6 +77,8 @@ export function useForecast({ market, crop, horizon, enabled = true }) {
   });
 }
 
+export { useMe } from './account';
+
 export {
   findCachedListing,
   fetchMyListing,

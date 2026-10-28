@@ -25,6 +25,8 @@ const DEFAULT_EXPIRES_IN_SECONDS = 8 * 60 * 60;
  * @property {number} expiresAt  epoch milliseconds
  * @property {string | null} name
  * @property {string | null} userId  the user id from GET /auth/me (null until it loaded)
+ * @property {boolean} passwordSet  from password_set in GET /auth/me (true until it loaded)
+ * @property {boolean} googleLinked  from google_linked in GET /auth/me (false until it loaded)
  * @property {boolean} [isDevFake]  development only role preview; never persisted, never sent
  */
 
@@ -106,6 +108,8 @@ function load() {
       expiresAt: parsed.expiresAt,
       name: typeof parsed.name === 'string' ? parsed.name : null,
       userId: typeof parsed.userId === 'string' ? parsed.userId : null,
+      passwordSet: parsed.passwordSet !== false,
+      googleLinked: parsed.googleLinked === true,
     };
   } catch {
     return null;
@@ -153,11 +157,14 @@ export function setFromLogin(authResult) {
     expiresAt: Date.now() + expiresIn * 1000,
     name: null,
     userId: null,
+    passwordSet: true,
+    googleLinked: false,
   });
 }
 
 /**
- * Merge the profile from GET /auth/me: id, name, role, is_super_admin and must_change_password.
+ * Merge the profile from GET /auth/me: id, name, role, is_super_admin, must_change_password,
+ * password_set and google_linked (true and false when the fields are absent).
  * The super admin flag comes only from the login response and this profile, never from any
  * other endpoint; anything but `true` counts as false. It only controls what the UI shows.
  * The id lets the admin screens leave out actions on the administrator's own account.
@@ -172,6 +179,8 @@ export function setProfile(me) {
     role: isKnownRole(me.role) ? me.role : state.role,
     mustChangePassword: Boolean(me.must_change_password),
     isSuperAdmin: me.is_super_admin === true,
+    passwordSet: me.password_set !== false,
+    googleLinked: me.google_linked === true,
   });
 }
 
@@ -281,6 +290,8 @@ export function startDevFakeSession({ role, isSuperAdmin = false, mustChangePass
     expiresAt: Date.now() + 8 * 60 * 60 * 1000,
     name: `Preview ${role}`,
     userId: null,
+    passwordSet: true,
+    googleLinked: false,
     isDevFake: true,
   });
 }

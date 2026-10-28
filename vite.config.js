@@ -87,6 +87,9 @@ export default defineConfig({
       // Origin only: the OpenAPI paths already start with /api/v1.
       VITE_API_BASE_URL: 'http://localhost:8000',
       VITE_SHOW_API_STATUS: 'false',
+      // Google sign in is off unless a test sets a client ID (vi.stubEnv), so a local .env never
+      // makes the sign in screens load Google in tests.
+      VITE_GOOGLE_CLIENT_ID: '',
     },
     testTimeout: 15000,
   },

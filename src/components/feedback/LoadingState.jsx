@@ -16,3 +16,27 @@ export function LoadingState({ label = 'Loading…', rows = 3, className }) {
     </div>
   );
 }
+
+/**
+ * The whole page's placeholder while a screen's code loads inside the app shell (right after
+ * signing in, or on the first visit to a screen): a title, a row of summary cards and a larger
+ * block, so the page appears to fill in rather than stay blank. Announced once.
+ * @param {{ label?: string }} props
+ */
+export function PageLoadingState({ label = 'Loading page…' }) {
+  return (
+    <div role="status" aria-live="polite" className="flex flex-col gap-6">
+      <span className="sr-only">{label}</span>
+      <div className="flex flex-col gap-2">
+        <Skeleton className="h-8 w-2/3 max-w-xs" />
+        <Skeleton className="h-4 w-full max-w-md" />
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {Array.from({ length: 3 }, (_, i) => (
+          <Skeleton key={i} className="h-28 w-full" />
+        ))}
+      </div>
+      <Skeleton className="h-64 w-full" />
+    </div>
+  );
+}
