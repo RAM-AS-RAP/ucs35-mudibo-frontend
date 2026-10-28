@@ -50,6 +50,10 @@ const PAIRS = [
   ['accent-gold', 'card', 3],
   ['accent-gold-text', 'card', 4.5],
   ['accent-gold-text', 'accent-gold-soft', 4.5],
+  // The green sidebar and drawer: link text, muted text, and the white focus ring on it.
+  ['on-primary', 'sidebar', 4.5],
+  ['on-primary-muted', 'sidebar', 4.5],
+  ['card', 'sidebar', 3],
 ];
 
 describe('design token contrast (WCAG)', () => {
@@ -80,7 +84,6 @@ describe('design token contrast (WCAG)', () => {
     ]) {
       expect(tokens[name], name).toMatch(/^#[0-9A-F]{6}$/);
     }
-    expect(tokens.sidebar).toBe(tokens.canvas);
     expect(tokens['chart-1']).toBe('#1B5E3B');
     expect(tokens['chart-2']).toBe('#B45309');
   });

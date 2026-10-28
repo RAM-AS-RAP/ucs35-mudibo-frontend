@@ -5,11 +5,17 @@ import { ADMIN_COMMON } from '@/lib/adminMessages';
 
 /**
  * The Refresh button of an admin screen: a manual refetch (admin screens never poll).
- * @param {{ onRefresh: () => void, refreshing?: boolean, disabled?: boolean }} props
+ * @param {{ onRefresh: () => void, refreshing?: boolean, disabled?: boolean, className?: string }} props
  */
-export function RefreshButton({ onRefresh, refreshing = false, disabled = false }) {
+export function RefreshButton({ onRefresh, refreshing = false, disabled = false, className }) {
   return (
-    <Button type="button" variant="outline" disabled={disabled || refreshing} onClick={onRefresh}>
+    <Button
+      type="button"
+      variant="outline"
+      disabled={disabled || refreshing}
+      onClick={onRefresh}
+      className={className}
+    >
       <RefreshCw aria-hidden="true" className={refreshing ? 'animate-spin' : undefined} />
       {ADMIN_COMMON.refresh}
     </Button>

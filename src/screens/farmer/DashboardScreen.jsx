@@ -1,10 +1,11 @@
 import { Link } from 'react-router';
-import { ArrowRight, LineChart, Sprout, TrendingUp } from 'lucide-react';
+import { ArrowRight, Bean, LineChart, MapPin, TrendingUp, Wheat } from 'lucide-react';
 import { useCurrentPrices, useForecast, useMarkets } from '@/api/queries';
 import { useSession } from '@/auth/session';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { DashboardHero, heroButton, heroOutlineButton } from '@/components/display/DashboardHero';
 import { DeltaTag } from '@/components/display/DeltaTag';
 import { PriceChange } from '@/components/display/PriceCard';
 import { EmptyState } from '@/components/feedback/EmptyState';
@@ -19,6 +20,31 @@ import { isForecastUsable } from '@/lib/shapSchema';
 import { monthsOlderByMarket } from '@/lib/trends';
 import { usePageTitle } from '@/lib/usePageTitle';
 import { CROPS } from './params';
+
+/** A crop's icon, for the card headers. */
+const CROP_ICON = { maize: Wheat, beans: Bean };
+
+/**
+ * A card title with the crop's icon in a tinted tile.
+ * @param {{ crop: 'maize' | 'beans', tone?: 'primary' | 'gold' }} props
+ */
+function CropTitle({ crop, tone = 'primary' }) {
+  const Icon = CROP_ICON[crop] ?? Wheat;
+  return (
+    <CardTitle as="h3" className="flex items-center gap-2.5">
+      <span
+        className={
+          tone === 'gold'
+            ? 'flex size-9 items-center justify-center rounded-lg bg-accent-gold-soft text-accent-gold-text'
+            : 'flex size-9 items-center justify-center rounded-lg bg-primary-soft text-primary'
+        }
+      >
+        <Icon aria-hidden="true" className="size-5" />
+      </span>
+      {cropLabel(crop)}
+    </CardTitle>
+  );
+}
 
 /**
  * "Latest prices" for one crop: every market's price per kg with its change.
@@ -44,15 +70,18 @@ function LatestPricesCard({ crop }) {
     const items = current.data.items;
     const older = monthsOlderByMarket(items);
     body = (
-      <ul className="flex flex-col divide-y divide-border">
+      <ul className="flex flex-col gap-2">
         {items.map((item) => {
           const market = String(item.market);
           return (
-            <li key={market} className="flex flex-col gap-1.5 py-3 first:pt-0 last:pb-0">
+            <li key={market} className="flex flex-col gap-2 rounded-xl bg-canvas px-3 py-2.5">
               <div className="flex flex-wrap items-baseline justify-between gap-x-3">
-                <span className="font-medium text-text">{market}</span>
+                <span className="flex items-center gap-1.5 font-semibold text-text">
+                  <MapPin aria-hidden="true" className="size-4 shrink-0 text-primary" />
+                  {market}
+                </span>
                 <span className="text-text">
-                  <span className="text-lg font-bold tabular-nums">
+                  <span className="text-xl font-extrabold tracking-tight tabular-nums">
                     {formatKES(/** @type {number} */ (item.avg_price_per_kg))}
                   </span>{' '}
                   <span className="text-text-secondary">{PRICE_TEXT.perKg}</span>
@@ -73,11 +102,11 @@ function LatestPricesCard({ crop }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle as="h3">{name}</CardTitle>
+        <CropTitle crop={crop} />
       </CardHeader>
-      <CardContent className="flex flex-col gap-4">
+      <CardContent className="flex flex-1 flex-col gap-4">
         {body}
-        <Button asChild variant="outline" className="w-fit">
+        <Button asChild variant="outline" className="mt-auto w-fit">
           <Link to={`/farmer/prices?crop=${crop}`}>
             <span>{`See ${name.toLowerCase()} prices`}</span>
             <ArrowRight aria-hidden="true" />
@@ -117,9 +146,11 @@ function ForecastSnapshotCard({ market, crop }) {
     const forecast = query.data.data;
     body = (
       <div className="flex flex-col gap-2">
-        <p className="text-sm font-medium text-text-secondary">{inLabelCap(1)}</p>
+        <p className="w-fit rounded-full bg-accent-gold-soft px-2.5 py-0.5 text-sm font-semibold text-accent-gold-text">
+          {inLabelCap(1)}
+        </p>
         <p className="text-text">
-          <span className="text-2xl font-bold tabular-nums">
+          <span className="text-4xl font-extrabold tracking-tight tabular-nums">
             {formatKES(forecast.predicted_price)}
           </span>{' '}
           <span className="text-text-secondary">{PRICE_TEXT.perKg}</span>
@@ -135,11 +166,11 @@ function ForecastSnapshotCard({ market, crop }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle as="h3">{name}</CardTitle>
+        <CropTitle crop={crop} tone="gold" />
       </CardHeader>
-      <CardContent className="flex flex-col gap-4">
+      <CardContent className="flex flex-1 flex-col gap-4">
         {body}
-        <Button asChild variant="outline" className="w-fit">
+        <Button asChild variant="outline" className="mt-auto w-fit">
           <Link to={`/farmer/forecast?${params}`}>
             <span>{`See the ${name.toLowerCase()} forecast`}</span>
             <ArrowRight aria-hidden="true" />
@@ -167,7 +198,8 @@ function ForecastSnapshot() {
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-        <p className="text-text">
+        <p className="flex items-center gap-1.5 text-text">
+          <MapPin aria-hidden="true" className="size-4 shrink-0 text-primary" />
           Market: <span className="font-semibold">{first}</span>
         </p>
         <Button asChild variant="link" className="px-1">
@@ -209,45 +241,30 @@ export default function DashboardScreen() {
     : MESSAGES.account.welcomeGeneric;
   return (
     <div className="flex flex-col gap-8">
-      <div className="bg-brand relative overflow-hidden rounded-2xl px-5 py-6 text-on-primary shadow-raised sm:px-8 sm:py-8">
-        <Sprout
-          aria-hidden="true"
-          className="pointer-events-none absolute -right-6 -bottom-10 size-48 text-on-primary opacity-10 sm:size-56"
-        />
-        <div className="relative flex flex-col gap-4">
-          <div className="flex flex-col gap-1">
-            <p className="text-lg font-medium text-on-primary-muted">{welcome}</p>
-            <h1
-              ref={headingRef}
-              tabIndex={-1}
-              className="text-3xl font-extrabold tracking-tight outline-none sm:text-4xl"
-            >
-              Dashboard
-            </h1>
-            <p className="max-w-lg text-on-primary-muted">
-              Market prices, price forecasts and your listings in one place.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Button asChild className="bg-card text-primary hover:bg-primary-soft">
+      <DashboardHero
+        greeting={welcome}
+        title="Dashboard"
+        headingRef={headingRef}
+        description="Market prices, price forecasts and your listings in one place."
+        actions={
+          <>
+            <Button asChild className={heroButton}>
               <Link to="/farmer/prices">
                 <LineChart aria-hidden="true" />
                 <span>Check prices</span>
               </Link>
             </Button>
-            <Button
-              asChild
-              variant="outline"
-              className="border-on-primary-muted bg-transparent text-on-primary shadow-none hover:border-card hover:bg-card/10 hover:text-on-primary"
-            >
+            <Button asChild variant="outline" className={heroOutlineButton}>
               <Link to="/farmer/forecast">
                 <TrendingUp aria-hidden="true" />
                 <span>Get a forecast</span>
               </Link>
             </Button>
-          </div>
-        </div>
-      </div>
+          </>
+        }
+      />
+
+      <ListingsSummary />
 
       <section aria-labelledby="dashboard-prices" className="flex flex-col gap-3">
         <SectionHeading id="dashboard-prices" icon={LineChart}>
@@ -266,8 +283,6 @@ export default function DashboardScreen() {
         </SectionHeading>
         <ForecastSnapshot />
       </section>
-
-      <ListingsSummary />
     </div>
   );
 }

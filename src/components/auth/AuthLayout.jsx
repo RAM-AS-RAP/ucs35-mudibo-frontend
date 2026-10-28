@@ -1,6 +1,5 @@
 import { LineChart, ShieldCheck, ShoppingBasket, TrendingUp } from 'lucide-react';
 import { BrandMark } from '@/components/layout/BrandMark';
-import { MESSAGES } from '@/lib/messages';
 
 /** The brand panel's short list of what the app offers (wide screens only). */
 const HIGHLIGHTS = [
@@ -22,9 +21,9 @@ const HIGHLIGHTS = [
 ];
 
 /**
- * The account screens' layout: the form card with the title (the page's h1) and subtitle, and
- * the research prototype note. From the `lg` breakpoint a green brand panel sits beside the
- * form; it comes after the form in the reading order, so the heading is read first.
+ * The account screens' layout: the form card with the title (the page's h1) and subtitle.
+ * From the `lg` breakpoint a green brand panel sits beside the form; it comes after the form
+ * in the reading order, so the heading is read first.
  * @param {{
  *   title: string,
  *   subtitle?: import('react').ReactNode,
@@ -63,9 +62,6 @@ export function AuthLayout({ title, subtitle, headingRef, children, after }) {
             {children}
           </section>
           {after}
-          <footer className="text-center text-sm text-text-secondary">
-            {MESSAGES.layout.footer}
-          </footer>
         </div>
       </div>
 

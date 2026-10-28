@@ -28,7 +28,8 @@
   /* Surfaces */
   /* Warm off white, so white cards stand out from the page. */
   --canvas: #f6f7f2;
-  --sidebar: #f6f7f2;
+  /* Deep brand green navigation (sidebar and drawer), light text on it. */
+  --sidebar: #0f3d26;
   --card: #ffffff;
 
   /* Text */
@@ -88,7 +89,7 @@
   --destructive-foreground: var(--on-primary);
   --input: var(--border);
   --ring: var(--focus-ring);
-  --sidebar-foreground: var(--text);
+  --sidebar-foreground: var(--on-primary);
 
   --radius: 0.875rem;
 }

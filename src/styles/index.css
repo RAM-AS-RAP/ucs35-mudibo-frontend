@@ -148,6 +148,12 @@
       linear-gradient(135deg, var(--primary) 0%, var(--primary-deep) 100%);
   }
 
+  /* The navigation surface: deep green, a touch lighter at the top. */
+  .bg-sidebar-brand {
+    background-color: var(--sidebar);
+    background-image: linear-gradient(180deg, var(--primary) 0%, var(--sidebar) 55%);
+  }
+
   /* A faint dot grid over the brand surface, fading out towards the bottom. Decorative. */
   .bg-dot-grid {
     background-image: radial-gradient(rgb(255 255 255 / 0.1) 1px, transparent 1px);

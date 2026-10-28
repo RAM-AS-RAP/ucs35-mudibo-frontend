@@ -1,5 +1,12 @@
 import { cn } from '@/lib/utils';
 
+/** Icon tile colours, shared with other dashboard tiles. */
+export const TILE_TONES = Object.freeze({
+  primary: 'bg-primary-soft text-primary',
+  gold: 'bg-accent-gold-soft text-accent-gold-text',
+  neutral: 'bg-neutral-bg text-neutral-text',
+});
+
 /**
  * A labelled figure, for example "Current price" and "KES 45.50".
  * @param {{
@@ -7,10 +14,11 @@ import { cn } from '@/lib/utils';
  *   value: import('react').ReactNode,
  *   hint?: import('react').ReactNode,
  *   icon?: import('react').ComponentType<{ className?: string, 'aria-hidden'?: boolean | 'true' }>,
+ *   tone?: 'primary' | 'gold' | 'neutral',
  *   className?: string,
- * }} props
+ * }} props  tone: the icon tile's colour (decoration only; the label carries the meaning)
  */
-export function StatCard({ label, value, hint, icon: Icon, className }) {
+export function StatCard({ label, value, hint, icon: Icon, tone = 'primary', className }) {
   return (
     <div
       className={cn(
@@ -21,7 +29,12 @@ export function StatCard({ label, value, hint, icon: Icon, className }) {
       <div className="flex items-center justify-between gap-2">
         <p className="text-sm font-medium text-text-secondary">{label}</p>
         {Icon && (
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary">
+          <span
+            className={cn(
+              'flex size-10 shrink-0 items-center justify-center rounded-xl',
+              TILE_TONES[tone],
+            )}
+          >
             <Icon aria-hidden="true" className="size-5" />
           </span>
         )}

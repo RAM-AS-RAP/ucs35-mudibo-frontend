@@ -52,14 +52,14 @@ function SheetContent({ className, children, side = 'left', ...props }) {
       <SheetPrimitive.Content
         data-slot="sheet-content"
         className={cn(
-          'fixed z-50 flex flex-col gap-4 bg-sidebar text-text shadow-lg transition ease-in-out data-[state=closed]:animate-out data-[state=closed]:duration-200 data-[state=open]:animate-in data-[state=open]:duration-300',
+          'bg-sidebar-brand fixed z-50 flex flex-col gap-4 text-sidebar-foreground shadow-lg transition ease-in-out data-[state=closed]:animate-out data-[state=closed]:duration-200 data-[state=open]:animate-in data-[state=open]:duration-300',
           SIDE_CLASSES[side],
           className,
         )}
         {...props}
       >
         {children}
-        <SheetPrimitive.Close className="absolute top-2 right-2 inline-flex size-11 items-center justify-center rounded-md text-text-secondary hover:bg-card focus-visible:ring-2 focus-visible:ring-ring">
+        <SheetPrimitive.Close className="absolute top-2 right-2 inline-flex size-11 items-center justify-center rounded-md text-on-primary-muted hover:bg-card/10 hover:text-on-primary focus-visible:outline-card">
           <XIcon aria-hidden="true" className="size-5" />
           <span className="sr-only">Close</span>
         </SheetPrimitive.Close>
@@ -92,7 +92,7 @@ function SheetTitle({ className, ...props }) {
   return (
     <SheetPrimitive.Title
       data-slot="sheet-title"
-      className={cn('font-semibold text-text', className)}
+      className={cn('font-semibold text-on-primary', className)}
       {...props}
     />
   );
@@ -102,7 +102,7 @@ function SheetDescription({ className, ...props }) {
   return (
     <SheetPrimitive.Description
       data-slot="sheet-description"
-      className={cn('text-sm text-text-secondary', className)}
+      className={cn('text-sm text-on-primary-muted', className)}
       {...props}
     />
   );
