@@ -524,7 +524,6 @@ export const PHOTO_TEXT = Object.freeze({
   current: 'Current photo',
   willRemove: 'The current photo will be removed when you save.',
   undoRemove: 'Keep the current photo',
-  sizeNote: 'Photos are resized automatically. Location data in photos is removed.',
   previewAlt: 'Preview of the chosen photo',
 });
 
