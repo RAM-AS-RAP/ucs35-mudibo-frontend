@@ -75,22 +75,11 @@ describe('OrdersScreen', () => {
     expect(byId(orders[1].order_id)).not.toHaveTextContent('Test payment received');
   });
 
-  it('shows the response note and the delivery notice', async () => {
+  it('shows no payment or delivery note above the orders', async () => {
     await openOrders();
-    expect(screen.getByTestId('orders-note')).toHaveTextContent(fixtures.farmerOrdersPage.note);
-    expect(
-      screen.getByText(
-        'AgriSence does not arrange delivery or share contact details in this prototype. Agree handover directly with the buyer through your own channels.',
-      ),
-    ).toBeInTheDocument();
-  });
-
-  it('falls back to the constant note when the response note is empty', async () => {
-    serveOrders(orders, '');
-    await openOrders();
-    expect(screen.getByTestId('orders-note')).toHaveTextContent(
-      'Payments run in a test environment. A paid order is a test confirmation and no real money moves.',
-    );
+    expect(screen.queryByTestId('orders-note')).not.toBeInTheDocument();
+    expect(screen.queryByText(/no real money moves/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Agree handover directly with the buyer/)).not.toBeInTheDocument();
   });
 
   it('never shows a buyer contact detail, even if the response carried one', async () => {

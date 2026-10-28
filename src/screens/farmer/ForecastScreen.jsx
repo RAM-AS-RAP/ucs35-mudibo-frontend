@@ -4,9 +4,10 @@ import {
   AlertCircle,
   ArrowRight,
   CalendarClock,
-  ChevronDown,
   ChartLine,
+  ChevronDown,
   PackagePlus,
+  TrendingUp,
 } from 'lucide-react';
 import { useCurrentPrices, useForecast, useMarkets } from '@/api/queries';
 import { Button } from '@/components/ui/button';
@@ -14,7 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DataTable } from '@/components/display/DataTable';
 import { DeltaTag } from '@/components/display/DeltaTag';
 import { ExplainabilityBars } from '@/components/display/ExplainabilityBars';
-import { PageHeader } from '@/components/display/PageHeader';
+import { PageHero } from '@/components/display/DashboardHero';
 import { PriceCard } from '@/components/display/PriceCard';
 import { Segmented } from '@/components/display/Segmented';
 import { EmptyState } from '@/components/feedback/EmptyState';
@@ -420,9 +421,10 @@ export default function ForecastScreen() {
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader
+      <PageHero
         title="Forecast"
         description="Choose a market and crop, then request what the price model expects."
+        icon={TrendingUp}
         headingRef={headingRef}
       />
       {body}
