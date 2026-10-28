@@ -220,12 +220,7 @@ export default function PricesScreen() {
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHero
-        title="Prices"
-        description="Monthly wholesale prices per kg."
-        icon={LineChart}
-        headingRef={headingRef}
-      />
+      <PageHero title="Latest market prices per kg" icon={LineChart} headingRef={headingRef} />
       <Segmented
         legend="Crop"
         name="crop"
