@@ -148,6 +148,13 @@
       linear-gradient(135deg, var(--primary) 0%, var(--primary-deep) 100%);
   }
 
+  /* A faint dot grid over the brand surface, fading out towards the bottom. Decorative. */
+  .bg-dot-grid {
+    background-image: radial-gradient(rgb(255 255 255 / 0.1) 1px, transparent 1px);
+    background-size: 22px 22px;
+    mask-image: linear-gradient(to bottom, black 0%, transparent 75%);
+  }
+
   /* Steps that pulled a forecast down: hatched, so the direction never depends on colour alone. */
   .bar-hatch-down {
     background-color: var(--negative-soft);

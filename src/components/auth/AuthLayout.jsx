@@ -1,14 +1,23 @@
-import { LineChart, ShoppingBasket, Sprout, TrendingUp } from 'lucide-react';
+import { LineChart, ShieldCheck, ShoppingBasket, TrendingUp } from 'lucide-react';
 import { BrandMark } from '@/components/layout/BrandMark';
 import { MESSAGES } from '@/lib/messages';
 
 /** The brand panel's short list of what the app offers (wide screens only). */
 const HIGHLIGHTS = [
-  { icon: LineChart, text: 'Monthly maize and bean prices for your markets' },
-  { icon: TrendingUp, text: 'One month price forecasts with a plain explanation' },
+  {
+    icon: LineChart,
+    title: 'Market prices',
+    text: 'Monthly maize and bean prices across Kenyan markets.',
+  },
+  {
+    icon: TrendingUp,
+    title: 'Price forecasts',
+    text: 'One month forecasts, with a plain explanation of how the model reached them.',
+  },
   {
     icon: ShoppingBasket,
-    text: 'Farmers list produce, buyers order and pay by M-Pesa (test mode)',
+    title: 'Direct trade',
+    text: 'Farmers list their produce; buyers order and pay by M-Pesa.',
   },
 ];
 
@@ -29,9 +38,9 @@ export function AuthLayout({ title, subtitle, headingRef, children, after }) {
     <main
       id="main-content"
       tabIndex={-1}
-      className="flex min-h-dvh bg-canvas outline-none lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]"
+      className="flex min-h-dvh bg-canvas outline-none lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-start"
     >
-      <div className="flex w-full flex-col items-center px-4 py-8 sm:justify-center lg:order-2 lg:px-8">
+      <div className="flex w-full flex-col items-center px-4 py-8 sm:justify-center lg:order-2 lg:min-h-dvh lg:px-8">
         <div className="flex w-full max-w-md flex-col gap-6">
           <p className="flex justify-center lg:hidden">
             <BrandMark size="lg" />
@@ -60,30 +69,42 @@ export function AuthLayout({ title, subtitle, headingRef, children, after }) {
         </div>
       </div>
 
-      <div className="bg-brand relative hidden overflow-hidden text-on-primary lg:order-1 lg:flex lg:flex-col lg:justify-between lg:p-12">
-        <Sprout
-          aria-hidden="true"
-          className="pointer-events-none absolute -right-16 -bottom-16 size-96 text-on-primary opacity-[0.07]"
-        />
-        <BrandMark size="lg" inverse />
-        <div className="relative flex max-w-md flex-col gap-6">
-          <p className="text-4xl leading-tight font-extrabold tracking-tight">
-            Know the market before you sell.
-          </p>
-          <ul className="flex flex-col gap-4">
-            {HIGHLIGHTS.map(({ icon: Icon, text }) => (
-              <li key={text} className="flex items-start gap-3 text-on-primary-muted">
-                <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-card/15 text-on-primary">
+      <div className="bg-brand relative hidden overflow-hidden text-on-primary lg:sticky lg:top-0 lg:order-1 lg:flex lg:h-dvh lg:items-center lg:px-12 xl:px-16">
+        <div aria-hidden="true" className="bg-dot-grid pointer-events-none absolute inset-0" />
+        <div className="relative flex w-full max-w-lg flex-col gap-10">
+          <BrandMark size="lg" inverse />
+
+          <div className="flex flex-col gap-4">
+            <p className="w-fit rounded-full bg-card/10 px-3 py-1 text-sm font-medium ring-1 ring-card/20">
+              For farmers and buyers in Kenya
+            </p>
+            <p className="text-4xl leading-[1.1] font-extrabold tracking-tight xl:text-5xl">
+              Know the market before you sell.
+            </p>
+            <p className="max-w-md text-lg text-on-primary-muted">
+              Prices, forecasts and a marketplace in one app, made for smallholder farming.
+            </p>
+          </div>
+
+          <ul className="flex flex-col divide-y divide-card/10 rounded-2xl bg-card/[0.06] ring-1 ring-card/15 backdrop-blur-sm">
+            {HIGHLIGHTS.map(({ icon: Icon, title, text }) => (
+              <li key={title} className="flex items-start gap-4 p-5">
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-card text-primary shadow-card">
                   <Icon aria-hidden="true" className="size-5" />
                 </span>
-                <span className="pt-1.5">{text}</span>
+                <span className="flex flex-col gap-0.5">
+                  <span className="font-semibold">{title}</span>
+                  <span className="text-on-primary-muted">{text}</span>
+                </span>
               </li>
             ))}
           </ul>
+
+          <p className="flex items-center gap-2 text-sm text-on-primary-muted">
+            <ShieldCheck aria-hidden="true" className="size-4 shrink-0" />
+            <span>Test mode: payments run in the M-Pesa sandbox. No real money moves.</span>
+          </p>
         </div>
-        <p className="relative text-sm text-on-primary-muted">
-          Built for smallholder farmers and buyers in Kenya.
-        </p>
       </div>
     </main>
   );
