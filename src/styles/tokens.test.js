@@ -40,6 +40,16 @@ const PAIRS = [
   ['chart-2', 'card', 3],
   ['chart-3', 'card', 3],
   ['chart-4', 'card', 3],
+  // Visual refresh: tints, the brand gradient and the gold accent.
+  ['primary', 'primary-soft', 4.5],
+  ['text', 'primary-soft', 4.5],
+  ['text-secondary', 'primary-soft', 4.5],
+  ['on-primary', 'primary-deep', 4.5],
+  ['on-primary-muted', 'primary', 4.5],
+  ['on-primary-muted', 'primary-deep', 4.5],
+  ['accent-gold', 'card', 3],
+  ['accent-gold-text', 'card', 4.5],
+  ['accent-gold-text', 'accent-gold-soft', 4.5],
 ];
 
 describe('design token contrast (WCAG)', () => {

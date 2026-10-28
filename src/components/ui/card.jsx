@@ -5,7 +5,7 @@ function Card({ className, ...props }) {
     <div
       data-slot="card"
       className={cn(
-        'flex flex-col gap-4 rounded-xl border border-border bg-card py-5 text-card-foreground shadow-sm',
+        'flex flex-col gap-4 rounded-2xl border border-border bg-card py-5 text-card-foreground shadow-card',
         className,
       )}
       {...props}
@@ -28,7 +28,7 @@ function CardTitle({ className, as: Tag = 'h2', ...props }) {
   return (
     <Tag
       data-slot="card-title"
-      className={cn('text-lg leading-tight font-semibold', className)}
+      className={cn('text-lg leading-tight font-bold tracking-tight', className)}
       {...props}
     />
   );

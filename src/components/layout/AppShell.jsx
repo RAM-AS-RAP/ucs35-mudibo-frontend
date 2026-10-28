@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, NavLink } from 'react-router';
-import { Menu, Sprout } from 'lucide-react';
+import { Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Sheet,
@@ -14,6 +14,7 @@ import { useSession } from '@/auth/session';
 import { ROLE_HOME } from '@/auth/roles';
 import { cn } from '@/lib/utils';
 import { AccountMenu } from './AccountMenu';
+import { BrandMark } from './BrandMark';
 import { DRAWER_DESCRIPTION, getNavItems } from './navConfig';
 import { NavBadge } from './NavBadge';
 
@@ -31,8 +32,10 @@ function SideNavList({ items, onNavigate }) {
             onClick={onNavigate}
             className={({ isActive }) =>
               cn(
-                'flex min-h-11 items-center gap-3 rounded-md px-3 py-2 font-medium transition-colors',
-                isActive ? 'bg-primary text-on-primary' : 'text-text hover:bg-card',
+                'relative flex min-h-11 items-center gap-3 rounded-lg px-3 py-2 font-medium transition-colors',
+                isActive
+                  ? 'bg-primary-soft font-semibold text-primary before:absolute before:inset-y-2 before:left-0 before:w-1 before:rounded-full before:bg-primary'
+                  : 'text-text-secondary hover:bg-card hover:text-text',
               )
             }
           >
@@ -72,7 +75,7 @@ export function AppShell({ children }) {
         Skip to content
       </a>
 
-      <header className="sticky top-0 z-30 flex h-16 items-center gap-2 border-b border-border bg-card px-3 sm:px-4">
+      <header className="sticky top-0 z-30 flex h-16 items-center gap-2 border-b border-border bg-card/95 px-3 shadow-card backdrop-blur-sm sm:px-4">
         <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
           <SheetTrigger asChild>
             <Button variant="ghost" size="icon" className="lg:hidden">
@@ -97,12 +100,8 @@ export function AppShell({ children }) {
             </nav>
           </SheetContent>
         </Sheet>
-        <Link
-          to={home}
-          className="flex min-h-11 shrink-0 items-center gap-2 rounded-md px-1 text-lg font-bold text-primary"
-        >
-          <Sprout aria-hidden="true" className="size-6" />
-          <span>AgriSence</span>
+        <Link to={home} className="flex min-h-11 shrink-0 items-center rounded-lg px-1">
+          <BrandMark />
         </Link>
         <div className="ml-auto flex min-w-0 items-center gap-2">
           <AccountMenu />

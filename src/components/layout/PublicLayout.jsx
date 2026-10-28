@@ -1,4 +1,4 @@
-import { Sprout } from 'lucide-react';
+import { BrandMark } from './BrandMark';
 
 /**
  * Centered single column layout for public and account pages (login, register, errors).
@@ -11,9 +11,8 @@ export function PublicLayout({ children }) {
       tabIndex={-1}
       className="flex min-h-dvh flex-col items-center justify-center gap-6 bg-canvas px-4 py-8 outline-none"
     >
-      <p className="flex items-center gap-2 text-2xl font-bold text-primary">
-        <Sprout aria-hidden="true" className="size-8" />
-        <span>AgriSence</span>
+      <p className="flex justify-center">
+        <BrandMark size="lg" />
       </p>
       <div className="flex w-full max-w-md flex-col gap-4">{children}</div>
     </main>

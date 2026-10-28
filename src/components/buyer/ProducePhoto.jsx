@@ -13,7 +13,7 @@ export function ProducePhoto({ imageUrl, alt, className, eager = false }) {
     return (
       <div
         className={cn(
-          'flex aspect-[4/3] w-full items-center justify-center rounded-lg bg-neutral-bg',
+          'flex aspect-[4/3] w-full items-center justify-center rounded-xl bg-primary-soft',
           className,
         )}
         data-testid="produce-photo-placeholder"
@@ -28,7 +28,7 @@ export function ProducePhoto({ imageUrl, alt, className, eager = false }) {
       alt={alt}
       loading={eager ? 'eager' : 'lazy'}
       decoding="async"
-      className={cn('aspect-[4/3] w-full rounded-lg bg-neutral-bg object-cover', className)}
+      className={cn('aspect-[4/3] w-full rounded-xl bg-primary-soft object-cover', className)}
     />
   );
 }

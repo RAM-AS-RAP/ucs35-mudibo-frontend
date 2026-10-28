@@ -13,22 +13,35 @@
   --primary: #1b5e3b;
   --primary-hover: #14482d;
   --on-primary: #ffffff;
+  /* Soft green tint: icon tiles, the active navigation item, hover fills (primary text on it). */
+  --primary-soft: #e4f1e8;
+  /* Deep green: the end of the brand gradient (hero banners, sign in panel). */
+  --primary-deep: #0f3d26;
+  /* Pale green text on the brand gradient (secondary lines in hero banners). */
+  --on-primary-muted: #d7ebdd;
+
+  /* Harvest gold accent: highlights and icon tiles, used sparingly. accent-text for words. */
+  --accent-gold: #a16207;
+  --accent-gold-soft: #fbf1d9;
+  --accent-gold-text: #854d0e;
 
   /* Surfaces */
-  --canvas: #eaf5ec;
-  --sidebar: #eaf5ec;
+  /* Warm off white, so white cards stand out from the page. */
+  --canvas: #f6f7f2;
+  --sidebar: #f6f7f2;
   --card: #ffffff;
 
   /* Text */
-  --text: #111827;
-  --text-secondary: #4b5563;
+  /* Warm (stone) neutrals instead of cool greys. */
+  --text: #1c1917;
+  --text-secondary: #57534e;
 
   /* Lines */
-  --border: #d1d5db;
+  --border: #e0ddd5;
 
   /* Neutral tags */
-  --neutral-bg: #f3f4f6;
-  --neutral-text: #374151;
+  --neutral-bg: #f1efea;
+  --neutral-text: #44403c;
 
   /* Positive: adjusted from #16A34A and #15803D to pass contrast on the mint canvas */
   --positive: #16a149;
@@ -52,7 +65,11 @@
   --focus-ring: #1b5e3b;
 
   /* Dialog and drawer backdrop */
-  --overlay: rgb(17 24 39 / 0.5);
+  --overlay: rgb(28 25 23 / 0.5);
+
+  /* Elevation scale (warm shadows). */
+  --elevation-card: 0 1px 2px rgb(28 25 23 / 0.04), 0 1px 3px rgb(28 25 23 / 0.06);
+  --elevation-raised: 0 4px 12px rgb(28 25 23 / 0.08), 0 2px 4px rgb(28 25 23 / 0.04);
 
   /* shadcn/ui semantic variables mapped to the tokens above */
   --background: var(--canvas);
@@ -65,7 +82,7 @@
   --secondary-foreground: var(--neutral-text);
   --muted: var(--neutral-bg);
   --muted-foreground: var(--text-secondary);
-  --accent: var(--canvas);
+  --accent: var(--primary-soft);
   --accent-foreground: var(--text);
   --destructive: var(--negative-text);
   --destructive-foreground: var(--on-primary);
@@ -73,5 +90,5 @@
   --ring: var(--focus-ring);
   --sidebar-foreground: var(--text);
 
-  --radius: 0.75rem;
+  --radius: 0.875rem;
 }

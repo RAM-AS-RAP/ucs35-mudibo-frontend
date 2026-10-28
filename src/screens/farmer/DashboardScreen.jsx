@@ -1,12 +1,11 @@
 import { Link } from 'react-router';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, LineChart, Sprout, TrendingUp } from 'lucide-react';
 import { useCurrentPrices, useForecast, useMarkets } from '@/api/queries';
 import { useSession } from '@/auth/session';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DeltaTag } from '@/components/display/DeltaTag';
-import { PageHeader } from '@/components/display/PageHeader';
 import { PriceChange } from '@/components/display/PriceCard';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { ErrorState } from '@/components/feedback/ErrorState';
@@ -186,6 +185,21 @@ function ForecastSnapshot() {
   );
 }
 
+/**
+ * A section heading with a tinted icon tile.
+ * @param {{ id: string, icon: import('react').ComponentType<{ className?: string, 'aria-hidden'?: boolean | 'true' }>, children: import('react').ReactNode }} props
+ */
+function SectionHeading({ id, icon: Icon, children }) {
+  return (
+    <h2 id={id} className="flex items-center gap-2.5 text-xl font-bold tracking-tight text-text">
+      <span className="flex size-9 items-center justify-center rounded-lg bg-primary-soft text-primary">
+        <Icon aria-hidden="true" className="size-5" />
+      </span>
+      {children}
+    </h2>
+  );
+}
+
 /** The farmer's home: latest prices, a forecast snapshot, and a summary of listings and orders. */
 export default function DashboardScreen() {
   const headingRef = usePageTitle('Dashboard');
@@ -194,14 +208,51 @@ export default function DashboardScreen() {
     ? MESSAGES.account.welcome(session.name)
     : MESSAGES.account.welcomeGeneric;
   return (
-    <div className="flex flex-col gap-6">
-      <p className="text-lg font-medium text-text">{welcome}</p>
-      <PageHeader title="Dashboard" headingRef={headingRef} />
+    <div className="flex flex-col gap-8">
+      <div className="bg-brand relative overflow-hidden rounded-2xl px-5 py-6 text-on-primary shadow-raised sm:px-8 sm:py-8">
+        <Sprout
+          aria-hidden="true"
+          className="pointer-events-none absolute -right-6 -bottom-10 size-48 text-on-primary opacity-10 sm:size-56"
+        />
+        <div className="relative flex flex-col gap-4">
+          <div className="flex flex-col gap-1">
+            <p className="text-lg font-medium text-on-primary-muted">{welcome}</p>
+            <h1
+              ref={headingRef}
+              tabIndex={-1}
+              className="text-3xl font-extrabold tracking-tight outline-none sm:text-4xl"
+            >
+              Dashboard
+            </h1>
+            <p className="max-w-lg text-on-primary-muted">
+              Market prices, price forecasts and your listings in one place.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button asChild className="bg-card text-primary hover:bg-primary-soft">
+              <Link to="/farmer/prices">
+                <LineChart aria-hidden="true" />
+                <span>Check prices</span>
+              </Link>
+            </Button>
+            <Button
+              asChild
+              variant="outline"
+              className="border-on-primary-muted bg-transparent text-on-primary shadow-none hover:border-card hover:bg-card/10 hover:text-on-primary"
+            >
+              <Link to="/farmer/forecast">
+                <TrendingUp aria-hidden="true" />
+                <span>Get a forecast</span>
+              </Link>
+            </Button>
+          </div>
+        </div>
+      </div>
 
       <section aria-labelledby="dashboard-prices" className="flex flex-col gap-3">
-        <h2 id="dashboard-prices" className="text-xl font-semibold text-text">
+        <SectionHeading id="dashboard-prices" icon={LineChart}>
           Latest prices
-        </h2>
+        </SectionHeading>
         <div className="grid gap-4 sm:grid-cols-2">
           {CROPS.map((crop) => (
             <LatestPricesCard key={crop} crop={crop} />
@@ -210,9 +261,9 @@ export default function DashboardScreen() {
       </section>
 
       <section aria-labelledby="dashboard-forecast" className="flex flex-col gap-3">
-        <h2 id="dashboard-forecast" className="text-xl font-semibold text-text">
+        <SectionHeading id="dashboard-forecast" icon={TrendingUp}>
           Forecast snapshot
-        </h2>
+        </SectionHeading>
         <ForecastSnapshot />
       </section>
 

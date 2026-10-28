@@ -17,7 +17,7 @@ function ListingPhoto({ listing }) {
   if (!src) {
     return (
       <div
-        className="flex aspect-[4/3] w-full items-center justify-center rounded-lg bg-neutral-bg"
+        className="flex aspect-[4/3] w-full items-center justify-center rounded-xl bg-primary-soft"
         data-testid="listing-photo-placeholder"
       >
         <Leaf aria-hidden="true" className="size-10 text-primary" />
@@ -30,7 +30,7 @@ function ListingPhoto({ listing }) {
       alt={LISTING_TEXT.photoAlt(cropLabel(listing.crop).toLowerCase())}
       loading="lazy"
       decoding="async"
-      className="aspect-[4/3] w-full rounded-lg bg-neutral-bg object-cover"
+      className="aspect-[4/3] w-full rounded-xl bg-primary-soft object-cover"
     />
   );
 }
@@ -47,23 +47,23 @@ export function ListingCard({ listing, onRemove }) {
   return (
     <article
       aria-labelledby={headingId}
-      className="flex flex-col gap-3 rounded-xl border border-border bg-card p-4 shadow-sm"
+      className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-3 shadow-card"
       data-listing-id={listing.id}
     >
       <ListingPhoto listing={listing} />
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <h2 id={headingId} className="text-lg font-semibold text-text">
+      <div className="flex flex-wrap items-start justify-between gap-2 px-1">
+        <h2 id={headingId} className="text-lg font-bold text-text">
           {crop} <span className="font-normal text-text-secondary">in</span> {listing.market}
         </h2>
         <StatusBadge kind="listing" status={listing.status} />
       </div>
-      <p className="text-text">
+      <p className="px-1 text-text-secondary">
         {LISTING_TEXT.available(formatQuantity(listing.quantity_available))}
       </p>
-      <p className="text-lg font-semibold text-text tabular-nums">
+      <p className="px-1 text-xl font-extrabold tracking-tight text-primary tabular-nums">
         {LISTING_TEXT.perKg(formatKES(listing.price_per_unit))}
       </p>
-      <div className="mt-auto flex flex-wrap gap-2">
+      <div className="mt-auto flex flex-wrap gap-2 px-1 pb-1">
         {!removed && (
           <Button asChild variant="outline">
             <Link to={`/farmer/listings/${listing.id}/edit`}>
