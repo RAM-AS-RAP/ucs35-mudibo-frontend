@@ -1,7 +1,8 @@
 import { useNavigate, useSearchParams } from 'react-router';
 import { toast } from 'sonner';
 import { useCreateListing, useMarkets } from '@/api/queries';
-import { PageHeader } from '@/components/display/PageHeader';
+import { PackagePlus } from 'lucide-react';
+import { PageHero } from '@/components/display/DashboardHero';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { ErrorState } from '@/components/feedback/ErrorState';
 import { LoadingState } from '@/components/feedback/LoadingState';
@@ -66,8 +67,13 @@ export default function CreateListingScreen() {
   }
 
   return (
-    <div className="flex max-w-3xl flex-col gap-6">
-      <PageHeader title={LISTING_TEXT.newListing} headingRef={headingRef} />
+    <div className="flex flex-col gap-6">
+      <PageHero
+        title={LISTING_TEXT.newListing}
+        description={LISTING_TEXT.createDescription}
+        icon={PackagePlus}
+        headingRef={headingRef}
+      />
       {body}
     </div>
   );

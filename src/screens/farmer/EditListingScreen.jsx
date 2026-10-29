@@ -2,11 +2,11 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Ban } from 'lucide-react';
+import { ArrowLeft, Ban, PencilLine } from 'lucide-react';
 import { ApiError } from '@/api/errors';
 import { invalidateListingData, useMyListing, useUpdateListing } from '@/api/queries';
 import { Button } from '@/components/ui/button';
-import { PageHeader } from '@/components/display/PageHeader';
+import { PageHero } from '@/components/display/DashboardHero';
 import { StatusBadge } from '@/components/display/StatusBadge';
 import { ErrorState } from '@/components/feedback/ErrorState';
 import { LoadingState } from '@/components/feedback/LoadingState';
@@ -141,8 +141,13 @@ export default function EditListingScreen() {
   }
 
   return (
-    <div className="flex max-w-3xl flex-col gap-6">
-      <PageHeader title={LISTING_TEXT.editTitle} headingRef={headingRef} />
+    <div className="flex flex-col gap-6">
+      <PageHero
+        title={LISTING_TEXT.editTitle}
+        description={LISTING_TEXT.editDescription}
+        icon={PencilLine}
+        headingRef={headingRef}
+      />
       {body}
     </div>
   );

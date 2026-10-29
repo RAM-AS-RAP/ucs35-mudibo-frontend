@@ -399,6 +399,25 @@ export const FORECAST_TEXT = Object.freeze({
     `Expected ${when}, starting from the latest price of ${amount} per kg.`,
   loading: 'Loading the forecast…',
   errorTitle: 'The forecast could not be loaded',
+
+  chooseTitle: 'Choose a market and crop',
+  chooseText: 'Pick where you sell and what you grow.',
+  yourChoice: 'Your choice',
+  change: 'Change',
+  changeLabel: 'Change market or crop',
+  /** @param {string} market */
+  latestHere: (market) => `Latest price in ${market}`,
+  previewTitle: 'What you get',
+  previewItems: [
+    'The price the model expects in 1 month',
+    'Whether the model expects a rise or a fall, and by how much',
+    'How the model reached the forecast',
+  ],
+  previewHint: 'Choose a market and crop, then select "Request 1 month forecast".',
+  changedNote: 'You changed the market or crop. Request a new forecast to see it.',
+  working: 'The model is working this out…',
+  nextStepTitle: 'Next step',
+  compare: 'Compare another market',
 });
 
 /** Plain descriptions of the explanation groups, by the label the ML pipeline sends. */
@@ -580,7 +599,19 @@ export const LISTING_TEXT = Object.freeze({
   priceHint: 'Enter the price for 1 kg, not for a bag',
   /** @param {string} qty @param {string} total  "KES 4,200.00" */
   estimate: (qty, total) => `If all ${qty} kg sell at this price: ${total}`,
+  /** @param {string} qty  "120.5"; the estimate line before the total */
+  estimateLead: (qty) => `If all ${qty} kg sell at this price:`,
   estimateLabel: 'Estimate',
+  createDescription: 'Tell buyers what you have for sale. It takes about a minute.',
+  editDescription: 'Update the quantity, the price or the photo of this listing.',
+  stepWhatTitle: 'What you are selling',
+  stepWhatText: 'Choose the crop and the market you sell in.',
+  stepWhatEditText: 'These stay the same for this listing.',
+  stepAmountTitle: 'Quantity and price',
+  stepAmountText: 'How much you have, and what you ask for each kilogram.',
+  stepPhotoTitle: 'Photo',
+  stepPhotoText: 'Optional. A clear photo helps buyers see your produce.',
+  createNote: 'You can change the quantity, the price and the photo later.',
   /** @param {string} words  "about 60% above" @param {string} market */
   caution: (words, market) =>
     `This is ${words} the latest price in ${market}. Check that the price is for 1 kg.`,

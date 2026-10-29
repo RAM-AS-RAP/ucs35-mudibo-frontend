@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { formatBytes } from '@/lib/format';
 import { imageErrorMessage, PHOTO_TEXT } from '@/lib/messages';
 import { safeImageUrl } from '@/lib/safeImageUrl';
+import { cn } from '@/lib/utils';
 
 /**
  * The photo part of the listing form.
@@ -155,77 +156,95 @@ export function PhotoPicker({
 
   return (
     <fieldset className="flex min-w-0 flex-col gap-3">
-      <legend className="mb-1.5 text-sm font-medium text-text">{PHOTO_TEXT.legend}</legend>
+      <legend className="sr-only">{PHOTO_TEXT.legend}</legend>
 
-      {hasNew && (
-        <img
-          src={previewUrl}
-          alt={PHOTO_TEXT.previewAlt}
-          className="aspect-[4/3] w-full max-w-sm rounded-lg bg-neutral-bg object-cover"
-        />
-      )}
-      {showCurrent && safeCurrent && (
-        <img
-          src={safeCurrent}
-          alt={currentAlt}
-          decoding="async"
-          className="aspect-[4/3] w-full max-w-sm rounded-lg bg-neutral-bg object-cover"
-        />
-      )}
-      {value.removeCurrent && value.status !== 'ready' && (
-        <p className="text-sm text-text-secondary">{PHOTO_TEXT.willRemove}</p>
-      )}
-
-      <div className="flex flex-wrap gap-2">
-        <Button
-          type="button"
-          variant="outline"
-          disabled={disabled}
-          onClick={() => cameraRef.current?.click()}
-        >
-          <Camera aria-hidden="true" />
-          {PHOTO_TEXT.takePhoto}
-        </Button>
-        <Button
-          ref={galleryButtonRef}
-          type="button"
-          variant="outline"
-          disabled={disabled}
-          onClick={() => galleryRef.current?.click()}
-        >
-          <ImagePlus aria-hidden="true" />
-          {PHOTO_TEXT.chooseGallery}
-        </Button>
+      <div
+        className={cn(
+          'flex flex-col gap-4 rounded-xl border-2 border-dashed p-4 sm:p-5',
+          hasNew || showCurrent
+            ? 'border-border bg-card sm:flex-row sm:items-center'
+            : 'items-center border-primary/30 bg-primary-soft/40 text-center',
+        )}
+      >
         {hasNew && (
-          <Button
-            ref={removeRef}
-            type="button"
-            variant="ghost"
-            disabled={disabled}
-            onClick={removeNew}
+          <img
+            src={previewUrl}
+            alt={PHOTO_TEXT.previewAlt}
+            className="aspect-[4/3] w-full rounded-lg bg-neutral-bg object-cover sm:w-56"
+          />
+        )}
+        {showCurrent && safeCurrent && (
+          <img
+            src={safeCurrent}
+            alt={currentAlt}
+            decoding="async"
+            className="aspect-[4/3] w-full rounded-lg bg-neutral-bg object-cover sm:w-56"
+          />
+        )}
+        {!hasNew && !showCurrent && (
+          <span
+            aria-hidden="true"
+            className="flex size-14 items-center justify-center rounded-full bg-card text-primary shadow-card"
           >
-            <Trash2 aria-hidden="true" />
-            {PHOTO_TEXT.removePhoto}
-          </Button>
+            <ImagePlus className="size-7" />
+          </span>
         )}
-        {showCurrent && (
-          <Button
-            ref={removeRef}
-            type="button"
-            variant="ghost"
-            disabled={disabled}
-            onClick={removeCurrent}
-          >
-            <Trash2 aria-hidden="true" />
-            {PHOTO_TEXT.removePhoto}
-          </Button>
-        )}
-        {value.removeCurrent && value.status !== 'ready' && (
-          <Button type="button" variant="ghost" disabled={disabled} onClick={keepCurrent}>
-            <Undo2 aria-hidden="true" />
-            {PHOTO_TEXT.undoRemove}
-          </Button>
-        )}
+        <div className={cn('flex flex-col gap-3', !hasNew && !showCurrent && 'items-center')}>
+          {value.removeCurrent && value.status !== 'ready' && (
+            <p className="text-sm text-text-secondary">{PHOTO_TEXT.willRemove}</p>
+          )}
+          <div className={cn('flex flex-wrap gap-2', !hasNew && !showCurrent && 'justify-center')}>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={disabled}
+              onClick={() => cameraRef.current?.click()}
+            >
+              <Camera aria-hidden="true" />
+              {PHOTO_TEXT.takePhoto}
+            </Button>
+            <Button
+              ref={galleryButtonRef}
+              type="button"
+              variant="outline"
+              disabled={disabled}
+              onClick={() => galleryRef.current?.click()}
+            >
+              <ImagePlus aria-hidden="true" />
+              {PHOTO_TEXT.chooseGallery}
+            </Button>
+            {hasNew && (
+              <Button
+                ref={removeRef}
+                type="button"
+                variant="ghost"
+                disabled={disabled}
+                onClick={removeNew}
+              >
+                <Trash2 aria-hidden="true" />
+                {PHOTO_TEXT.removePhoto}
+              </Button>
+            )}
+            {showCurrent && (
+              <Button
+                ref={removeRef}
+                type="button"
+                variant="ghost"
+                disabled={disabled}
+                onClick={removeCurrent}
+              >
+                <Trash2 aria-hidden="true" />
+                {PHOTO_TEXT.removePhoto}
+              </Button>
+            )}
+            {value.removeCurrent && value.status !== 'ready' && (
+              <Button type="button" variant="ghost" disabled={disabled} onClick={keepCurrent}>
+                <Undo2 aria-hidden="true" />
+                {PHOTO_TEXT.undoRemove}
+              </Button>
+            )}
+          </div>
+        </div>
       </div>
 
       <input
