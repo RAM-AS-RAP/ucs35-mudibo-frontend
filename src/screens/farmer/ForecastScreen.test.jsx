@@ -74,6 +74,12 @@ async function openExplanation(path = '/farmer/forecast') {
 
 const headline = () => screen.getByTestId('forecast-headline');
 
+/** After a request the controls fold into a summary; Change opens them again. */
+const changeButton = () => screen.getByRole('button', { name: 'Change market or crop' });
+async function openControls() {
+  await userEvent.setup().click(changeButton());
+}
+
 describe('ForecastScreen: headline and horizon', () => {
   it('shows the formatted headline without float artefacts or an updated time', async () => {
     const { container } = await openForecast();
@@ -163,6 +169,7 @@ describe('ForecastScreen: request flow', () => {
     const recorder = recordRequests();
     await openExplanation();
     const user = userEvent.setup();
+    await openControls();
     await user.selectOptions(screen.getByRole('combobox', { name: 'Market' }), 'Kisumu');
     expect(screen.queryByTestId('forecast-headline')).not.toBeInTheDocument();
     expect(screen.queryByRole('figure')).not.toBeInTheDocument();
@@ -179,6 +186,7 @@ describe('ForecastScreen: request flow', () => {
     expect(whyButton()).toHaveAttribute('aria-expanded', 'false');
     expect(forecastCalls()).toEqual(['Nairobi', 'Kisumu']);
 
+    await openControls();
     await user.click(screen.getByRole('radio', { name: 'Beans' }));
     expect(screen.queryByTestId('forecast-headline')).not.toBeInTheDocument();
     expect(forecastCalls()).toEqual(['Nairobi', 'Kisumu']);
@@ -357,6 +365,7 @@ describe('ForecastScreen: kept across tabs', () => {
     await openExplanation();
     expect(screen.getByRole('figure')).toHaveTextContent(formatKES(42.49));
     const user = userEvent.setup();
+    await openControls();
     await user.selectOptions(screen.getByRole('combobox', { name: 'Market' }), 'Kisumu');
     expect(screen.queryByRole('figure')).not.toBeInTheDocument();
     await user.click(requestButton());
@@ -401,8 +410,51 @@ describe('ForecastScreen: kept across tabs', () => {
     expect(screen.queryByTestId('forecast-headline')).not.toBeInTheDocument();
   });
 
+  it('folds the controls into a summary after the request and moves focus to the result', async () => {
+    await openForecast();
+    expect(screen.queryByRole('combobox', { name: 'Market' })).not.toBeInTheDocument();
+    const summary = screen.getByRole('region', { name: 'Your choice' });
+    expect(summary).toHaveTextContent('Maize');
+    expect(summary).toHaveTextContent('Nairobi');
+    expect(screen.getByRole('heading', { name: 'Maize in Nairobi, in 1 month' })).toHaveFocus();
+
+    await openControls();
+    expect(screen.getByRole('combobox', { name: 'Market' })).toHaveFocus();
+    // The forecast stays until the selection changes.
+    expect(headline()).toBeInTheDocument();
+  });
+
+  it('"Compare another market" opens the controls with the market focused', async () => {
+    await openForecast();
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Compare another market' }));
+    expect(screen.getByRole('combobox', { name: 'Market' })).toHaveFocus();
+  });
+
+  it('says the selection changed instead of showing the preview again', async () => {
+    await openScreen();
+    expect(screen.getByRole('heading', { name: 'What you get' })).toBeInTheDocument();
+    await userEvent.setup().click(requestButton());
+    await screen.findByText(/Expected in/);
+    await openControls();
+    await userEvent
+      .setup()
+      .selectOptions(screen.getByRole('combobox', { name: 'Market' }), 'Kisumu');
+    expect(
+      screen.getByText('You changed the market or crop. Request a new forecast to see it.'),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'What you get' })).not.toBeInTheDocument();
+  });
+
+  it('shows the latest price for the selection before the request', async () => {
+    await openScreen();
+    expect(await screen.findByTestId('forecast-latest-here')).toHaveTextContent(
+      'Latest price in NairobiKES 40.00 per kg',
+    );
+  });
+
   it('asking again for the same forecast keeps the explanation open', async () => {
     await openExplanation();
+    await openControls();
     await userEvent.setup().click(requestButton());
     expect(whyButton()).toHaveAttribute('aria-expanded', 'true');
   });
@@ -410,9 +462,10 @@ describe('ForecastScreen: kept across tabs', () => {
 
 describe('ForecastScreen: URL, next step and session', () => {
   it('initialises the controls from the URL', async () => {
-    await openForecast('/farmer/forecast?market=Kisumu&crop=beans');
+    await openScreen('/farmer/forecast?market=Kisumu&crop=beans');
     expect(screen.getByRole('combobox', { name: 'Market' })).toHaveValue('Kisumu');
     expect(screen.getByRole('radio', { name: 'Beans' })).toBeChecked();
+    await userEvent.setup().click(requestButton());
     expect(screen.getByRole('heading', { name: 'Beans in Kisumu, in 1 month' })).toBeVisible();
   });
 

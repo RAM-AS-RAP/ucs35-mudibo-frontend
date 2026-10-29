@@ -14,7 +14,7 @@ contribution.
 | --------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Dashboard | `/farmer`          | Greeting; latest maize and beans prices per market with the change against the month before; the one month forecast for maize and beans in the first market; a summary of active listings and paid orders (F2b, see [listings-orders.md](listings-orders.md)) | `GET /markets`, `GET /prices/current?crop=maize`, `GET /prices/current?crop=beans` and the two counts `GET /listings/mine?status=active&limit=1`, `GET /listings/mine/orders?status=paid&limit=1` (in parallel), then `GET /forecasts?market=<first>&crop=maize\|beans&horizon=one_month` (in parallel) |
 | Prices    | `/farmer/prices`   | Crop control; a price card per market; the price trend for the selected markets and range, with a data table                                                                                                                                                  | `GET /prices/current?crop=`, `GET /markets`, `GET /prices/trends?market=&crop=&months=` (one per selected market, in parallel)                                                                                                                                                                          |
-| Forecast  | `/farmer/forecast` | Market and crop controls with the "Request 1 month forecast" button; after the click, the 1 month ahead headline and the "Why the model expects this" button; unavailable state; "Plan a listing"                                                             | `GET /markets` on load; only after the click `GET /forecasts?market=&crop=&horizon=one_month`, and `GET /prices/current?crop=` when that forecast is unavailable                                                                                                                                        |
+| Forecast  | `/farmer/forecast` | Market and crop controls with the "Request 1 month forecast" button; after the click, the 1 month ahead headline and the "Why the model expects this" button; unavailable state; "Plan a listing"                                                             | `GET /markets` and `GET /prices/current?crop=` (the "Latest price in" line) on load; only after the click `GET /forecasts?market=&crop=&horizon=one_month`                                                                                                                                        |
 
 Selections live in the URL query string (`crop`, `markets`, `range`, `market`, `horizon`), so a
 screen can be bookmarked or shared. Only these non sensitive values are stored. Each is checked
@@ -80,9 +80,10 @@ months old" is the information that matters.
 
 ### Headline
 
-The predicted price (`predicted_price`) in large text with "per kg", the bag line, the expected
-change (`expected_change_pct`) with its direction word and icon, and the caption
-"Expected in 1 month, starting from the latest price of KES 40.00 per kg." (`origin_price`).
+One path from "Latest" (`origin_price`) through a direction arrow to "In 1 month"
+(`predicted_price`, large, with "per kg"); each price appears once in it. Under it the expected
+change (`expected_change_pct`) with its direction word and icon, the bag line, and the caption
+"Expected in 1 month, starting from the latest price of KES 40.00 per kg."
 
 There is no horizon choice: only the 1 month ahead forecast is requested and shown.
 
@@ -90,15 +91,22 @@ There is no horizon choice: only the 1 month ahead forecast is requested and sho
 
 The screen fetches nothing about the forecast until the farmer asks for it:
 
-1. On load it shows only the Market and Crop controls, the **Request 1 month forecast**
-   button. Only `GET /markets` is sent.
-2. The click enables the forecast query (`useForecast({ ..., enabled })`) for that market and crop.
-   The card shows the loading, error, unavailable or headline state. A forecast already cached by
-   the dashboard or the listing form appears at once, but never before the click.
+1. **Choose** (step 1): crop tiles (`CropChoice`), the market (`IconSelect`), the "Latest price in
+   <market>" line (`GET /prices/current`, a price, not a forecast) and the **Request 1 month
+   forecast** button. Below it, a "What you get" preview lists what a request shows.
+2. The click enables the forecast query (`useForecast({ ..., enabled })`) for that market and crop
+   and moves focus to the result heading. The controls fold into a one line "Your choice" summary
+   with a **Change** button (named "Change market or crop"), which opens them again with the market
+   focused. The green result frame (step 2) appears at once with a loading shimmer and fills in
+   place; error, unavailable and unusable answers use a white frame in the same spot. A forecast
+   already cached by the dashboard or the listing form appears at once, but never before the click.
 3. Under the headline, **Why the model expects this** (`aria-expanded`) opens and closes the
-   explanation below; it starts closed. "Plan a listing" appears once a forecast is shown.
+   explanation as a white panel attached to the bottom of the same frame; it starts closed.
+   The next step card (step 3) appears once a forecast is shown, with "Plan a listing" and
+   **Compare another market** (opens the controls with the market focused).
 4. Changing the market or crop clears the request and closes the explanation, so a shown forecast
-   always matches the selection.
+   always matches the selection; a note says to request a new forecast instead of the preview.
+   Motion (fade, slide, shimmer) uses `motion-safe:` only.
 5. The request (market, crop and whether the explanation is open) is kept in memory by
    `src/screens/farmer/forecastRequest.js`, not in the URL or storage. After a visit to another
    tab, the sidebar link (which carries no selection) brings back that market and crop, writes

@@ -163,6 +163,7 @@ describe('keyboard operation', () => {
     await requestForecast();
     await screen.findByText(/Expected in 1 month/);
     const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Change market or crop' }));
     const maize = screen.getByRole('radio', { name: 'Maize' });
     maize.focus();
     await user.keyboard('{ArrowRight}');
