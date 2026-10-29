@@ -164,7 +164,9 @@ From `src/styles/tokens.test.js`, which reads `tokens.css` (print with
   (`tone="inverse"` on the green) (optionally with a `direction` from
   `directionOf` and a `suffix`), `StatusBadge`, `Money`, and for F2a: `PriceCard`
   (and `PriceChange`), `MarketChips` (toggle buttons, `aria-pressed`, one always selected), `Segmented`
-  (native radio group, 44 px options), `ExplainabilityBars` (accessible list with `div` bars), `TrendChart` (wrapper with
+  (native radio group, 44 px options), `CropChoice` (crop picture tiles on native radios, check
+  mark and border for the choice; New listing and Forecast), `IconSelect` (native select with an
+  icon and chevron, 48 px), `StepHeading` (numbered step heading), `ExplainabilityBars` (accessible list with `div` bars), `TrendChart` (wrapper with
   `role="img"` and a summary; lazily loads `TrendChartCanvas`, the only file that imports Recharts)
   and `DataTable` (caption, column and row headers). `StatusBadge` also takes `kind="listing"`
   (Active, Sold out, Removed) and shows the F2b order words ("Paid (test payment)", "Waiting for
