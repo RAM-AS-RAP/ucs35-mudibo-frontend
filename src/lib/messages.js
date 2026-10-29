@@ -580,7 +580,19 @@ export const LISTING_TEXT = Object.freeze({
   priceHint: 'Enter the price for 1 kg, not for a bag',
   /** @param {string} qty @param {string} total  "KES 4,200.00" */
   estimate: (qty, total) => `If all ${qty} kg sell at this price: ${total}`,
+  /** @param {string} qty  "120.5"; the estimate line before the total */
+  estimateLead: (qty) => `If all ${qty} kg sell at this price:`,
   estimateLabel: 'Estimate',
+  createDescription: 'Tell buyers what you have for sale. It takes about a minute.',
+  editDescription: 'Update the quantity, the price or the photo of this listing.',
+  stepWhatTitle: 'What you are selling',
+  stepWhatText: 'Choose the crop and the market you sell in.',
+  stepWhatEditText: 'These stay the same for this listing.',
+  stepAmountTitle: 'Quantity and price',
+  stepAmountText: 'How much you have, and what you ask for each kilogram.',
+  stepPhotoTitle: 'Photo',
+  stepPhotoText: 'Optional. A clear photo helps buyers see your produce.',
+  createNote: 'You can change the quantity, the price and the photo later.',
   /** @param {string} words  "about 60% above" @param {string} market */
   caution: (words, market) =>
     `This is ${words} the latest price in ${market}. Check that the price is for 1 kg.`,

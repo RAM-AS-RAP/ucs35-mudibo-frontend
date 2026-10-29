@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useBlocker } from 'react-router';
 import { Controller, useForm, useWatch } from 'react-hook-form';
-import { AlertTriangle, Info, Loader2 } from 'lucide-react';
+import { AlertTriangle, Bean, Calculator, Info, Loader2, MapPin, Wheat } from 'lucide-react';
 import { ApiError, getUserMessage } from '@/api/errors';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,7 +10,9 @@ import { describedBy, FieldError, FieldHint } from '@/components/auth/FormField'
 import { FormErrorSummary } from '@/components/auth/FormErrorSummary';
 import { OfflineFormNotice } from '@/components/auth/FormNotices';
 import { useServerProblem } from '@/components/auth/useServerProblem';
-import { Segmented } from '@/components/display/Segmented';
+import { CropChoice } from '@/components/display/CropChoice';
+import { IconSelect } from '@/components/display/IconSelect';
+import { StepHeading } from '@/components/display/StepHeading';
 import { ConfirmDialog } from '@/components/feedback/ConfirmDialog';
 import { useIsOffline } from '@/lib/connectivity';
 import { multiplyMoney, parseDecimalInput, sameDecimal } from '@/lib/decimal';
@@ -33,10 +35,15 @@ export const MAX_QUANTITY = 100_000;
 export const MAX_PRICE = 100_000;
 
 const ID = 'listing';
-const CROP_OPTIONS = /** @type {const} */ (['maize', 'beans']).map((value) => ({
-  value,
-  label: cropLabel(value),
-}));
+/** A bordered box holding an input and a unit on its right; the box shows the focus ring. */
+const FIELD_GROUP =
+  'flex min-h-12 w-full items-stretch overflow-hidden rounded-lg border border-input bg-card transition-colors focus-within:border-primary focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 has-[[aria-invalid=true]]:border-negative';
+/** The input inside FIELD_GROUP: no border or ring of its own. */
+const GROUP_INPUT =
+  'min-h-12 rounded-none border-0 bg-transparent text-lg font-medium tabular-nums focus-visible:ring-0 focus-visible:ring-offset-0';
+const UNIT =
+  'flex shrink-0 items-center border-l border-border bg-neutral-bg px-3 text-sm font-medium text-text-secondary';
+
 const SERVER_FIELDS = {
   crop: 'crop',
   market: 'market',
@@ -272,204 +279,306 @@ export function ListingForm({ mode, initial, markets = [], listing = null, disab
       <form
         noValidate
         onSubmit={(event) => handleSubmit(onValid)(event)}
-        className="flex flex-col gap-5"
+        className="overflow-hidden rounded-2xl border border-border bg-card shadow-card"
         aria-label={isEdit ? LISTING_TEXT.editTitle : LISTING_TEXT.newListing}
       >
-        {isEdit && listing ? (
-          <div className="flex flex-col gap-1 rounded-lg border border-border bg-neutral-bg p-4">
-            <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
-              <dt className="text-text-secondary">{LISTING_TEXT.cropLegend}</dt>
-              <dd className="font-semibold text-text">{cropLabel(listing.crop)}</dd>
-              <dt className="text-text-secondary">{LISTING_TEXT.marketLabel}</dt>
-              <dd className="font-semibold text-text">{listing.market}</dd>
-            </dl>
-            <p className="text-sm text-neutral-text">{LISTING_TEXT.readOnlyCropMarket}</p>
-          </div>
-        ) : (
-          <>
-            <Controller
-              control={control}
-              name="crop"
-              render={({ field }) => (
-                <Segmented
-                  legend={LISTING_TEXT.cropLegend}
-                  name={`${ID}-crop`}
-                  options={CROP_OPTIONS}
-                  value={field.value}
-                  onChange={(value) => field.onChange(value)}
-                />
-              )}
-            />
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor={marketId}>{LISTING_TEXT.marketLabel}</Label>
-              <select
-                id={marketId}
-                disabled={formDisabled}
-                aria-invalid={errors.market ? true : undefined}
-                aria-describedby={describedBy(marketId, { error: Boolean(errors.market) })}
-                className="flex min-h-11 w-full rounded-md border border-input bg-card px-3 py-2 text-base text-text outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-negative sm:max-w-sm"
-                {...register('market', {
-                  validate: (value) => Boolean(value) || LISTING_TEXT.marketPlaceholder + '.',
-                })}
-              >
-                <option value="">{LISTING_TEXT.marketPlaceholder}</option>
-                {markets.map((name) => (
-                  <option key={name} value={name}>
-                    {name}
-                  </option>
-                ))}
-              </select>
-              <FieldError id={marketId} message={errors.market?.message} />
-            </div>
-          </>
-        )}
-
-        <PriceGuidance crop={crop} market={market} />
-
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor={quantityId}>{LISTING_TEXT.quantityLabel}</Label>
-          <Input
-            id={quantityId}
-            inputMode="decimal"
-            autoComplete="off"
-            disabled={formDisabled}
-            className="sm:max-w-sm"
-            aria-invalid={errors.quantity ? true : undefined}
-            aria-describedby={describedBy(quantityId, {
-              hint: true,
-              error: Boolean(errors.quantity),
-              extra: reactivates ? [reactivateId] : [],
-            })}
-            {...register('quantity', {
-              validate: (value) => {
-                const result = parseQuantity(value, isEdit);
-                return result.ok || result.error;
-              },
-            })}
-          />
-          <FieldHint id={quantityId}>
-            {isEdit ? LISTING_TEXT.quantityEditHint : LISTING_TEXT.quantityHint}
-          </FieldHint>
-          {reactivates && (
-            <p id={reactivateId} className="flex items-start gap-1.5 text-sm text-text">
-              <Info aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-primary" />
-              <span>{LISTING_TEXT.reactivateHint}</span>
-            </p>
-          )}
-          <FieldError id={quantityId} message={errors.quantity?.message} />
-        </div>
-
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor={priceId}>{LISTING_TEXT.priceLabel}</Label>
-          <div className="flex items-center gap-2 sm:max-w-sm">
-            <Input
-              id={priceId}
-              inputMode="decimal"
-              autoComplete="off"
-              disabled={formDisabled}
-              aria-invalid={errors.price ? true : undefined}
-              aria-describedby={describedBy(priceId, {
-                hint: true,
-                error: Boolean(errors.price),
-                extra: [priceSuffixId, ...(check.level !== 'ok' ? [priceCheckId] : [])],
-              })}
-              {...register('price', {
-                validate: (value) => {
-                  const result = parsePrice(value);
-                  return result.ok || result.error;
-                },
-              })}
-            />
-            <span id={priceSuffixId} className="shrink-0 text-text-secondary">
-              {LISTING_TEXT.priceSuffix}
-            </span>
-          </div>
-          <FieldHint id={priceId}>{LISTING_TEXT.priceHint}</FieldHint>
-          <FieldError id={priceId} message={errors.price?.message} />
-          {check.level !== 'ok' && check.ratio !== null && market && latestPrice !== null && (
-            <div
-              id={priceCheckId}
-              data-level={check.level}
-              className={cn(
-                'flex items-start gap-2 rounded-lg border bg-neutral-bg px-3 py-2 text-sm text-neutral-text',
-                check.level === 'confirm' ? 'border-negative' : 'border-border',
-              )}
-            >
-              {check.level === 'confirm' ? (
-                <AlertTriangle
-                  aria-hidden="true"
-                  className="mt-0.5 size-4 shrink-0 text-negative"
-                />
-              ) : (
-                <Info aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
-              )}
-              <p>
-                {check.level === 'confirm'
-                  ? LISTING_TEXT.confirm(
-                      comparisonWords(check.ratio),
-                      market,
-                      formatKES(latestPrice),
-                    )
-                  : LISTING_TEXT.caution(comparisonWords(check.ratio), market)}
-              </p>
-            </div>
-          )}
-          {confirmNeeded && (
-            <label className="flex min-h-11 cursor-pointer items-center gap-3 text-base text-text">
-              <input
-                type="checkbox"
-                className="size-6 shrink-0 accent-primary"
-                checked={confirmedFor === priceText}
-                onChange={(event) => setConfirmedFor(event.target.checked ? priceText : null)}
-              />
-              <span>{LISTING_TEXT.confirmCheckbox}</span>
-            </label>
-          )}
-        </div>
-
-        {estimate && quantity.ok && (
-          <p className="flex flex-wrap items-center gap-2 text-text" data-testid="listing-estimate">
-            <span className="rounded-md bg-neutral-bg px-2 py-0.5 text-sm font-medium text-neutral-text">
-              {LISTING_TEXT.estimateLabel}
-            </span>
-            <span>
-              {LISTING_TEXT.estimate(formatQuantity(quantity.value), formatKES(estimate))}
-            </span>
-          </p>
-        )}
-
-        <PhotoPicker
-          value={photo}
-          onChange={(next) => {
-            setPhotoServerError(null);
-            setPhoto(next);
-          }}
-          currentUrl={isEdit ? (listing?.image_url ?? null) : null}
-          currentAlt={
-            listing ? LISTING_TEXT.photoAlt(cropLabel(listing.crop).toLowerCase()) : undefined
-          }
-          serverError={photoServerError}
-          disabled={formDisabled || pending}
-        />
-
-        {isEdit && !hasChanges && (
-          <p className="text-sm text-text-secondary" id={`${ID}-no-changes`}>
-            {LISTING_TEXT.noChanges}
-          </p>
-        )}
-        <div className="flex flex-wrap gap-2">
-          <Button
-            type="submit"
-            className="w-full sm:w-auto"
-            disabled={submitDisabled}
-            aria-describedby={isEdit && !hasChanges ? `${ID}-no-changes` : undefined}
+        <div className="grid lg:grid-cols-[minmax(0,1fr)_22rem]">
+          <section
+            aria-labelledby={`${ID}-step-what`}
+            className="flex flex-col gap-5 p-5 sm:p-6 lg:col-start-1"
           >
-            {pending && <Loader2 aria-hidden="true" className="animate-spin" />}
-            {submitLabel}
-          </Button>
-          <Button asChild variant="outline" className="w-full sm:w-auto">
-            <Link to="/farmer/listings">{LISTING_TEXT.cancel}</Link>
-          </Button>
+            <StepHeading
+              step={1}
+              id={`${ID}-step-what`}
+              title={LISTING_TEXT.stepWhatTitle}
+              text={isEdit ? LISTING_TEXT.stepWhatEditText : LISTING_TEXT.stepWhatText}
+            />
+            {isEdit && listing ? (
+              <div className="flex flex-col gap-3">
+                <dl className="grid gap-3 sm:max-w-md sm:grid-cols-2">
+                  <div className="relative flex min-h-16 flex-col justify-center rounded-xl border border-border bg-neutral-bg py-3 pr-3 pl-16">
+                    <dt className="text-sm text-text-secondary">
+                      <span
+                        aria-hidden="true"
+                        className="absolute top-1/2 left-3 flex size-10 -translate-y-1/2 items-center justify-center rounded-lg bg-accent-gold-soft text-accent-gold"
+                      >
+                        {listing.crop === 'beans' ? (
+                          <Bean className="size-5" />
+                        ) : (
+                          <Wheat className="size-5" />
+                        )}
+                      </span>
+                      {LISTING_TEXT.cropLegend}
+                    </dt>
+                    <dd className="font-semibold text-text">{cropLabel(listing.crop)}</dd>
+                  </div>
+                  <div className="relative flex min-h-16 flex-col justify-center rounded-xl border border-border bg-neutral-bg py-3 pr-3 pl-16">
+                    <dt className="text-sm text-text-secondary">
+                      <span
+                        aria-hidden="true"
+                        className="absolute top-1/2 left-3 flex size-10 -translate-y-1/2 items-center justify-center rounded-lg bg-primary-soft text-primary"
+                      >
+                        <MapPin className="size-5" />
+                      </span>
+                      {LISTING_TEXT.marketLabel}
+                    </dt>
+                    <dd className="font-semibold break-words text-text">{listing.market}</dd>
+                  </div>
+                </dl>
+                <p className="flex items-start gap-2 text-sm text-neutral-text">
+                  <Info aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+                  <span>{LISTING_TEXT.readOnlyCropMarket}</span>
+                </p>
+              </div>
+            ) : (
+              <>
+                <Controller
+                  control={control}
+                  name="crop"
+                  render={({ field }) => (
+                    <CropChoice
+                      legend={LISTING_TEXT.cropLegend}
+                      className="sm:max-w-md"
+                      name={`${ID}-crop`}
+                      value={field.value}
+                      disabled={formDisabled}
+                      onChange={(value) => field.onChange(value)}
+                    />
+                  )}
+                />
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor={marketId}>{LISTING_TEXT.marketLabel}</Label>
+
+                  <IconSelect
+                    icon={MapPin}
+                    wrapperClassName="sm:max-w-md"
+                    id={marketId}
+                    disabled={formDisabled}
+                    aria-invalid={errors.market ? true : undefined}
+                    aria-describedby={describedBy(marketId, { error: Boolean(errors.market) })}
+                    {...register('market', {
+                      validate: (value) => Boolean(value) || LISTING_TEXT.marketPlaceholder + '.',
+                    })}
+                  >
+                    <option value="">{LISTING_TEXT.marketPlaceholder}</option>
+                    {markets.map((name) => (
+                      <option key={name} value={name}>
+                        {name}
+                      </option>
+                    ))}
+                  </IconSelect>
+
+                  <FieldError id={marketId} message={errors.market?.message} />
+                </div>
+              </>
+            )}
+          </section>
+
+          {/* Beside the steps from lg (kept in view while scrolling); between steps 1 and 2 below. */}
+          <div className="border-t border-border bg-neutral-bg/60 p-5 sm:p-6 lg:col-start-2 lg:row-span-3 lg:row-start-1 lg:border-t-0 lg:border-l">
+            <PriceGuidance crop={crop} market={market} className="lg:sticky lg:top-6" />
+          </div>
+
+          <section
+            aria-labelledby={`${ID}-step-amount`}
+            className="flex flex-col gap-5 border-t border-border p-5 sm:p-6 lg:col-start-1"
+          >
+            <StepHeading
+              step={2}
+              id={`${ID}-step-amount`}
+              title={LISTING_TEXT.stepAmountTitle}
+              text={LISTING_TEXT.stepAmountText}
+            />
+            <div className="grid gap-5 sm:grid-cols-2">
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor={quantityId}>{LISTING_TEXT.quantityLabel}</Label>
+                <div className={FIELD_GROUP}>
+                  <Input
+                    id={quantityId}
+                    inputMode="decimal"
+                    autoComplete="off"
+                    placeholder="0"
+                    disabled={formDisabled}
+                    className={GROUP_INPUT}
+                    aria-invalid={errors.quantity ? true : undefined}
+                    aria-describedby={describedBy(quantityId, {
+                      hint: true,
+                      error: Boolean(errors.quantity),
+                      extra: reactivates ? [reactivateId] : [],
+                    })}
+                    {...register('quantity', {
+                      validate: (value) => {
+                        const result = parseQuantity(value, isEdit);
+                        return result.ok || result.error;
+                      },
+                    })}
+                  />
+                  <span aria-hidden="true" className={UNIT}>
+                    kg
+                  </span>
+                </div>
+                <FieldHint id={quantityId}>
+                  {isEdit ? LISTING_TEXT.quantityEditHint : LISTING_TEXT.quantityHint}
+                </FieldHint>
+                {reactivates && (
+                  <p id={reactivateId} className="flex items-start gap-1.5 text-sm text-text">
+                    <Info aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-primary" />
+                    <span>{LISTING_TEXT.reactivateHint}</span>
+                  </p>
+                )}
+                <FieldError id={quantityId} message={errors.quantity?.message} />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor={priceId}>{LISTING_TEXT.priceLabel}</Label>
+                <div className={FIELD_GROUP}>
+                  <Input
+                    id={priceId}
+                    inputMode="decimal"
+                    autoComplete="off"
+                    placeholder="0.00"
+                    disabled={formDisabled}
+                    className={GROUP_INPUT}
+                    aria-invalid={errors.price ? true : undefined}
+                    aria-describedby={describedBy(priceId, {
+                      hint: true,
+                      error: Boolean(errors.price),
+                      extra: [priceSuffixId, ...(check.level !== 'ok' ? [priceCheckId] : [])],
+                    })}
+                    {...register('price', {
+                      validate: (value) => {
+                        const result = parsePrice(value);
+                        return result.ok || result.error;
+                      },
+                    })}
+                  />
+                  <span id={priceSuffixId} className={UNIT}>
+                    {LISTING_TEXT.priceSuffix}
+                  </span>
+                </div>
+                <FieldHint id={priceId}>{LISTING_TEXT.priceHint}</FieldHint>
+                <FieldError id={priceId} message={errors.price?.message} />
+              </div>
+            </div>
+
+            {check.level !== 'ok' && check.ratio !== null && market && latestPrice !== null && (
+              <div
+                id={priceCheckId}
+                data-level={check.level}
+                className={cn(
+                  'flex items-start gap-2 rounded-lg border px-3 py-2.5 text-sm',
+                  check.level === 'confirm'
+                    ? 'border-negative bg-card text-text'
+                    : 'border-accent-gold/40 bg-accent-gold-soft text-accent-gold-text',
+                )}
+              >
+                {check.level === 'confirm' ? (
+                  <AlertTriangle
+                    aria-hidden="true"
+                    className="mt-0.5 size-4 shrink-0 text-negative"
+                  />
+                ) : (
+                  <Info aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+                )}
+                <p>
+                  {check.level === 'confirm'
+                    ? LISTING_TEXT.confirm(
+                        comparisonWords(check.ratio),
+                        market,
+                        formatKES(latestPrice),
+                      )
+                    : LISTING_TEXT.caution(comparisonWords(check.ratio), market)}
+                </p>
+              </div>
+            )}
+            {confirmNeeded && (
+              <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-lg border border-border bg-neutral-bg px-3 py-2 text-base text-text">
+                <input
+                  type="checkbox"
+                  className="size-6 shrink-0 accent-primary"
+                  checked={confirmedFor === priceText}
+                  onChange={(event) => setConfirmedFor(event.target.checked ? priceText : null)}
+                />
+                <span>{LISTING_TEXT.confirmCheckbox}</span>
+              </label>
+            )}
+
+            {estimate && quantity.ok && (
+              <div
+                className="flex items-center gap-4 rounded-xl border border-primary/20 bg-primary-soft p-4"
+                data-testid="listing-estimate"
+              >
+                <span
+                  aria-hidden="true"
+                  className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-primary text-on-primary"
+                >
+                  <Calculator className="size-5" />
+                </span>
+                <div className="flex min-w-0 flex-col">
+                  <span className="text-xs font-semibold tracking-wide text-primary uppercase">
+                    {LISTING_TEXT.estimateLabel}
+                  </span>
+                  <p className="text-sm text-text">
+                    {LISTING_TEXT.estimateLead(formatQuantity(quantity.value))}{' '}
+                    <strong className="block text-2xl font-extrabold text-text tabular-nums">
+                      {formatKES(estimate)}
+                    </strong>
+                  </p>
+                </div>
+              </div>
+            )}
+          </section>
+
+          <section
+            aria-labelledby={`${ID}-step-photo`}
+            className="flex flex-col gap-5 border-t border-border p-5 sm:p-6 lg:col-start-1"
+          >
+            <StepHeading
+              step={3}
+              id={`${ID}-step-photo`}
+              title={LISTING_TEXT.stepPhotoTitle}
+              text={LISTING_TEXT.stepPhotoText}
+            />
+            <PhotoPicker
+              value={photo}
+              onChange={(next) => {
+                setPhotoServerError(null);
+                setPhoto(next);
+              }}
+              currentUrl={isEdit ? (listing?.image_url ?? null) : null}
+              currentAlt={
+                listing ? LISTING_TEXT.photoAlt(cropLabel(listing.crop).toLowerCase()) : undefined
+              }
+              serverError={photoServerError}
+              disabled={formDisabled || pending}
+            />
+          </section>
+        </div>
+
+        <div className="flex flex-col gap-3 border-t border-border bg-neutral-bg px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+          {isEdit ? (
+            !hasChanges && (
+              <p className="text-sm text-text-secondary" id={`${ID}-no-changes`}>
+                {LISTING_TEXT.noChanges}
+              </p>
+            )
+          ) : (
+            <p className="text-sm text-text-secondary">{LISTING_TEXT.createNote}</p>
+          )}
+          <div className="flex flex-col gap-2 sm:ml-auto sm:flex-row">
+            <Button asChild variant="outline" className="w-full sm:w-auto">
+              <Link to="/farmer/listings">{LISTING_TEXT.cancel}</Link>
+            </Button>
+            <Button
+              type="submit"
+              className="w-full sm:w-auto sm:min-w-40"
+              disabled={submitDisabled}
+              aria-describedby={isEdit && !hasChanges ? `${ID}-no-changes` : undefined}
+            >
+              {pending && <Loader2 aria-hidden="true" className="animate-spin" />}
+              {submitLabel}
+            </Button>
+          </div>
         </div>
       </form>
 

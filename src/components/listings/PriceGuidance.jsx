@@ -1,5 +1,5 @@
 import { Link } from 'react-router';
-import { ArrowRight, Clock } from 'lucide-react';
+import { ArrowRight, Clock, Lightbulb } from 'lucide-react';
 import { useForecast } from '@/api/queries';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -86,12 +86,23 @@ export function PriceGuidance({ crop, market, className }) {
     <section
       aria-labelledby="price-guidance-title"
       data-testid="price-guidance"
-      className={cn('flex flex-col gap-3 rounded-xl border border-border bg-card p-4', className)}
+      className={cn(
+        'flex flex-col gap-3 rounded-xl border border-border bg-card p-4 shadow-card',
+        className,
+      )}
     >
-      <h2 id="price-guidance-title" className="text-lg font-semibold text-text">
-        {GUIDANCE_TEXT.title}
-        <span className="sr-only">{market ? ` for ${name} in ${market}` : ` for ${name}`}</span>
-      </h2>
+      <div className="flex items-center gap-3">
+        <span
+          aria-hidden="true"
+          className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-accent-gold-soft text-accent-gold"
+        >
+          <Lightbulb className="size-5" />
+        </span>
+        <h2 id="price-guidance-title" className="text-lg font-semibold text-text">
+          {GUIDANCE_TEXT.title}
+          <span className="sr-only">{market ? ` for ${name} in ${market}` : ` for ${name}`}</span>
+        </h2>
+      </div>
       {market && (
         <p className="text-sm font-medium text-text">
           {name} in {market}
